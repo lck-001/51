@@ -6,8 +6,12 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = BASE_DIR
+if not (PROJECT_DIR / "dashboard_id").exists():
+    PROJECT_DIR = BASE_DIR.parent
+
 for subdir in ("dashboard_id", "pollkey", "queryByPollkey"):
-    path = BASE_DIR / subdir
+    path = PROJECT_DIR / subdir
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
@@ -211,3 +215,4 @@ if __name__ == "__main__":
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         raise SystemExit(1) from exc
+
