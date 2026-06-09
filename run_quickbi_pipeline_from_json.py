@@ -110,6 +110,26 @@ def require_valid_cookie(page_id: str, workspace_id: str) -> None:
         raise
 
 
+def is_query_result_payload(payload: dict) -> bool:
+    data = payload.get("data") or {}
+    if not data.get("normalResult"):
+        return False
+    return any(data.get(key) is not None for key in ("performanceInfo", "value", "axisResult", "oldQueryResult", "debugInfo"))
+
+
+def is_pollkey_only_payload(payload: dict) -> bool:
+    data = payload.get("data") or {}
+    return (
+        bool(data.get("pollKey"))
+        and not data.get("normalResult")
+        and data.get("performanceInfo") is None
+        and data.get("value") is None
+        and data.get("axisResult") is None
+        and data.get("oldQueryResult") is None
+        and data.get("debugInfo") is None
+    )
+
+
 def fetch_pollkeys(report_id: str, workspace_id: str, tasks: list[dict]) -> list[dict]:
     client = QuickBIPollkeyClient(
         QuickBIPollkeyConfig(
@@ -141,11 +161,16 @@ def fetch_final_results(report_id: str, workspace_id: str, tasks: list[dict], po
         )
     )
     payloads: list[dict] = []
-    # pollkey 与 task 需要严格一一对应，否则后面的 queryByPollKey 会串组件。
+    # ?? query ???????? queryByPollKey ????????????????
     for task, pollkey_payload in zip(tasks, pollkey_payloads, strict=True):
+        if is_query_result_payload(pollkey_payload):
+            payloads.append(pollkey_payload)
+            continue
+
         poll_key = (pollkey_payload.get("data") or {}).get("pollKey")
         if not poll_key:
             raise RuntimeError(f"pollKey missing for component {task['component_id']}")
+
         request_item = QueryByPollkeyRequest(
             component_id=task["component_id"],
             poll_key=poll_key,
