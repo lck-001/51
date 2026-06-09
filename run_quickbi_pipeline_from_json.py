@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent
-# 脚本放到 51 仓库后，模块目录还在上一级工程目录里，所以这里做一层回退查找。
+# 鑴氭湰鏀惧埌 51 浠撳簱鍚庯紝妯″潡鐩綍杩樺湪涓婁竴绾у伐绋嬬洰褰曢噷锛屾墍浠ヨ繖閲屽仛涓€灞傚洖閫€鏌ユ壘銆?
 PROJECT_DIR = BASE_DIR
 if not (PROJECT_DIR / "dashboard_id").exists():
     PROJECT_DIR = BASE_DIR.parent
@@ -25,7 +25,7 @@ COOKIE = (
     'cna=9ESgIt4fFHQCAQHLUMIaaKhs; aliyun_lang=zh; aliyun_site=CN; aliyun_country=CN; x_login_pk=727d621bebdd4479a5e8036a8bb5794e; x_login_pk=727d621bebdd4479a5e8036a8bb5794e; qbi_locale=zh-CN; qbi_locale=zh-CN; qbi_version=1; qbi_version=1; login_aliyunid_csrf=_csrf_tk_1858380977697032; login_aliyunid="data @ 51talk"; login_aliyunid_ticket=3SAW2yxnMCnjYw2452ZLYAoA.111EWZwDoggFsfvrV6qoCREnFRzmxuTH2b5XXjQz7McK25w4W1qWV28joExHZaTAAmHmLTF6CevwqBcdTDX7KRbDMm1hfAWbRs19d2Lte7vv7x4sTWkyXGPFHpxHKJVupXiCBQHGXyGnUiyhEUM6K8RELKwh8.2mWNaj2R3tSmsYgruLV8fLnJwG8XAcLVJkVrJCtVwRM3BbzwYppXWVQMRFrQvbtSrF; login_aliyunid_sc=3R5H3e3HY2c8gwLZuY5GmS7K.1115pJgwSWzyZ1zzCQudjPySGezPyosZfbCAajwfExkZdtgU.2mWNaj2qzWyKH95nPZehbyQ6QgmAUcUpr1bxov7gcHQAhReMfDuD1uQKrXRPn3L7Bv; login_aliyunid_pk=31734768; login_current_pk=235454981062774632; csrf_token=f35fe83b-c079-4560-8e89-0d6365a55aed; isg=BKqqAVhAtEKJYDgQM_AWYye8-xBMGy51ZE6LkzR8dPnrZ3YhFqoMhHiF9ZP7jKYN; tfstk=g35oB-t9mTJ7X3o4sDR7nu_qRa2APQOBXMhpvBKU3n-bRaQUFyVhyNvpLuORtij1xbILdQdHLGtXv_QF9e5HNsB-93EWtwS9tlET65Q5PdAUXlEau_YXTePpY-pyub3evlET6SQ5PBOUXwCrhMDDRn8y8blzoI8p0UuyLM-23F8t4BRFYr4DRn-eTBSegrYB0HReTMl7S4-Nt9f4fyFDvHloZsYkEhcpmXc3JUvkba-DlE14OLxNzncU2OSvyHxf_oeclGWP2Es3soANCifHQBVofUXVSI-J_W0BDpfcq9j8JvTcKw56NC0UaZAkqd5fqVcFbZbFBKfY75Oka3WpNw3g2Zfl2a1cJ2k2ZQBDI_Aa10-dHNfH-6ZQiGbF59Jct0jzUxkwM0hBuyCqdv9ylExtr3PRmMyM2nz0oA6BUETMfr4mdAJylUtgorD_mL8Xyxf..'
 )
 DEFAULT_WORKSPACE_ID = "f15abc53-cb27-4be5-a05b-8a68b3b58736"
-# 输入文件来自浏览器抓包导出的组件查询参数。
+# 杈撳叆鏂囦欢鏉ヨ嚜娴忚鍣ㄦ姄鍖呭鍑虹殑缁勪欢鏌ヨ鍙傛暟銆?
 INPUT_FILE = Path(r"C:\Users\lichengkang001\Desktop\olap_query_params.json")
 RESULT_DIR = BASE_DIR / "result"
 CSRF_TOKEN = extract_csrf_token(COOKIE)
@@ -47,11 +47,11 @@ def read_json_file(path: Path) -> object:
 
 
 def normalize_task(item: dict) -> dict:
-    # page_id 为空时，直接退回 report_id，避免抓包结果字段不完整导致任务无法分组。
+    # page_id 涓虹┖鏃讹紝鐩存帴閫€鍥?report_id锛岄伩鍏嶆姄鍖呯粨鏋滃瓧娈典笉瀹屾暣瀵艰嚧浠诲姟鏃犳硶鍒嗙粍銆?
     page_id = item.get("page_id") or item.get("report_id")
     workspace_id = item.get("workspace_id") or DEFAULT_WORKSPACE_ID
     component_type = item.get("component_type")
-    # 抓包结果里 component_type 经常是空字符串，这里按当前看板默认补成 66。
+    # 鎶撳寘缁撴灉閲?component_type 缁忓父鏄┖瀛楃涓诧紝杩欓噷鎸夊綋鍓嶇湅鏉块粯璁よˉ鎴?66銆?
     if component_type in ("", None):
         component_type = 66
     else:
@@ -77,7 +77,7 @@ def load_tasks_by_page(path: Path) -> dict[str, list[dict]]:
     if not isinstance(payload, list):
         raise ValueError("olap_query_params.json must contain a JSON array")
 
-    # 按 page_id 分组，后面一页一页执行并分别落盘。
+    # 鎸?page_id 鍒嗙粍锛屽悗闈竴椤典竴椤垫墽琛屽苟鍒嗗埆钀界洏銆?
     grouped: dict[str, list[dict]] = {}
     for raw_item in payload:
         if not isinstance(raw_item, dict):
@@ -102,7 +102,7 @@ def require_valid_cookie(page_id: str, workspace_id: str) -> None:
         fetch_dashboard(page_id=page_id, workspace_id=workspace_id)
     except Exception as exc:
         message = str(exc)
-        # 先用 dashboard 接口做登录态探活，避免后面跑到一半才发现 COOKIE 失效。
+        # 鍏堢敤 dashboard 鎺ュ彛鍋氱櫥褰曟€佹帰娲伙紝閬垮厤鍚庨潰璺戝埌涓€鍗婃墠鍙戠幇 COOKIE 澶辨晥銆?
         if is_cookie_invalid_error(message):
             raise RuntimeError(
                 "COOKIE is invalid or expired. Update COOKIE in run_quickbi_pipeline_from_json.py and retry."
@@ -112,9 +112,8 @@ def require_valid_cookie(page_id: str, workspace_id: str) -> None:
 
 def is_query_result_payload(payload: dict) -> bool:
     data = payload.get("data") or {}
-    if not data.get("normalResult"):
-        return False
-    return any(data.get(key) is not None for key in ("performanceInfo", "value", "axisResult", "oldQueryResult", "debugInfo"))
+    # 这里以 performanceInfo 是否存在作为最终结果判定，重点是取 sqlRecords 里的 SQL。
+    return data.get("performanceInfo") is not None
 
 
 def is_pollkey_only_payload(payload: dict) -> bool:
@@ -193,7 +192,7 @@ def build_output(page_id: str, workspace_id: str, tasks: list[dict], dashboard_p
 
 
 def resolve_runtime_workspace_id(page_id: str, tasks: list[dict]) -> tuple[str, dict]:
-    # 优先用抓包里带出的 workspace_id，再用 dashboard 返回值做最终纠正。
+    # 浼樺厛鐢ㄦ姄鍖呴噷甯﹀嚭鐨?workspace_id锛屽啀鐢?dashboard 杩斿洖鍊煎仛鏈€缁堢籂姝ｃ€?
     preferred_workspace_id = next((item["workspace_id"] for item in tasks if item.get("workspace_id")), DEFAULT_WORKSPACE_ID)
     dashboard_payload = fetch_dashboard(page_id=page_id, workspace_id=preferred_workspace_id)
     dashboard_data = dashboard_payload.get("data") or {}
@@ -203,14 +202,14 @@ def resolve_runtime_workspace_id(page_id: str, tasks: list[dict]) -> tuple[str, 
 
 def write_result(page_id: str, payload: dict) -> Path:
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
-    # 每个 page_id 单独输出一个结果文件，便于回看和重跑。
+    # 姣忎釜 page_id 鍗曠嫭杈撳嚭涓€涓粨鏋滄枃浠讹紝渚夸簬鍥炵湅鍜岄噸璺戙€?
     output_path = RESULT_DIR / f"{page_id}.json"
     output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return output_path
 
 
 def run_for_page(page_id: str, tasks: list[dict]) -> Path:
-    # 单页执行主链路：校验 COOKIE -> 取 workspace_id -> 拿 pollkey -> 拉最终结果 -> 落盘。
+    # 鍗曢〉鎵ц涓婚摼璺細鏍￠獙 COOKIE -> 鍙?workspace_id -> 鎷?pollkey -> 鎷夋渶缁堢粨鏋?-> 钀界洏銆?
     require_valid_cookie(page_id=page_id, workspace_id=tasks[0]["workspace_id"])
     workspace_id, dashboard_payload = resolve_runtime_workspace_id(page_id=page_id, tasks=tasks)
     pollkey_payloads = fetch_pollkeys(report_id=page_id, workspace_id=workspace_id, tasks=tasks)
@@ -236,7 +235,7 @@ def main() -> int:
     if not tasks_by_page:
         raise RuntimeError(f"no tasks found in {INPUT_FILE}")
 
-    # 支持一个输入文件里包含多个 page_id，逐页执行。
+    # 鏀寔涓€涓緭鍏ユ枃浠堕噷鍖呭惈澶氫釜 page_id锛岄€愰〉鎵ц銆?
     written_files: list[Path] = []
     for page_id, tasks in tasks_by_page.items():
         written_files.append(run_for_page(page_id=page_id, tasks=tasks))
