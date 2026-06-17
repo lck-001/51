@@ -1,0 +1,11 @@
+{
+  "workspace_id": "f15abc53-cb27-4be5-a05b-8a68b3b58736",
+  "page_id": "b9d30bba-ea87-48a3-a548-015911c19d46",
+  "storage_state": "quickbi_state.json",
+  "olap_params_file": "olap_query_params.json",
+  "result_file": "quickbi_sql_result.json",
+  "poll_attempts": 90,
+  "poll_interval_seconds": 1.0,
+  "wait_after_load_seconds": 20,
+  "tab_wait_seconds": 5
+}
