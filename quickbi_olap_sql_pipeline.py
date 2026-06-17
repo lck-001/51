@@ -258,8 +258,23 @@ def switch_to_preview(page) -> str:
 def get_tabs(page) -> list[dict[str, Any]]:
     raw = page.evaluate(
         """
-        () => JSON.stringify(Array.from(document.querySelectorAll('.story-builder-tab'))
-          .map((t, i) => ({idx: i, text: (t.textContent || '').trim().substring(0, 60)})))
+        () => {
+          const selectors = ['.story-builder-tab', '.bi-tabs-tab'];
+          for (const selector of selectors) {
+            const tabs = Array.from(document.querySelectorAll(selector))
+              .map((t, i) => ({
+                idx: i,
+                selector,
+                text: (t.textContent || '').trim().replace(/\\s+/g, ' ').substring(0, 60)
+              }))
+              .filter(t => t.text && !['🐱'].includes(t.text));
+            const uniqueTexts = new Set(tabs.map(t => t.text));
+            if (uniqueTexts.size > 1) {
+              return JSON.stringify(tabs);
+            }
+          }
+          return '[]';
+        }
         """
     )
     return json.loads(raw) if raw else []
@@ -267,8 +282,32 @@ def get_tabs(page) -> list[dict[str, Any]]:
 
 def wait_and_scroll(page, seconds: float) -> None:
     page.wait_for_timeout(int(seconds * 1000))
-    for y in range(0, 3001, 500):
-        page.evaluate("(value) => window.scrollTo(0, value)", y)
+    for _ in range(2):
+        page.evaluate(
+            """
+            () => {
+              window.scrollTo(0, document.body.scrollHeight);
+              const scrollables = Array.from(document.querySelectorAll('div,main,section'))
+                .filter(el => el.scrollHeight > el.clientHeight + 80);
+              for (const el of scrollables) {
+                el.scrollTop = el.scrollHeight;
+              }
+            }
+            """
+        )
+        page.wait_for_timeout(500)
+        page.evaluate(
+            """
+            () => {
+              window.scrollTo(0, 0);
+              const scrollables = Array.from(document.querySelectorAll('div,main,section'))
+                .filter(el => el.scrollHeight > el.clientHeight + 80);
+              for (const el of scrollables) {
+                el.scrollTop = 0;
+              }
+            }
+            """
+        )
         page.wait_for_timeout(300)
 
 
@@ -332,8 +371,16 @@ def capture_olap_params(config: Config) -> list[dict[str, Any]]:
             current_trigger = f"tab:{tab.get('text', '')[:30]}"
             print(f"  点击 Tab: {tab.get('text')}", flush=True)
             page.evaluate(
-                "(idx) => { const tab = document.querySelectorAll('.story-builder-tab')[idx]; if (tab) tab.click(); }",
-                tab.get("idx"),
+                """
+                (tab) => {
+                  const target = document.querySelectorAll(tab.selector)[tab.idx];
+                  if (target) {
+                    target.scrollIntoView({block: 'center', inline: 'center'});
+                    target.click();
+                  }
+                }
+                """,
+                tab,
             )
             wait_and_scroll(page, config.tab_wait_seconds)
 
