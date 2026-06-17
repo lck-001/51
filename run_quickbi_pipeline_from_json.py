@@ -29,6 +29,8 @@ from quickbi_query_by_pollkey_client import QueryByPollkeyRequest, QuickBIQueryB
 
 DEFAULT_CONFIG_FILE = BASE_DIR / "quickbi_pipeline_config.local.json"
 DEFAULT_OUTPUT_MODE = "sql"
+DEFAULT_POLL_ATTEMPTS = 90
+DEFAULT_POLL_INTERVAL_SECONDS = 1.0
 OUTPUT_MODES = {"full", "sql", "summary"}
 COOKIE_VALUE_SAFE_CHARS = "!#$%&'()*+-./:<=>?@[]^_`{|}~"
 
@@ -42,8 +44,8 @@ class RuntimeConfig:
     default_workspace_id: str
     output_mode: str = DEFAULT_OUTPUT_MODE
     continue_on_error: bool = True
-    poll_attempts: int = 20
-    poll_interval_seconds: float = 1.0
+    poll_attempts: int = DEFAULT_POLL_ATTEMPTS
+    poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS
     verbose: bool = False
 
 
@@ -236,8 +238,8 @@ def load_runtime_config(args: argparse.Namespace) -> RuntimeConfig:
         default_workspace_id=default_workspace_id,
         output_mode=output_mode,
         continue_on_error=bool(payload.get("continue_on_error", True)),
-        poll_attempts=int(payload.get("poll_attempts", 20)),
-        poll_interval_seconds=float(payload.get("poll_interval_seconds", 1.0)),
+        poll_attempts=int(payload.get("poll_attempts", DEFAULT_POLL_ATTEMPTS)),
+        poll_interval_seconds=float(payload.get("poll_interval_seconds", DEFAULT_POLL_INTERVAL_SECONDS)),
         verbose=bool(payload.get("verbose", False)),
     )
     if args.verbose:
@@ -450,7 +452,10 @@ def wait_until_sql_records(
 
     if last_payload is None:
         raise RuntimeError("queryByPollKey returned no payload")
-    return last_payload
+    raise RuntimeError(
+        "queryByPollKey did not return SQL records after "
+        f"{config.poll_attempts} attempts for component {request_item.component_id}"
+    )
 
 
 def extract_sql_records(component_result: dict[str, Any]) -> list[dict[str, Any]]:

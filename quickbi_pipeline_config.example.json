@@ -5,7 +5,7 @@
   "default_workspace_id": "f15abc53-cb27-4be5-a05b-8a68b3b58736",
   "output_mode": "sql",
   "continue_on_error": true,
-  "poll_attempts": 20,
+  "poll_attempts": 90,
   "poll_interval_seconds": 1.0,
   "verbose": false
 }
