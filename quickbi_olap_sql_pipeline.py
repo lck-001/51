@@ -282,33 +282,41 @@ def get_tabs(page) -> list[dict[str, Any]]:
 
 def wait_and_scroll(page, seconds: float) -> None:
     page.wait_for_timeout(int(seconds * 1000))
-    for _ in range(2):
-        page.evaluate(
-            """
-            () => {
-              window.scrollTo(0, document.body.scrollHeight);
-              const scrollables = Array.from(document.querySelectorAll('div,main,section'))
-                .filter(el => el.scrollHeight > el.clientHeight + 80);
-              for (const el of scrollables) {
-                el.scrollTop = el.scrollHeight;
-              }
+    page.evaluate(
+        """
+        async () => {
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const scrollElement = async (el) => {
+            const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+            const step = Math.max(400, Math.floor(el.clientHeight * 0.75));
+            for (let top = 0; top <= maxTop; top += step) {
+              el.scrollTop = top;
+              await sleep(250);
             }
-            """
-        )
-        page.wait_for_timeout(500)
-        page.evaluate(
-            """
-            () => {
-              window.scrollTo(0, 0);
-              const scrollables = Array.from(document.querySelectorAll('div,main,section'))
-                .filter(el => el.scrollHeight > el.clientHeight + 80);
-              for (const el of scrollables) {
-                el.scrollTop = 0;
-              }
-            }
-            """
-        )
-        page.wait_for_timeout(300)
+            el.scrollTop = maxTop;
+            await sleep(300);
+            el.scrollTop = 0;
+            await sleep(150);
+          };
+
+          window.scrollTo(0, 0);
+          await sleep(200);
+          for (let y = 0; y <= document.body.scrollHeight; y += 600) {
+            window.scrollTo(0, y);
+            await sleep(250);
+          }
+
+          const scrollables = Array.from(document.querySelectorAll('div,main,section'))
+            .filter(el => el.scrollHeight > el.clientHeight + 120)
+            .sort((a, b) => b.scrollHeight - a.scrollHeight)
+            .slice(0, 12);
+          for (const el of scrollables) {
+            await scrollElement(el);
+          }
+          window.scrollTo(0, 0);
+        }
+        """
+    )
 
 
 def capture_olap_params(config: Config) -> list[dict[str, Any]]:
