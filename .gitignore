@@ -1,7 +1,5 @@
 __pycache__/
 *.py[cod]
-quickbi_pipeline_config.local.json
-result/
 quickbi_state.json
 olap_query_params.json
 quickbi_sql_result.json
