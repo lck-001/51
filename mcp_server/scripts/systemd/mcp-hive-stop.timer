@@ -1,0 +1,10 @@
+[Unit]
+Description=Stop MCP Hive services at 01:00
+
+[Timer]
+OnCalendar=*-*-* 01:00:00
+Persistent=true
+Unit=mcp-hive-stop.service
+
+[Install]
+WantedBy=timers.target

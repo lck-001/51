@@ -1,0 +1,20 @@
+[
+  {
+    "database": "ads",
+    "table": "ads_cn_user_profile_sla_di",
+    "domain": "cn",
+    "priority": "P0",
+    "asset_type": "sla_result_table",
+    "recommended": true,
+    "description": "境内用户画像 SLA 关键结果表示例，请替换为真实表。"
+  },
+  {
+    "database": "ads",
+    "table": "ads_oversea_user_profile_sla_di",
+    "domain": "oversea",
+    "priority": "P0",
+    "asset_type": "sla_result_table",
+    "recommended": true,
+    "description": "境外用户画像 SLA 关键结果表示例，请替换为真实表。"
+  }
+]

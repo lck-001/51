@@ -1,0 +1,10 @@
+[Unit]
+Description=Start MCP Hive services at 12:00
+
+[Timer]
+OnCalendar=*-*-* 12:00:00
+Persistent=true
+Unit=mcp-hive-gateway.service
+
+[Install]
+WantedBy=timers.target

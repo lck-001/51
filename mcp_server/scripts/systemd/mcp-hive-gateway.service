@@ -1,0 +1,15 @@
+[Unit]
+Description=MCP Hive Query Gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mcp-hive/gateway
+ExecStart=/usr/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8088
+Restart=always
+RestartSec=5
+User=mcp
+Group=mcp
+
+[Install]
+WantedBy=multi-user.target

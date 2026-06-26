@@ -1,0 +1,14 @@
+[
+  {
+    "name": "cn_user_profile",
+    "domain": "cn",
+    "asset_type": "profile_asset",
+    "description": "境内用户画像资产示例。"
+  },
+  {
+    "name": "oversea_user_profile",
+    "domain": "oversea",
+    "asset_type": "profile_asset",
+    "description": "境外用户画像资产示例。"
+  }
+]

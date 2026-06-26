@@ -1,0 +1,6 @@
+[Unit]
+Description=Stop MCP Hive Query Gateway
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl stop mcp-hive-gateway.service

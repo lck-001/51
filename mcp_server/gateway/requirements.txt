@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+pyyaml
+sqlglot
+pyhive[hive]
+thrift
+requests

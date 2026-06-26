@@ -1,0 +1,75 @@
+server:
+  host: "0.0.0.0"
+  port: 8088
+  timezone: "Asia/Shanghai"
+  service_window:
+    start: "12:00"
+    end: "01:00"
+  session_ttl_seconds: 7200
+
+hive:
+  host: "hiveserver2.internal"
+  port: 10000
+  auth: "LDAP"
+  database: "default"
+  queue: "ai_mcp_query"
+  connect_timeout_seconds: 10
+  query_timeout_seconds: 300
+
+yarn:
+  resource_manager_url: ""
+
+limits:
+  global_concurrency: 20
+  per_user_concurrency: 2
+  per_user_submit_per_minute: 6
+  default_limit: 500
+  max_limit: 1000
+  max_result_bytes: 10485760
+  max_sql_length: 20000
+  max_asset_hits: 20
+
+assets:
+  # Production Linux directory examples:
+  # ddl_dirs:
+  #   - "/home/dev/51dolphin_git/dolphinscheduler_ddl"
+  #   - "/home/dev/51dolphin_git/ovs_dolphinscheduler_ddl/ovs_hive_ddl"
+  # dml_dirs:
+  #   - "/home/dev/51dolphin_git/dolphinscheduler_code"
+  #   - "/home/dev/51dolphin_git/ovs_dolphinscheduler_code"
+  # profile_dirs:
+  #   - "/home/dev/51dolphin_git/lingyun_code"
+  ddl_dirs: []
+  dml_dirs: []
+  profile_dirs: []
+  scan_extensions:
+    - ".sql"
+    - ".sh"
+    - ".md"
+    - ".txt"
+    - ".json"
+  max_file_bytes: 1048576
+  max_snippet_chars: 4000
+  directory_cache_ttl_seconds: 300
+  parsed_path: "../assets/parsed"
+  sla_table_file: "../assets/parsed/sla_tables.json"
+  profile_asset_file: "../assets/parsed/profile_assets.json"
+  table_file: "../assets/parsed/tables.jsonl"
+  etl_file: "../assets/parsed/etl_lineage.jsonl"
+
+security:
+  require_partition_filter: true
+  partition_columns:
+    - dt
+    - biz_date
+    - ds
+  sensitive_columns:
+    - phone
+    - mobile
+    - id_card
+    - email
+    - device_id
+    - imei
+    - idfa
+  blocked_databases:
+    - ods_raw_sensitive
