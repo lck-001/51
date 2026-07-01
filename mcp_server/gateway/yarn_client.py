@@ -11,6 +11,7 @@ class YarnClient:
         return bool(self.config.get("resource_manager_url"))
 
     def kill_application(self, application_id: str) -> dict[str, Any]:
+        # 只供服务器运维脚本调用，不在 Gateway HTTP API 中直接暴露，避免普通用户误杀任务。
         if not self.enabled():
             return {"killed": False, "reason": "yarn resource manager is not configured"}
         base_url = self.config["resource_manager_url"].rstrip("/")

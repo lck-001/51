@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart MCP Hive Query Gateway after failed health check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart mcp-hive-gateway.service

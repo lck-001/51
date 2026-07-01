@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -11,6 +14,13 @@ class AssetIndex:
         self.scan_extensions = set(assets.get("scan_extensions", [".sql", ".sh", ".md", ".txt", ".json"]))
         self.max_file_bytes = int(assets.get("max_file_bytes", 1048576))
         self.max_snippet_chars = int(assets.get("max_snippet_chars", 4000))
+        self.max_scan_files = int(assets.get("max_scan_files", 20000))
+        self.excluded_dirs = set(
+            assets.get(
+                "excluded_dirs",
+                [".git", ".idea", "__pycache__", ".venv", "venv", "node_modules", "target", "dist", "build"],
+            )
+        )
         self.directory_cache_ttl_seconds = int(assets.get("directory_cache_ttl_seconds", 300))
         self._directory_cache: list[dict[str, Any]] | None = None
         self._directory_cache_expires_at = 0.0
@@ -70,6 +80,7 @@ class AssetIndex:
         return items
 
     def _scan_directory_assets(self) -> list[dict[str, Any]]:
+        # 目录扫描会读取大量 DDL/DML 文件，使用短 TTL 缓存减少每次资产搜索的磁盘开销。
         now = time.time()
         if self._directory_cache is not None and self._directory_cache_expires_at > now:
             return self._directory_cache
@@ -83,27 +94,35 @@ class AssetIndex:
 
     def _scan_dirs(self, dirs: list[Path], asset_type: str) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
+        scanned = 0
         for base_dir in dirs:
             if not base_dir.exists() or not base_dir.is_dir():
                 continue
-            for path in base_dir.rglob("*"):
-                if not path.is_file() or path.suffix.lower() not in self.scan_extensions:
-                    continue
-                try:
-                    if path.stat().st_size > self.max_file_bytes:
+            for root, dirnames, filenames in os.walk(base_dir):
+                dirnames[:] = [dirname for dirname in dirnames if dirname not in self.excluded_dirs]
+                root_path = Path(root)
+                for filename in filenames:
+                    if scanned >= self.max_scan_files:
+                        return items
+                    path = root_path / filename
+                    if path.suffix.lower() not in self.scan_extensions:
                         continue
-                    text = path.read_text(encoding="utf-8", errors="ignore")
-                except OSError:
-                    continue
-                items.append(
-                    {
-                        "asset_type": asset_type,
-                        "path": str(path),
-                        "name": path.name,
-                        "relative_path": str(path.relative_to(base_dir)),
-                        "snippet": text[: self.max_snippet_chars],
-                    }
-                )
+                    scanned += 1
+                    try:
+                        if path.stat().st_size > self.max_file_bytes:
+                            continue
+                        text = path.read_text(encoding="utf-8", errors="ignore")
+                    except OSError:
+                        continue
+                    items.append(
+                        {
+                            "asset_type": asset_type,
+                            "path": str(path),
+                            "name": path.name,
+                            "relative_path": str(path.relative_to(base_dir)),
+                            "snippet": text[: self.max_snippet_chars],
+                        }
+                    )
         return items
 
     def _read_json(self, path: Path, default: Any) -> Any:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -11,10 +13,19 @@ class LogoutRequest(BaseModel):
 
 
 class SqlRequest(BaseModel):
-    session_id: str
+    session_id: str | None = None
     sql: str
     limit: int | None = None
     timeout_seconds: int | None = None
+
+
+class SessionRequest(BaseModel):
+    session_id: str | None = None
+
+
+class DatabaseRequest(BaseModel):
+    session_id: str | None = None
+    database: str = Field(min_length=1, max_length=128)
 
 
 class AssetSearchRequest(BaseModel):

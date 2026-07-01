@@ -1,0 +1,9 @@
+[Unit]
+Description=Health check MCP Hive Query Gateway and restart on failure
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/mcp-hive/gateway.env
+ExecStart=/opt/mcp-hive/scripts/healthcheck.sh
+ExecStartPost=/bin/true
+OnFailure=mcp-hive-restart.service

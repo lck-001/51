@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
@@ -8,15 +10,15 @@ from fastapi import FastAPI, HTTPException
 from asset_index import AssetIndex
 from config import CONFIG
 from hive_client import HiveClient
-from models import AssetSearchRequest, LoginRequest, LogoutRequest, SqlRequest, TableRequest
+from models import AssetSearchRequest, DatabaseRequest, LoginRequest, LogoutRequest, SessionRequest, SqlRequest, TableRequest
 from rate_limiter import ConcurrencyLimiter, RateLimiter
 from service_window import is_in_service_window
 from session_store import SessionStore
 from sql_guard import SqlGuard
-from yarn_client import YarnClient
 
 app = FastAPI(title="MCP Hive Query Gateway")
 
+# 这些对象在进程启动时初始化，生产环境修改 config.yaml 后需要重启服务才会生效。
 sessions = SessionStore(ttl_seconds=int(CONFIG["server"]["session_ttl_seconds"]))
 rate_limiter = RateLimiter(per_user_per_minute=int(CONFIG["limits"]["per_user_submit_per_minute"]))
 concurrency = ConcurrencyLimiter(
@@ -26,12 +28,12 @@ concurrency = ConcurrencyLimiter(
 sql_guard = SqlGuard(CONFIG)
 assets = AssetIndex(CONFIG)
 hive_client = HiveClient(CONFIG)
-yarn_client = YarnClient(CONFIG)
 executor = ThreadPoolExecutor(max_workers=int(CONFIG["limits"]["global_concurrency"]))
 
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
+    """给负载均衡、systemd healthcheck 和 MCP 客户端做健康探测。"""
     return {
         "status": "ok",
         "service_window_open": is_in_service_window(CONFIG),
@@ -43,6 +45,7 @@ def health() -> dict[str, Any]:
 
 @app.post("/api/login")
 def login(req: LoginRequest) -> dict[str, Any]:
+    # 登录只生成网关 session；真正 Hive 查询仍会在执行 SQL 时使用该用户身份连接 Hive。
     hive_client.test_connection(req.username, req.password)
     session = sessions.create(req.username, req.password)
     return {
@@ -81,13 +84,28 @@ def get_table(req: TableRequest) -> dict[str, Any]:
     return item
 
 
+@app.post("/api/hive/databases")
+def list_databases(req: SessionRequest) -> dict[str, Any]:
+    username, password = _resolve_credentials(req.session_id)
+    return {"databases": hive_client.list_databases(username, password)}
+
+
+@app.post("/api/hive/tables")
+def list_tables(req: DatabaseRequest) -> dict[str, Any]:
+    username, password = _resolve_credentials(req.session_id)
+    try:
+        return {"database": req.database, "tables": hive_client.list_tables(username, password, req.database)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/sql/validate")
 def validate_sql(req: SqlRequest) -> dict[str, Any]:
-    session = _require_session(req.session_id)
+    username, _ = _resolve_credentials(req.session_id)
     result = sql_guard.validate(req.sql, req.limit)
     return {
         "valid": True,
-        "username": session.username,
+        "username": username,
         "normalized_sql": result.normalized_sql,
         "warnings": result.warnings,
     }
@@ -95,13 +113,14 @@ def validate_sql(req: SqlRequest) -> dict[str, Any]:
 
 @app.post("/api/sql/execute")
 def execute_sql(req: SqlRequest) -> dict[str, Any]:
+    # 查询执行入口必须先过服务窗口、限流、并发和 SQL 只读校验。
     if not is_in_service_window(CONFIG):
         raise HTTPException(status_code=403, detail="service window is closed")
 
-    session = _require_session(req.session_id)
-    if not rate_limiter.allow(session.username):
+    username, password = _resolve_credentials(req.session_id)
+    if not rate_limiter.allow(username):
         raise HTTPException(status_code=429, detail="rate limit exceeded")
-    if not concurrency.acquire(session.username):
+    if not concurrency.acquire(username):
         raise HTTPException(status_code=429, detail="concurrency limit exceeded")
 
     query_id = "q_" + uuid.uuid4().hex
@@ -115,8 +134,8 @@ def execute_sql(req: SqlRequest) -> dict[str, Any]:
         )
         future = executor.submit(
             hive_client.execute,
-            username=session.username,
-            password=session.password,
+            username=username,
+            password=password,
             sql=validation.normalized_sql,
             max_rows=max_rows,
         )
@@ -134,12 +153,7 @@ def execute_sql(req: SqlRequest) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
-        concurrency.release(session.username)
-
-
-@app.post("/api/admin/kill-yarn-application/{application_id}")
-def kill_yarn_application(application_id: str) -> dict[str, Any]:
-    return yarn_client.kill_application(application_id)
+        concurrency.release(username)
 
 
 def _require_session(session_id: str):
@@ -147,3 +161,16 @@ def _require_session(session_id: str):
     if not session:
         raise HTTPException(status_code=401, detail="invalid or expired session")
     return session
+
+
+def _resolve_credentials(session_id: str | None) -> tuple[str, str]:
+    if session_id:
+        session = _require_session(session_id)
+        return session.username, session.password
+    configured = hive_client.configured_credentials()
+    if configured:
+        return configured
+    raise HTTPException(
+        status_code=401,
+        detail="missing session_id and no HIVE_USER/HIVE_PASSWORD configured",
+    )

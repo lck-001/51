@@ -5,6 +5,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/mcp-hive/gateway
+# 可选环境文件，建议在这里放 HIVE_HOST、HIVE_QUEUE、HIVE_GATEWAY_CONFIG 等生产配置。
+EnvironmentFile=-/etc/mcp-hive/gateway.env
 ExecStart=/usr/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8088
 Restart=always
 RestartSec=5

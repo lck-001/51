@@ -3,6 +3,13 @@ uvicorn[standard]
 pydantic
 pyyaml
 sqlglot
-pyhive[hive]
+# Keep PyHive on the pure Python SASL path. Do not use pyhive[hive] or
+# install the native "sasl" package unless the server has Python.h and
+# libsasl2 development headers.
+pyhive
 thrift
+thrift-sasl
+pure-sasl
 requests
+tzdata
+mcp[cli]

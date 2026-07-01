@@ -1,60 +1,132 @@
-# MCP Hive Query Gateway
+# 51talk Hive MCP 查询服务
 
-这是公司内网 MCP + Hive 自然语言查询方案的落地骨架。
+这是 51talk 内部使用的 Hive MCP 查询服务。它把 Hive 查询能力包装成 MCP 工具，并通过服务端统一做 SQL 安全校验、限流、服务窗口和 Hive 连接管理。
 
-## 目录
+## 目录说明
 
-- `mcp_hive_technical_solution.md`: 完整技术方案。
-- `gateway/`: Python FastAPI Hive Query Gateway。
-- `assets/parsed/`: DDL、DML、SLA 关键表、用户画像资产的结构化索引示例。
-- `toolbox/`: Google MCP Toolbox 配置样例。
-- `scripts/`: 运维脚本样例。
+```text
+gateway/                 FastAPI Hive Gateway，部署在企业内网服务器
+assets/parsed/           表、SLA、画像、血缘等解析后的资产索引
+packages/hive-mcp-server 员工 MCP 客户端通过 npx 启动的内部 npm 包
+scripts/systemd/         Linux 服务器 systemd 托管示例
+scripts/healthcheck.sh   Linux 健康检查脚本，配合 systemd timer 使用
+scripts/healthcheck.ps1  Windows 本地调试健康检查脚本
+docs/                    企业接入和运维说明
+```
 
-## 本地启动 Gateway
+## 服务端启动
 
-```powershell
-cd gateway
+```bash
+cd /opt/mcp-hive/gateway
 python -m pip install -r requirements.txt
 python -m uvicorn app:app --host 0.0.0.0 --port 8088
 ```
 
 健康检查：
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8088/api/health
+```bash
+curl http://127.0.0.1:8088/api/health
 ```
 
-## 生产落地步骤
+生产环境建议使用 `scripts/systemd/mcp-hive-gateway.service` 托管。
 
-1. 修改 `gateway/config.yaml` 中 HiveServer2、认证、队列、限制参数。
-2. 在 `gateway/config.yaml` 配置服务器上的 DDL、DML、用户画像目录；SLA 关键表继续维护为 JSON。
-3. 部署 `gateway` 到内网 Linux 服务器。
-4. 部署 Google MCP Toolbox，并让 tools 调用 Gateway API。
-5. 配置 systemd 和 timer，控制每天 12:00 到次日 01:00 服务窗口。
-6. Codex / Hermes / Trea 通过 MCP HTTP endpoint 接入。
+## 自动拉起
 
-服务器目录配置示例：
+`mcp-hive-gateway.service` 已配置：
+
+```text
+Restart=always
+RestartSec=5
+```
+
+进程异常退出时，systemd 会自动拉起。
+
+如果进程没退出但 HTTP 健康检查异常，可以启用健康检查 timer：
+
+```bash
+sudo cp scripts/healthcheck.sh /opt/mcp-hive/scripts/healthcheck.sh
+sudo chmod +x /opt/mcp-hive/scripts/healthcheck.sh
+sudo cp scripts/systemd/mcp-hive-*.service /etc/systemd/system/
+sudo cp scripts/systemd/mcp-hive-*.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mcp-hive-gateway.service
+sudo systemctl enable --now mcp-hive-healthcheck.timer
+```
+
+## 超时任务查杀
+
+普通 MCP 和 HTTP 查询接口不暴露 YARN kill 能力，避免员工误杀任务。
+
+如果确实需要运维人员查杀超大或超时任务，先在 `gateway/config.yaml` 配置：
 
 ```yaml
-assets:
-  ddl_dirs:
-    - "/home/dev/51dolphin_git/dolphinscheduler_ddl"
-    - "/home/dev/51dolphin_git/ovs_dolphinscheduler_ddl/ovs_hive_ddl"
-  dml_dirs:
-    - "/home/dev/51dolphin_git/dolphinscheduler_code"
-    - "/home/dev/51dolphin_git/ovs_dolphinscheduler_code"
-  profile_dirs:
-    - "/home/dev/51dolphin_git/lingyun_code"
-  sla_table_file: "../assets/parsed/sla_tables.json"
+yarn:
+  resource_manager_url: "http://yarn-rm.internal:8088"
 ```
 
-在线检索会递归扫描这些目录下的 `.sql/.sh/.md/.txt/.json` 文件，并按 `max_file_bytes` 和 `max_snippet_chars` 截断，避免一次性把大文件塞给模型。扫描结果会按 `directory_cache_ttl_seconds` 在内存缓存，避免每次提问都刷文件目录。生产高并发时建议再增加离线索引任务，把扫描结果落到 `assets/parsed/*.jsonl`。
+然后在服务器上执行：
 
-## 重要安全边界
+```bash
+python scripts/kill_yarn_application.py application_1710000000000_12345
+```
 
-- Hive 地址内置在服务端。
-- 客户用户名密码只通过登录接口传入并临时保存在服务端会话，不写日志。
-- SQL 只允许 `SELECT` 或 `WITH SELECT`。
-- 默认补 `LIMIT`，限制最大返回行数。
-- 非服务窗口拒绝执行 SQL。
-- 并发、QPS、SQL 长度、结果集大小都在 Gateway 统一控制。
+## 核心配置
+
+服务端默认读取：
+
+```text
+gateway/config.yaml
+```
+
+也可以通过环境变量指定其他配置文件：
+
+```bash
+export HIVE_GATEWAY_CONFIG=/opt/mcp-hive/gateway/config.prod.yaml
+```
+
+## 员工 MCP 客户端配置
+
+统一使用下面这一种配置方式，把 Hive 用户名和密码直接写入 MCP 配置的 `env`：
+
+```json
+{
+  "mcpServers": {
+    "company-hive": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@51talk/hive-mcp-server",
+        "--stdio"
+      ],
+      "env": {
+        "HIVE_GATEWAY_URL": "http://mcp-hive.internal:8088",
+        "HIVE_USER": "请替换为我的 Hive 用户名",
+        "HIVE_PASSWORD": "请替换为我的 Hive 密码"
+      }
+    }
+  }
+}
+```
+
+## 安全边界
+
+Gateway 服务端会统一执行这些限制：
+
+- 只允许 `SELECT` / `WITH SELECT`
+- 阻断 `INSERT`、`UPDATE`、`DELETE`、`DROP`、`ALTER`、`CREATE`、`TRUNCATE`
+- 禁止多语句
+- 自动补充或限制 `LIMIT`
+- 控制服务窗口、用户频率、用户并发和全局并发
+- 支持敏感库阻断
+
+员工客户端是否弹出 `Always allow` 是 MCP 客户端权限机制，不由 Gateway 服务端控制。
+
+## npm 包发布
+
+```bash
+cd packages/hive-mcp-server
+npm publish --registry http://your-internal-npm-registry
+```
+
+员工机器如果默认 npm registry 不是企业源，需要配置 npm registry，否则 `npx @51talk/hive-mcp-server` 拉不到包。
+

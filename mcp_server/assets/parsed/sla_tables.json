@@ -1,20 +1,290 @@
 [
   {
-    "database": "ads",
-    "table": "ads_cn_user_profile_sla_di",
-    "domain": "cn",
-    "priority": "P0",
-    "asset_type": "sla_result_table",
-    "recommended": true,
-    "description": "境内用户画像 SLA 关键结果表示例，请替换为真实表。"
-  },
-  {
-    "database": "ads",
-    "table": "ads_oversea_user_profile_sla_di",
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_dim_user_base",
     "domain": "oversea",
     "priority": "P0",
-    "asset_type": "sla_result_table",
+    "asset_type": "ovs_sla_result_table",
     "recommended": true,
-    "description": "境外用户画像 SLA 关键结果表示例，请替换为真实表。"
+    "description": "海外-学员维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_staff_dim_staff_base",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "ovs_sla_result_table",
+    "recommended": true,
+    "description": "海外-员工维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_dim_channel",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "ovs_sla_result_table",
+    "recommended": true,
+    "description": "海外-学员渠道维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_fact_user_assets",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "海外-学员财富事实表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_dim_user_dispatch",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "ovs_sla_result_table",
+    "recommended": true,
+    "description": "海外-学员与销售关系维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_teacher_dim_teacher_base",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "ovs_sla_result_table",
+    "recommended": true,
+    "description": "海外-老师维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_fact_appoint",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "海外-约课明细事实表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_fact_appoint_ft",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "海外-体验课约课明细事实表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_fact_user_order",
+    "domain": "oversea",
+    "priority": "P0",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "海外-订单明细事实表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_fact_refunds",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "海外-退费明细事实表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dw_user_dim_user_call",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "ovs_sla_result_table",
+    "recommended": true,
+    "description": "海外-外呼维度表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dm_stdt_tot_uvc_d",
+    "domain": "oversea",
+    "priority": "P0",
+    "asset_type": "wide_table",
+    "recommended": true,
+    "description": "海外-学员宽表（统一视图）"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dm_ord_tot_uvc_d",
+    "domain": "oversea",
+    "priority": "P0",
+    "asset_type": "wide_table",
+    "recommended": true,
+    "description": "海外-订单统一视图"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dm_crs_ft_prfm_dtl_d",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "海外-体验课明细表"
+  },
+  {
+    "database": "ovs_dw",
+    "table": "ovs_dm_crs_rglr_prfm_dtl_d",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "海外-付费课明细表"
+  },
+  {
+    "database": "ovs_app",
+    "table": "ovs_app_stdt_label_all",
+    "domain": "oversea",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "海外-学员标签表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_dim_user_base",
+    "domain": "cn",
+    "priority": "P0",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-学员维度表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_staff_dim_staff_base",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-员工维度表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_dim_channel",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-学员渠道维度表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_fact_user_assets",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "国内-学员财富事实表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_dim_user_dispatch",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-学员与销售关系维度表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_teacher_dim_teacher_base",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-老师维度表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_fact_appoint",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "国内-约课明细事实表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_fact_appoint_ft",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "国内-体验课约课明细事实表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_fact_user_order",
+    "domain": "cn",
+    "priority": "P0",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "国内-订单明细事实表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_fact_refunds",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "fact_table",
+    "recommended": true,
+    "description": "国内-退费明细事实表"
+  },
+  {
+    "database": "dw",
+    "table": "dw_user_dim_user_call",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "dimension_table",
+    "recommended": true,
+    "description": "国内-外呼维度表"
+  },
+  {
+    "database": "dm",
+    "table": "dm_stdt_tot_uvc_d",
+    "domain": "cn",
+    "priority": "P0",
+    "asset_type": "wide_table",
+    "recommended": true,
+    "description": "国内-学员宽表（统一视图）"
+  },
+  {
+    "database": "dm",
+    "table": "dm_ord_tot_uvc_d",
+    "domain": "cn",
+    "priority": "P0",
+    "asset_type": "wide_table",
+    "recommended": true,
+    "description": "国内-订单统一视图"
+  },
+  {
+    "database": "dm",
+    "table": "dm_crs_ft_prfm_dtl_d",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "国内-体验课明细表"
+  },
+  {
+    "database": "dm",
+    "table": "dm_crs_rglr_prfm_dtl_d",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "国内-付费课明细表"
+  },
+  {
+    "database": "app",
+    "table": "app_stdt_label_all",
+    "domain": "cn",
+    "priority": "P1",
+    "asset_type": "detail_table",
+    "recommended": true,
+    "description": "国内-学员标签表"
   }
 ]

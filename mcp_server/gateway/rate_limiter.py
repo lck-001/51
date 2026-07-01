@@ -11,6 +11,7 @@ class RateLimiter:
 
     def allow(self, username: str) -> bool:
         with self._lock:
+            # 滑动窗口限流：按用户统计最近 60 秒提交次数。
             now = time.time()
             window_start = now - 60
             events = self._events[username]
@@ -32,6 +33,7 @@ class ConcurrencyLimiter:
 
     def acquire(self, username: str) -> bool:
         with self._lock:
+            # 双层并发保护：全局保护 Hive 集群，单用户保护公平性。
             if self.active_global >= self.global_limit:
                 return False
             if self.active_by_user[username] >= self.per_user_limit:

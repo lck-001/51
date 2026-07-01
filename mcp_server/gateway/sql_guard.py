@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 import sqlglot
@@ -33,6 +35,7 @@ class SqlGuard:
         self.security = config["security"]
 
     def validate(self, sql: str, requested_limit: int | None = None) -> SqlValidationResult:
+        # 服务端永远做最终 SQL 安全校验，不能只依赖 MCP 客户端提示词或工具描述。
         cleaned = sql.strip().rstrip(";").strip()
         if len(cleaned) > int(self.limits["max_sql_length"]):
             raise ValueError("SQL exceeds max length")
@@ -75,6 +78,7 @@ class SqlGuard:
         )
 
     def _ensure_limit(self, sql: str, requested_limit: int | None) -> str:
+        # 没有 LIMIT 的查询统一包一层，避免员工或模型误扫全表。
         default_limit = int(self.limits["default_limit"])
         max_limit = int(self.limits["max_limit"])
         effective_limit = min(requested_limit or default_limit, max_limit)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run MCP Hive Query Gateway health check every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=mcp-hive-healthcheck.service
+
+[Install]
+WantedBy=timers.target

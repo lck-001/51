@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import uuid
 from dataclasses import dataclass
@@ -15,6 +17,7 @@ class Session:
 
 class SessionStore:
     def __init__(self, ttl_seconds: int) -> None:
+        # session 只存在内存中；多实例部署时需要替换为 Redis 等共享存储。
         self.ttl_seconds = ttl_seconds
         self._sessions: dict[str, Session] = {}
         self._lock = Lock()

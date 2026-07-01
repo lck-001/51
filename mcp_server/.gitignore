@@ -4,3 +4,8 @@ __pycache__/
 .venv/
 venv/
 *.log
+*.credentials.json
+.mcp_hive_credentials.json
+.npm-cache/
+*.tgz
+.env
