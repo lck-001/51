@@ -1,0 +1,330 @@
+[
+  {
+    "id": "m01",
+    "title": "第一次打开",
+    "group": "开始与材料",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m01.png"
+  },
+  {
+    "id": "m02",
+    "title": "学习首页与教练",
+    "group": "开始与材料",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m02.png"
+  },
+  {
+    "id": "m03",
+    "title": "我的材料",
+    "group": "开始与材料",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m03.png"
+  },
+  {
+    "id": "m04",
+    "title": "添加学习材料",
+    "group": "开始与材料",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m04.png"
+  },
+  {
+    "id": "m05",
+    "title": "处理前确认",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m05.png"
+  },
+  {
+    "id": "m06",
+    "title": "说一段素材",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m06.png"
+  },
+  {
+    "id": "m07",
+    "title": "提取内容核对",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m07.png"
+  },
+  {
+    "id": "m08",
+    "title": "调整学习单元",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m08.png"
+  },
+  {
+    "id": "m09",
+    "title": "处理任务与恢复",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m09.png"
+  },
+  {
+    "id": "m10",
+    "title": "助手收件箱",
+    "group": "助手与学习",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m10.png"
+  },
+  {
+    "id": "m11",
+    "title": "按钮下方 · 两行词卡",
+    "group": "听读与纠音",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m11.png"
+  },
+  {
+    "id": "m12",
+    "title": "按钮保留 · 词卡展开",
+    "group": "听读与纠音",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m12.png"
+  },
+  {
+    "id": "m13",
+    "title": "跟读与录音质量",
+    "group": "听读与纠音",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m13.png"
+  },
+  {
+    "id": "m14",
+    "title": "专业发音反馈",
+    "group": "听读与纠音",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m14.png"
+  },
+  {
+    "id": "m15",
+    "title": "词句填空选择",
+    "group": "复习与交流",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m15.png"
+  },
+  {
+    "id": "m16",
+    "title": "听问题选回应",
+    "group": "复习与交流",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m16.png"
+  },
+  {
+    "id": "m17",
+    "title": "答后解释与回原句",
+    "group": "复习与交流",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m17.png"
+  },
+  {
+    "id": "m18",
+    "title": "自己回答与短对话",
+    "group": "复习与交流",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m18.png"
+  },
+  {
+    "id": "m19",
+    "title": "我的词句本",
+    "group": "复习与交流",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m19.png"
+  },
+  {
+    "id": "m20",
+    "title": "分享与我的作品",
+    "group": "作品与分享",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m20.png"
+  },
+  {
+    "id": "m21",
+    "title": "录音或真人视频",
+    "group": "作品与分享",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m21.png"
+  },
+  {
+    "id": "m22",
+    "title": "字幕校对与片段",
+    "group": "作品与分享",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m22.png"
+  },
+  {
+    "id": "m23",
+    "title": "分享预览与范围",
+    "group": "作品与分享",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m23.png"
+  },
+  {
+    "id": "m24",
+    "title": "分享状态与撤回",
+    "group": "作品与分享",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m24.png"
+  },
+  {
+    "id": "m25",
+    "title": "我的进步看板",
+    "group": "我的与管理",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m25.png"
+  },
+  {
+    "id": "m26",
+    "title": "用量与预算",
+    "group": "我的与管理",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m26.png"
+  },
+  {
+    "id": "m27",
+    "title": "隐私与个人资产",
+    "group": "我的与管理",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m27.png"
+  },
+  {
+    "id": "m28",
+    "title": "粘贴文字或网页",
+    "group": "导入与生成",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m28.png"
+  },
+  {
+    "id": "m29",
+    "title": "登录与跨端进入",
+    "group": "开始与材料",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m29.png"
+  },
+  {
+    "id": "m30",
+    "title": "跨端续学与新版本",
+    "group": "助手与学习",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m30.png"
+  },
+  {
+    "id": "m31",
+    "title": "学习教练",
+    "group": "学习教练与Agent",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m31.png"
+  },
+  {
+    "id": "m32",
+    "title": "可修改的练习计划",
+    "group": "学习教练与Agent",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m32.png"
+  },
+  {
+    "id": "m33",
+    "title": "教练状态与停止",
+    "group": "学习教练与Agent",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m33.png"
+  },
+  {
+    "id": "m34",
+    "title": "教练权限与记忆",
+    "group": "学习教练与Agent",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m34.png"
+  },
+  {
+    "id": "m35",
+    "title": "连接外部助手",
+    "group": "学习教练与Agent",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m35.png"
+  },
+  {
+    "id": "m36",
+    "title": "帮助与反馈",
+    "group": "帮助与反馈",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m36.png"
+  },
+  {
+    "id": "m37",
+    "title": "我的反馈与进度",
+    "group": "帮助与反馈",
+    "width": 390,
+    "height": 844,
+    "path": "screens/m37.png"
+  },
+  {
+    "id": "d01",
+    "title": "材料工作台",
+    "group": "桌面端布局",
+    "width": 1440,
+    "height": 960,
+    "path": "screens/d01.png"
+  },
+  {
+    "id": "d02",
+    "title": "学习工作台",
+    "group": "桌面端布局",
+    "width": 1440,
+    "height": 960,
+    "path": "screens/d02.png"
+  },
+  {
+    "id": "d03",
+    "title": "我的进步与管理",
+    "group": "桌面端布局",
+    "width": 1440,
+    "height": 960,
+    "path": "screens/d03.png"
+  },
+  {
+    "id": "d04",
+    "title": "反馈中心 · 管理端",
+    "group": "桌面端布局",
+    "width": 1440,
+    "height": 960,
+    "path": "screens/d04.png"
+  }
+]

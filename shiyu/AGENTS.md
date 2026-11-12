@@ -1,0 +1,13 @@
+# Shiyu engineering rules
+
+- Follow the reviewed product → requirements → architecture → implementation → human acceptance → staged release process. Do not expand a feasibility experiment into product implementation without the appropriate review.
+- Use the newest approved prototype; navigation is 学习、材料、添加、分享、我的. Adding materials and sharing works are separate flows.
+- Keep reading content, playback/progress, practice controls, and the compact bottom dictionary in the agreed order.
+- Professional acoustic assessment is required for pronunciation scoring. ASR text similarity is not pronunciation accuracy.
+- Preserve four-platform scope; distinguish built, statically checked, locally tested, device verified, and released.
+- Never commit user recordings, private material, credentials, browser profiles, SDK/cache/build directories, local receipts, signing keys or device identifiers. Use synthetic fixtures.
+- SDK terms, privacy grants and device consent belong to the current user/environment; do not inherit a previous operator's approval from code.
+- Keep `pubspec.lock`; do not silently change dependency versions. Review merged Android permissions and retain system-document-picker/private-storage boundaries.
+- Use isolated local test services and adapters; no production data/service changes or automatic sharing.
+- Routine reversible engineering work and scoped Git delivery can proceed under the user's stated authorization; do not repeatedly ask users to pick framework parameters. Respect actual external data, cost, device and release boundaries.
+- End engineering replies with the current stage, next recommended action, and user action required (none when none). Do not claim work continues after the turn without an actual running task.

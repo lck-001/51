@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:shiyu:local-01:contracts:v0.1",
+  "title": "C01-C07 limited local contract design",
+  "$comment": "Design draft, not a deployed HTTP/OpenAPI interface. No third-party JSON Schema validator is installed or implied. Principal authentication, authorization, idempotency, ordering, ledger and lifecycle invariants require model/runtime checks beyond these shapes. No production or speech accuracy claim.",
+  "type": "object",
+  "required": ["contract_id", "payload"],
+  "properties": {
+    "contract_id": {"enum": ["C01", "C02", "C03", "C04", "C05", "C06", "C07"]},
+    "payload": {"type": "object"}
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {"if": {"properties": {"contract_id": {"const": "C01"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/Delivery"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C02"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/ProgressWrite"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C03"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/ProcessingIntent"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C04"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/AssessmentContext"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C05"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/LearningAttempt"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C06"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/CoachPlan"}}}},
+    {"if": {"properties": {"contract_id": {"const": "C07"}}}, "then": {"properties": {"payload": {"$ref": "#/$defs/FeedbackSubmission"}}}}
+  ],
+  "$defs": {
+    "Id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "NonNegativeUnits": {"type": "integer", "minimum": 0, "$comment": "Synthetic units, not currency or an actual provider quotation."},
+    "Delivery": {
+      "type": "object",
+      "required": ["delivery_id", "source_ref", "source_revision", "body"],
+      "properties": {
+        "delivery_id": {"$ref": "#/$defs/Id"},
+        "source_ref": {"$ref": "#/$defs/Id"},
+        "source_revision": {"$ref": "#/$defs/Id"},
+        "body": {"type": "string", "minLength": 1, "maxLength": 20000}
+      },
+      "additionalProperties": false,
+      "$comment": "owner/integration/capabilities come from trusted server context, never from this request. Same delivery key with changed payload must conflict; unchanged replay returns same receipt. Receipt lookup has its own limited capability."
+    },
+    "ProgressWrite": {
+      "type": "object",
+      "required": ["material_id", "learning_revision_id", "sentence_id", "expected_revision"],
+      "properties": {
+        "material_id": {"$ref": "#/$defs/Id"},
+        "learning_revision_id": {"$ref": "#/$defs/Id"},
+        "sentence_id": {"$ref": "#/$defs/Id"},
+        "expected_revision": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false,
+      "$comment": "Sentence membership and material ownership require lookup. Cross-version percent migration is not permitted by this shape."
+    },
+    "ProcessingIntent": {
+      "type": "object",
+      "required": ["stable_operation_key", "plan_hash", "approved_limit_units", "reserved_units"],
+      "properties": {
+        "stable_operation_key": {"$ref": "#/$defs/Id"},
+        "plan_hash": {"$ref": "#/$defs/Id"},
+        "approved_limit_units": {"$ref": "#/$defs/NonNegativeUnits"},
+        "reserved_units": {"$ref": "#/$defs/NonNegativeUnits"},
+        "state": {"enum": ["awaiting_approval", "queued", "running", "outcome_unknown", "cancel_requested", "cancelled", "succeeded", "failed", "partially_completed"]}
+      },
+      "additionalProperties": false,
+      "$comment": "Approval and reservation are server-owned facts, not client authority. Unknown outcome cannot be automatically retried or released. Reconciliation and settlement must be idempotent."
+    },
+    "AssessmentContext": {
+      "type": "object",
+      "required": ["recording_id", "task_type", "capture_profile", "quality_status", "result_status"],
+      "properties": {
+        "recording_id": {"$ref": "#/$defs/Id"},
+        "task_type": {"enum": ["scripted", "keyword_retell", "free_response"]},
+        "capture_profile": {
+          "type": "object",
+          "required": ["platform", "input_route", "dsp_status"],
+          "properties": {
+            "platform": {"type": "string"},
+            "input_route": {"type": "string"},
+            "dsp_status": {"enum": ["known", "unknown"]}
+          },
+          "additionalProperties": false
+        },
+        "quality_status": {"enum": ["unchecked", "acceptable", "insufficient", "unknown"]},
+        "result_status": {"enum": ["not_submitted", "quality_insufficient", "assessing", "not_evaluated", "valid", "insufficient_sample"]},
+        "mock_only": {"const": true}
+      },
+      "additionalProperties": false,
+      "$comment": "Local fixtures never contain real professional scores. A valid result label is not proof of real acoustic performance; absent/invalid samples cannot be filled with invented dimensions."
+    },
+    "LearningAttempt": {
+      "type": "object",
+      "required": ["attempt_id", "question_id", "question_revision", "dimension", "assistance", "answer"],
+      "properties": {
+        "attempt_id": {"$ref": "#/$defs/Id"},
+        "question_id": {"$ref": "#/$defs/Id"},
+        "question_revision": {"$ref": "#/$defs/Id"},
+        "dimension": {"enum": ["listening_response_selection", "meaning_recall", "expression_use", "optional_spelling"]},
+        "assistance": {"type": "array", "items": {"enum": ["question_replay", "slow_audio", "question_text", "chinese_hint", "keywords", "answer_example", "option_audio"]}},
+        "answer": {"type": "string", "maxLength": 2000}
+      },
+      "additionalProperties": false,
+      "$comment": "Event ordering matters beyond shape. Option preview is not submission; reasonable response sets and help conditions are evaluated separately. A selection pass is not long-term mastery or free expression ability."
+    },
+    "CoachPlan": {
+      "type": "object",
+      "required": ["run_id", "plan_revision", "plan_hash", "selected_material_ids", "tools", "limits"],
+      "properties": {
+        "run_id": {"$ref": "#/$defs/Id"},
+        "plan_revision": {"type": "integer", "minimum": 1},
+        "plan_hash": {"$ref": "#/$defs/Id"},
+        "selected_material_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/Id"}},
+        "tools": {"type": "array", "items": {"enum": ["get_selected_learning_context", "get_confirmed_learning_summary", "list_due_items", "get_item_preview", "save_plan_draft", "create_practice_draft", "adjust_run_review_draft"]}},
+        "limits": {
+          "type": "object",
+          "required": ["model_calls", "tool_calls", "cost_units"],
+          "properties": {
+            "model_calls": {"type": "integer", "minimum": 0},
+            "tool_calls": {"type": "integer", "minimum": 0},
+            "cost_units": {"$ref": "#/$defs/NonNegativeUnits"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "Registry/tool names are a design vocabulary, not a claim that all tools are implemented in reference_model.py. Plan mutation invalidates old approval. No publish/delete/read-all/permission grant tool is exposed. Planning also requires prior budget approval."
+    },
+    "FeedbackSubmission": {
+      "type": "object",
+      "required": ["client_operation_id", "kind", "description"],
+      "properties": {
+        "client_operation_id": {"$ref": "#/$defs/Id"},
+        "kind": {"enum": ["usage_issue", "suggestion", "content_correction", "complaint"]},
+        "description": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "selected_context_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "default": []},
+        "selected_attachment_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "default": []}
+      },
+      "additionalProperties": false,
+      "$comment": "Reporter is server-bound. No attachment/context is uploaded unless explicitly selected. Inbox read_at, pagination cursor and handling state remain separate; fixed outcome requires real release/evidence references."
+    }
+  }
+}

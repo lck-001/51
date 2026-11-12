@@ -1,0 +1,7 @@
+{
+  "version": "3.31.12",
+  "archiveUrl": "https://cmake.org/files/v3.31/cmake-3.31.12-windows-x86_64.zip",
+  "sha256": "0c4baa40f28b3f8225eb3fdf6946c987b4fe901403b4eaf2fbbd9378100aaa0c",
+  "sizeBytes": 46666397,
+  "source": "Official CMake 3.31 listing and SHA-256.txt"
+}

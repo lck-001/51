@@ -1,0 +1,158 @@
+{
+  "checked_at": "2026-11-12",
+  "status": "metadata_only_no_install_no_sdk_license_acceptance",
+  "jdk": {
+    "vendor": "Eclipse Adoptium Temurin",
+    "version": "17.0.21+9",
+    "os": "windows",
+    "arch": "x64",
+    "package": "zip",
+    "size_bytes": 191117380,
+    "sha256": "98518ecf554465057ee5509462631deeee374bc368c12a411d225cd29381f84b",
+    "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21_9.zip",
+    "source": "https://api.adoptium.net/v3/assets/latest/17/hotspot?architecture=x64&image_type=jdk&os=windows&vendor=eclipse"
+  },
+  "android_commandline_tools": {
+    "build": "15859902",
+    "file": "commandlinetools-win-15859902_latest.zip",
+    "display_size": "155.7 MB",
+    "size_bytes": 155655386,
+    "sha256": "90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a",
+    "url": "https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip",
+    "source": "https://developer.android.com/studio#command-line-tools-only"
+  },
+  "sdk_package_candidates": [
+    "platforms;android-36",
+    "platforms;android-35",
+    "build-tools;36.0.0",
+    "platform-tools",
+    "ndk;28.2.13676358",
+    "cmake;3.22.1"
+  ],
+  "platform_tools_stable_release_note": "37.0.1",
+  "sdk_component_archives": [
+    {
+      "path": "platforms;android-36",
+      "channel": "stable",
+      "displayName": "Android SDK Platform 36",
+      "revision": "2",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": null,
+          "hostArch": null,
+          "sizeBytes": 65878410,
+          "checksumType": "sha1",
+          "checksum": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576",
+          "url": "https://dl.google.com/android/repository/platform-36_r02.zip"
+        }
+      ]
+    },
+    {
+      "path": "platforms;android-35",
+      "channel": "stable",
+      "displayName": "Android SDK Platform 35",
+      "revision": "2",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": null,
+          "hostArch": null,
+          "sizeBytes": 64273788,
+          "checksumType": "sha1",
+          "checksum": "0bb560a90a7a2cbd0dd8348224d518b638fe7949",
+          "url": "https://dl.google.com/android/repository/platform-35_r02.zip"
+        }
+      ]
+    },
+    {
+      "path": "ndk;28.2.13676358",
+      "channel": "stable",
+      "displayName": "NDK (Side by side) 28.2.13676358",
+      "revision": "28.2.13676358",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 748118221,
+          "checksumType": "sha1",
+          "checksum": "086bba43ff2f5eb0e387b15c8278bb4e0d89ba1d",
+          "url": "https://dl.google.com/android/repository/android-ndk-r28c-windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "build-tools;36.0.0",
+      "channel": "stable",
+      "displayName": "Android SDK Build-Tools 36",
+      "revision": "36.0.0",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 58699878,
+          "checksumType": "sha1",
+          "checksum": "f16ccffd34de8790dede813a6c7d8e2c11a27b50",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "cmake;3.22.1",
+      "channel": "stable",
+      "displayName": "CMake 3.22.1",
+      "revision": "3.22.1",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 16116742,
+          "checksumType": "sha1",
+          "checksum": "292778f32a7d5183e1c49c7897b870653f2d2c1b",
+          "url": "https://dl.google.com/android/repository/cmake-3.22.1-windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "platform-tools",
+      "channel": "stable",
+      "displayName": "Android SDK Platform-Tools",
+      "revision": "37.0.1",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 8044989,
+          "checksumType": "sha1",
+          "checksum": "e03e78b1d80b396f1c3358e31251cb31740e1110",
+          "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip"
+        }
+      ]
+    }
+  ],
+  "repository_source": "https://dl.google.com/android/repository/repository2-3.xml",
+  "existing_runner": {
+    "agp": "9.3.1",
+    "kotlin": "2.4.20",
+    "gradle_wrapper": "9.5.0-all"
+  },
+  "native_build_required_by": "jni 1.1.2 externalNativeBuild and src/CMakeLists.txt",
+  "extra_media_downloads": "media_kit_libs_android_video 1.3.8 downloads four libmpv v1.1.7 ABI jars using MD5",
+  "engineering_extra_free_space_budget_gib": 12,
+  "disk_budget_is_official_or_measured": false,
+  "license_url": "https://developer.android.com/studio/terms",
+  "sdk_archive_bytes": 961132028,
+  "base_download_bytes": 1307904794,
+  "cli_repository_archive_matches": [
+    {
+      "path": "cmdline-tools;22.0",
+      "sizeBytes": 155655386,
+      "checksum": "b9862337a13e2809a5159dc3a08d058091bd59f6",
+      "checksumType": "sha1"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "metadataUrl": "https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json",
+  "baseUrl": "https://storage.googleapis.com/flutter_infra_release/releases",
+  "currentStable": "ab2912035e160d9cad6306df307576da6128ebdb",
+  "version": "3.50.0",
+  "hash": "ab2912035e160d9cad6306df307576da6128ebdb",
+  "dartSdkVersion": "3.14.0",
+  "arch": "x64",
+  "releaseDate": "2026-11-11T18:54:25.86833Z",
+  "archive": "stable/windows/flutter_windows_3.50.0-stable.zip",
+  "archiveUrl": "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.50.0-stable.zip",
+  "sha256": "35fb843409c80a1c69b64bbae1756bba437222f909622d83540e266e1759aab8",
+  "sizeBytes": 1868535132,
+  "http": 200,
+  "fetchedAt": "2026-11-12T15:04:37.5206560+08:00"
+}

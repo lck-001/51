@@ -1,0 +1,109 @@
+{
+  "metadataUrl": "https://dl.google.com/android/repository/repository2-3.xml",
+  "date": "2026-11-12",
+  "packages": [
+    {
+      "path": "platforms;android-36",
+      "channel": "stable",
+      "displayName": "Android SDK Platform 36",
+      "revision": "2",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": null,
+          "hostArch": null,
+          "sizeBytes": 65878410,
+          "checksumType": "sha1",
+          "checksum": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576",
+          "url": "https://dl.google.com/android/repository/platform-36_r02.zip"
+        }
+      ]
+    },
+    {
+      "path": "platforms;android-35",
+      "channel": "stable",
+      "displayName": "Android SDK Platform 35",
+      "revision": "2",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": null,
+          "hostArch": null,
+          "sizeBytes": 64273788,
+          "checksumType": "sha1",
+          "checksum": "0bb560a90a7a2cbd0dd8348224d518b638fe7949",
+          "url": "https://dl.google.com/android/repository/platform-35_r02.zip"
+        }
+      ]
+    },
+    {
+      "path": "ndk;28.2.13676358",
+      "channel": "stable",
+      "displayName": "NDK (Side by side) 28.2.13676358",
+      "revision": "28.2.13676358",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 748118221,
+          "checksumType": "sha1",
+          "checksum": "086bba43ff2f5eb0e387b15c8278bb4e0d89ba1d",
+          "url": "https://dl.google.com/android/repository/android-ndk-r28c-windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "build-tools;36.0.0",
+      "channel": "stable",
+      "displayName": "Android SDK Build-Tools 36",
+      "revision": "36.0.0",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 58699878,
+          "checksumType": "sha1",
+          "checksum": "f16ccffd34de8790dede813a6c7d8e2c11a27b50",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "cmake;3.22.1",
+      "channel": "stable",
+      "displayName": "CMake 3.22.1",
+      "revision": "3.22.1",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 16116742,
+          "checksumType": "sha1",
+          "checksum": "292778f32a7d5183e1c49c7897b870653f2d2c1b",
+          "url": "https://dl.google.com/android/repository/cmake-3.22.1-windows.zip"
+        }
+      ]
+    },
+    {
+      "path": "platform-tools",
+      "channel": "stable",
+      "displayName": "Android SDK Platform-Tools",
+      "revision": "37.0.1",
+      "licenseRef": "android-sdk-license",
+      "archives": [
+        {
+          "hostOs": "windows",
+          "hostArch": null,
+          "sizeBytes": 8044989,
+          "checksumType": "sha1",
+          "checksum": "e03e78b1d80b396f1c3358e31251cb31740e1110",
+          "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip"
+        }
+      ]
+    }
+  ],
+  "sdkArchiveBytes": 961132028
+}

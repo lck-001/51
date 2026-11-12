@@ -1,0 +1,42 @@
+{
+  "scope": "original synthetic local fixtures; no playback executed",
+  "wav": {
+    "durationSeconds": 12,
+    "sampleRate": 16000,
+    "channels": 1,
+    "sampleBits": 16,
+    "sectionHz": [
+      440,
+      660,
+      880,
+      1100
+    ]
+  },
+  "files": [
+    {
+      "name": "invalid-media.wav",
+      "sizeBytes": 32,
+      "sha256": "13b3cf9bba2c80984584bb24667dd2790ec308ff0b6ae1307947172641c7ce10"
+    },
+    {
+      "name": "playback-seek-12s.wav",
+      "sizeBytes": 384044,
+      "sha256": "7a24dad44c79db3424a93217ecd5850a8fa81e48793ba53199dd4da4b8ab7180"
+    },
+    {
+      "name": "playback-video-12s.mp4",
+      "sizeBytes": 711270,
+      "sha256": "dde1e93e9249a79bad53af0bea621e078b239403a58056b8c6eea30bfee06bba"
+    },
+    {
+      "name": "zero-byte.wav",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "中文 空格 导入说明.txt",
+      "sizeBytes": 107,
+      "sha256": "191b0fe19923b937d824dbf4149f106d08737e087d2e72f1e1fbb1114c035479"
+    }
+  ]
+}
