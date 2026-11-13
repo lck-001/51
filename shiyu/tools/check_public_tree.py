@@ -12,7 +12,7 @@ options = args.parse_args()
 project = Path(__file__).resolve().parents[1]
 repo = project.parent
 prefix = project.name + '/'
-paths = subprocess.check_output(['git','diff','--cached','--name-only','--diff-filter=ACMR','-z','--',project.name], cwd=repo).split(b'\0')
+paths = subprocess.check_output(['git','ls-files','--cached','-z','--',project.name], cwd=repo).split(b'\0')
 names = [p.decode('utf-8') for p in paths if p]
 if not names:
     raise SystemExit('No staged project source to audit')

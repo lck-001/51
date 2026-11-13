@@ -28,15 +28,39 @@
     },
     {
       "path": "GLOSSARY.md",
-      "gitBlob": "63193d2590e58b5ce500aec3c7e6dcc3c2e9b48a",
-      "sizeBytes": 2623,
-      "sha256": "9af16c159be93df6e228f462a557cf05f3a029b1134f0405650f7cc6ecab6252"
+      "gitBlob": "8d66f3390d0184b9ffd4bacc9c9c7aaeb6a2c0e6",
+      "sizeBytes": 3574,
+      "sha256": "fda349b8862f0741a65a8cb1e959c7c2a09340f57a5628d1cd21592090d48688"
     },
     {
       "path": "README.md",
-      "gitBlob": "c61a3b4ae8e5a7a96f91700e08b1dd2509026b5e",
-      "sizeBytes": 3799,
-      "sha256": "d93887f2486e45412d1a3b4abd4fe8120532552c794953653eb5b269bfca1e96"
+      "gitBlob": "e01766be78836ab23d032710f16dcaa12fbae87e",
+      "sizeBytes": 4087,
+      "sha256": "29e3f901319702ab5ef5c3e9437226826150c3f80411712618b3391fcf6dd609"
+    },
+    {
+      "path": "docs/reviews/M13-architecture.md",
+      "gitBlob": "32bc43526dd3b94dd19fd93f37956bf52fa98b22",
+      "sizeBytes": 15902,
+      "sha256": "0fbaf33a59582394cd547f091861afb54316d5cf784e4bec93099ab89c61bfcb"
+    },
+    {
+      "path": "docs/reviews/M13-conclusion.md",
+      "gitBlob": "3c9e4e84296de56627560d8f82af5fc602565b4c",
+      "sizeBytes": 5064,
+      "sha256": "7f740ad2708507cf2f7629ac48af593b170cc73aa83ee36e6e9509ac71f63377"
+    },
+    {
+      "path": "docs/reviews/M13-product.md",
+      "gitBlob": "88792831607145f3d06b1fa4f6da5b8161e83e64",
+      "sizeBytes": 3557,
+      "sha256": "3f746dbd860f613eb74d809632eed3965fbce5b2acc7742fdcf7146c5a8a3219"
+    },
+    {
+      "path": "docs/reviews/M13-qa.md",
+      "gitBlob": "883843151fa210cd1c374e31607225f588dd9526",
+      "sizeBytes": 6327,
+      "sha256": "16ab0ec6fa27f141f60f3a2c43da4ddbc146a8adce7d9177b732b1604eb8741e"
     },
     {
       "path": "planning/agent-v04/Agent增量需求与分期-v0.4.md",
@@ -814,9 +838,9 @@
     },
     {
       "path": "tools/check_public_tree.py",
-      "gitBlob": "c8832ab5600b98aaab8f6b3bde03ff14cddb5f43",
-      "sizeBytes": 3709,
-      "sha256": "533fa46dbddec6351f174e0f5fb33c4dc754c45659a2e7ce3077d227e4715044"
+      "gitBlob": "0739b4589dfd9015e16a2ab6dbf8203a9892dd53",
+      "sizeBytes": 3678,
+      "sha256": "45f6119df30ecf61c8579657adcef14491ce311af048b93b0d68315cf9753d09"
     },
     {
       "path": "validation/local-01/README.md",
