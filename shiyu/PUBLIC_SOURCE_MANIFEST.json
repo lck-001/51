@@ -39,6 +39,12 @@
       "sha256": "de9e4a3b437116478dd1cca316fb2463fec5688d2dca0cf82dae1faf782529fb"
     },
     {
+      "path": "docs/reviews/M13-android-adapter-gate.md",
+      "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
+      "sizeBytes": 14127,
+      "sha256": "234f7f30bc91b6c53933b23e235055553ba81618a82e2f107b00869233cf3416"
+    },
+    {
       "path": "docs/reviews/M13-architecture.md",
       "gitBlob": "32bc43526dd3b94dd19fd93f37956bf52fa98b22",
       "sizeBytes": 15902,
@@ -63,6 +69,12 @@
       "sha256": "16ab0ec6fa27f141f60f3a2c43da4ddbc146a8adce7d9177b732b1604eb8741e"
     },
     {
+      "path": "docs/reviews/M13-state-validation.md",
+      "gitBlob": "8c1e7dc3178a824cf4822013fd0fae05ec032b5b",
+      "sizeBytes": 1468,
+      "sha256": "467bbdeac8ccf8e1e0af50377a767c4130647f78822253201219f4bf05759675"
+    },
+    {
       "path": "docs/reviews/M14-emulator-results.md",
       "gitBlob": "c252d53b70b1bd6ea99364d7d4f9feb36d038e8d",
       "sizeBytes": 4641,
@@ -85,6 +97,42 @@
       "gitBlob": "5f19e6b73396ae5fc3b7d05cc58ca06c4f8e0ab6",
       "sizeBytes": 5349,
       "sha256": "648d3eece8a3f9964dcc11a5588864e83169eb9c805f606e069c1209ff1369c9"
+    },
+    {
+      "path": "packages/playback_core/README.md",
+      "gitBlob": "d53f59811bd5635fdbdb8341ae8f3d22323cdcbe",
+      "sizeBytes": 1439,
+      "sha256": "56fc48151ade9950ca679f92b5516a3983cdb5ce66dcf19171d23cdf0b81cf14"
+    },
+    {
+      "path": "packages/playback_core/lib/playback_core.dart",
+      "gitBlob": "7ac36cf6cba01301a5df79c50e66a97f9405e3c3",
+      "sizeBytes": 30567,
+      "sha256": "a3147acc1ce7143fd9f7658bc0b5dd9a0a85a635d6740d557cd1af373a3dcbc0"
+    },
+    {
+      "path": "packages/playback_core/pubspec.lock",
+      "gitBlob": "caf414b505e4f600ff56fa345358748da960ec37",
+      "sizeBytes": 115,
+      "sha256": "44c835e52f096d2ac280696cc08c027b5ea56ca306e9c00ff434891cc31f328e"
+    },
+    {
+      "path": "packages/playback_core/pubspec.yaml",
+      "gitBlob": "147255f54c0fe12dd9c306a111264f9aba1cb8d2",
+      "sizeBytes": 162,
+      "sha256": "a2c6be5884d87efd30f695980b33800ba6fd9c55c49ba817bcac64cb3681a287"
+    },
+    {
+      "path": "packages/playback_core/test/interface_regression.dart",
+      "gitBlob": "9801c78f6072f77668e986f75f94428349ef0794",
+      "sizeBytes": 48758,
+      "sha256": "282c6a6bb7e77bc2afe6984786f8af8aff6b50f284746bc876888ee08acaae4b"
+    },
+    {
+      "path": "packages/playback_core/test/support.dart",
+      "gitBlob": "a83d0327b18ec326ea19c71eb7e97a243a6b0fdb",
+      "sizeBytes": 843,
+      "sha256": "9d9768bafeedf4f7c923e306a90f8340389a5e4264480a1560cb4275d0e13a26"
     },
     {
       "path": "planning/agent-v04/Agent增量需求与分期-v0.4.md",
