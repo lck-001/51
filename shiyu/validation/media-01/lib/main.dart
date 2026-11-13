@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 import 'package:camera/camera.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,7 +28,17 @@ class MediaProbe extends StatefulWidget {
 class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
   final _recorder = AudioRecorder();
   final _player = Player();
-  late final _video = VideoController(_player);
+  late final _video = VideoController(
+    _player,
+    // Android Surface output avoids the failing libmpv EGL/GLES path.
+    // Unsupported codecs still report player errors; this is not a transcoder.
+    configuration: Platform.isAndroid
+        ? const VideoControllerConfiguration(
+            vo: 'mediacodec_embed',
+            hwdec: 'mediacodec',
+          )
+        : const VideoControllerConfiguration(),
+  );
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   final List<String> _files = [];
   Future<void> _tail = Future<void>.value();
@@ -35,8 +47,11 @@ class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
   int _pending = 0;
   bool get _busy => _pending > 0;
   bool _closed = false;
+  bool _exiting = false;
+  Future<void>? _shutdown;
   bool _background = false;
   String _status = '请选择导入、录音或录像；素材保存在本机。';
+  int _statusRevision = 0;
   String? _current;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -77,6 +92,7 @@ class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
 
   void _message(String value) {
     _status = value;
+    _statusRevision++;
     _refresh();
   }
 
@@ -237,6 +253,7 @@ class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _background = false;
+      _refresh();
       return; // Never automatically reopen capture devices.
     }
     // Permission dialogs may cause inactive; do not tear down during that dialog.
@@ -244,6 +261,7 @@ class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _background = true;
+      final statusAtInterruption = _statusRevision;
       _run(() async {
         final hadCapture = _capture != Capture.none;
         final hadPreview = _camera != null;
@@ -257,142 +275,193 @@ class _MediaProbeState extends State<MediaProbe> with WidgetsBindingObserver {
           _message('应用进入后台，已停止录制。请回放检查保存结果；返回后需手动继续。');
         } else if (hadPreview) {
           _message('应用进入后台，已关闭相机预览并暂停播放。返回后需手动开启。');
-        } else {
+        } else if (_current != null &&
+            _statusRevision == statusAtInterruption) {
           _message('播放已暂停；返回后可手动继续。');
         }
       });
     }
   }
 
+  Future<void> _shutdownMedia() => _shutdown ??= _releaseMedia();
+
+  Future<void> _releaseMedia() async {
+    _closed = true;
+    await _tail;
+    var failed = false;
+    Future<void> attempt(Future<void> Function() action) async {
+      try {
+        await action();
+      } catch (_) {
+        failed = true;
+      }
+    }
+
+    for (final subscription in _subscriptions) {
+      await attempt(subscription.cancel);
+    }
+    await attempt(_stopCapture);
+    await attempt(_closeCamera);
+    await attempt(_recorder.dispose);
+    await attempt(_player.dispose);
+    if (failed) throw StateError('媒体资源释放未全部成功。');
+  }
+
+  Future<void> _requestExit() async {
+    if (_exiting) return;
+    if (_busy) {
+      _message('当前操作尚未结束，请完成后再退出。');
+      return;
+    }
+    setState(() => _exiting = true);
+    try {
+      // Keep the engine alive until native callbacks and surfaces are released.
+      // A timeout does not cancel cleanup or claim that resources were released.
+      await _shutdownMedia().timeout(const Duration(seconds: 15));
+      if (mounted) await SystemNavigator.pop();
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _exiting = false;
+        _status = '关闭仍在等待，尚未确认录制停止或资源释放。可稍后再按返回；需要立即关闭时请从系统结束实验。';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _exiting = false;
+        _status = '媒体资源未完全释放，请从系统结束实验。';
+      });
+    }
+  }
+
   @override
   void dispose() {
-    _closed = true;
     WidgetsBinding.instance.removeObserver(this);
-    // Wait for an in-flight native operation, then stop before disposing devices.
+    // Fallback for external disposal; ordinary Android Back awaits this first.
     unawaited(
-      _tail
-          .then((_) async {
-            for (final subscription in _subscriptions) {
-              await subscription.cancel();
-            }
-            try {
-              await _stopCapture();
-            } finally {
-              try {
-                await _closeCamera();
-              } finally {
-                await _recorder.dispose();
-                await _player.dispose();
-              }
-            }
-          })
-          .catchError((Object error) {
-            // Lifecycle teardown cannot update a disposed UI.
-            debugPrint('Media probe cleanup failed: $error');
-          }),
+      _shutdownMedia().catchError((Object _) {
+        debugPrint('Media probe cleanup did not complete successfully.');
+      }),
     );
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final idle = !_busy && _capture == Capture.none && !_background;
+    final idle =
+        !_closed &&
+        !_exiting &&
+        !_busy &&
+        _capture == Capture.none &&
+        !_background;
     final durationMs = _duration.inMilliseconds.toDouble();
     final maxMs = durationMs > 0 ? durationMs : 1.0;
-    return Scaffold(
-      appBar: AppBar(title: const Text('拾语 · 媒体隔离验证')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Text(
-            '媒体能力验证 · 素材保存在本机',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          SelectableText(_status),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton(
-                onPressed: idle ? () => _run(_import) : null,
-                child: const Text('导入本地文件'),
-              ),
-              FilledButton(
-                onPressed: idle ? () => _run(_startAudio) : null,
-                child: const Text('开始录音'),
-              ),
-              OutlinedButton(
-                onPressed: !_busy && _capture != Capture.none
-                    ? () => _run(_stopCapture)
-                    : null,
-                child: const Text('停止并保存录制'),
-              ),
-              OutlinedButton(
-                onPressed: idle ? () => _run(_preview) : null,
-                child: const Text('开启相机预览（请求相机/麦克风）'),
-              ),
-              FilledButton(
-                onPressed: idle && (_camera?.value.isInitialized ?? false)
-                    ? () => _run(_startVideo)
-                    : null,
-                child: const Text('开始录像'),
-              ),
-              OutlinedButton(
-                onPressed: idle && _camera != null
-                    ? () => _run(_closeCamera)
-                    : null,
-                child: const Text('关闭相机预览'),
-              ),
-            ],
-          ),
-          if (_camera?.value.isInitialized ?? false)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: SizedBox(height: 220, child: CameraPreview(_camera!)),
+    return PopScope<Object?>(
+      canPop: !Platform.isAndroid,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && Platform.isAndroid) unawaited(_requestExit());
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('拾语 · 媒体隔离验证')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text(
+              '媒体能力验证 · 素材保存在本机',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: Video(controller: _video, controls: NoVideoControls),
-          ),
-          Slider(
-            value: (_seekPreview ?? _position.inMilliseconds.toDouble()).clamp(
-              0,
-              maxMs,
+            const SizedBox(height: 12),
+            SelectableText(_status),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: idle ? () => _run(_import) : null,
+                  child: const Text('导入本地文件'),
+                ),
+                FilledButton(
+                  onPressed: idle ? () => _run(_startAudio) : null,
+                  child: const Text('开始录音'),
+                ),
+                OutlinedButton(
+                  onPressed:
+                      !_closed &&
+                          !_exiting &&
+                          !_busy &&
+                          _capture != Capture.none
+                      ? () => _run(_stopCapture)
+                      : null,
+                  child: const Text('停止并保存录制'),
+                ),
+                OutlinedButton(
+                  onPressed: idle ? () => _run(_preview) : null,
+                  child: const Text('开启相机预览（请求相机/麦克风）'),
+                ),
+                FilledButton(
+                  onPressed: idle && (_camera?.value.isInitialized ?? false)
+                      ? () => _run(_startVideo)
+                      : null,
+                  child: const Text('开始录像'),
+                ),
+                OutlinedButton(
+                  onPressed: idle && _camera != null
+                      ? () => _run(_closeCamera)
+                      : null,
+                  child: const Text('关闭相机预览'),
+                ),
+              ],
             ),
-            max: maxMs,
-            onChanged: idle && _current != null && durationMs > 0
-                ? (v) {
-                    _seekPreview = v;
-                    _refresh();
-                  }
-                : null,
-            onChangeEnd: idle && _current != null && durationMs > 0
-                ? (v) {
-                    _seekPreview = null;
-                    _run(() => _player.seek(Duration(milliseconds: v.round())));
-                  }
-                : null,
-          ),
-          Text('${_position.inSeconds}s / ${_duration.inSeconds}s'),
-          OutlinedButton(
-            onPressed: idle && _current != null
-                ? () => _run(() => _player.playOrPause())
-                : null,
-            child: const Text('播放 / 暂停'),
-          ),
-          const Divider(),
-          const Text('本次会话文件（仅存本机；重启后列表不恢复）'),
-          for (final path in _files)
-            ListTile(
-              title: Text(path.split(Platform.pathSeparator).last),
-              subtitle: Text(path),
-              trailing: const Icon(Icons.play_arrow),
-              onTap: idle ? () => _run(() => _play(path)) : null,
+            if (!_closed && (_camera?.value.isInitialized ?? false))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: SizedBox(height: 220, child: CameraPreview(_camera!)),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: _closed
+                  ? const Center(child: Text('媒体操作已停用'))
+                  : Video(controller: _video, controls: NoVideoControls),
             ),
-        ],
+            Slider(
+              value: (_seekPreview ?? _position.inMilliseconds.toDouble())
+                  .clamp(0, maxMs),
+              max: maxMs,
+              onChanged: idle && _current != null && durationMs > 0
+                  ? (v) {
+                      _seekPreview = v;
+                      _refresh();
+                    }
+                  : null,
+              onChangeEnd: idle && _current != null && durationMs > 0
+                  ? (v) {
+                      _seekPreview = null;
+                      _run(
+                        () => _player.seek(Duration(milliseconds: v.round())),
+                      );
+                    }
+                  : null,
+            ),
+            Text('${_position.inSeconds}s / ${_duration.inSeconds}s'),
+            OutlinedButton(
+              onPressed: idle && _current != null
+                  ? () => _run(() => _player.playOrPause())
+                  : null,
+              child: const Text('播放 / 暂停'),
+            ),
+            const Divider(),
+            const Text('本次会话文件（仅存本机；重启后列表不恢复）'),
+            for (final path in _files)
+              ListTile(
+                title: Text(path.split(Platform.pathSeparator).last),
+                subtitle: Text(path),
+                trailing: const Icon(Icons.play_arrow),
+                onTap: idle ? () => _run(() => _play(path)) : null,
+              ),
+          ],
+        ),
       ),
     );
   }
