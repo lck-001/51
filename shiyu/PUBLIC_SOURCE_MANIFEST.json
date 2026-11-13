@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "e01766be78836ab23d032710f16dcaa12fbae87e",
-      "sizeBytes": 4087,
-      "sha256": "29e3f901319702ab5ef5c3e9437226826150c3f80411712618b3391fcf6dd609"
+      "gitBlob": "436c77df9bde0e422dbd1e46667b0751a4968d52",
+      "sizeBytes": 4458,
+      "sha256": "7ec40c251172d13ac360fbf706b9b25d6cb9ce4002cd5593446eb04a4849457c"
     },
     {
       "path": "docs/reviews/M13-architecture.md",
@@ -61,6 +61,18 @@
       "gitBlob": "883843151fa210cd1c374e31607225f588dd9526",
       "sizeBytes": 6327,
       "sha256": "16ab0ec6fa27f141f60f3a2c43da4ddbc146a8adce7d9177b732b1604eb8741e"
+    },
+    {
+      "path": "docs/reviews/M14-emulator-results.md",
+      "gitBlob": "c252d53b70b1bd6ea99364d7d4f9feb36d038e8d",
+      "sizeBytes": 4641,
+      "sha256": "21f6349c3b12eb003ad8bb27f06b5e152ecbd37a1202efda4d9044890f3bf81b"
+    },
+    {
+      "path": "docs/reviews/M14-emulator-test-plan.md",
+      "gitBlob": "29c312f2b345f38cc5107ea2861f7fe8034b07c7",
+      "sizeBytes": 3573,
+      "sha256": "9ad751952c82eea86c4d5001cc74fdcfe699b1cd3d09a6e6a0ba324c0aae7008"
     },
     {
       "path": "planning/agent-v04/Agent增量需求与分期-v0.4.md",
@@ -841,6 +853,12 @@
       "gitBlob": "0739b4589dfd9015e16a2ab6dbf8203a9892dd53",
       "sizeBytes": 3678,
       "sha256": "45f6119df30ecf61c8579657adcef14491ce311af048b93b0d68315cf9753d09"
+    },
+    {
+      "path": "tools/download_verified_artifacts.py",
+      "gitBlob": "047caab6fb42605e4b6b1f867a1ca9c12217efa5",
+      "sizeBytes": 5469,
+      "sha256": "72c60f9db5306cb4818436e87fe1f67cf11174e2d283bfca13d794546b47a49a"
     },
     {
       "path": "validation/local-01/README.md",
