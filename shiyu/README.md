@@ -79,3 +79,7 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 ## M14 模拟器验证
 
 官方 Android 模拟器已安装。0.0.3 修复 Android 视频输出、返回前台刷新和旧提示覆盖，并加入有序退出；最新证据见 [修复与回归记录](docs/reviews/M14-media-fixes.md)、[独立QA复核](docs/reviews/M14-fix-qa.md)。[首轮失败记录](docs/reviews/M14-emulator-results.md)保留为历史，不代表最新版状态。本实验不等于完整产品或真机验收；后续推进 M13 状态模块。
+
+## 后台开发与原生接入更新
+
+播放策略模块52项独立回归已过，Android有限后台链路和Windows隐藏静音原生回归已分别收口。见 [策略验证](docs/reviews/M13-state-validation.md)、[Android实际记录](docs/reviews/M15-android-native-results.md)、[Windows后台记录](docs/reviews/M15-windows-background-results.md)。真实锁屏/媒体键/音质与四端实机仍未验，不操作用户主界面进行自动验收。下一包是 [材料持久化与受限送入](docs/reviews/M16-first-user-flow-workpack.md)，不是继续堆媒体实验。

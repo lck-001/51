@@ -10,9 +10,9 @@
   "files": [
     {
       "path": ".gitattributes",
-      "gitBlob": "1c01a5ed29d2513d0924910cb4e1ec245aa66a7d",
-      "sizeBytes": 75,
-      "sha256": "d2ac53a76e954ef55f05b2ac6a0a523f2eee2d232f526625781e9e45881a68d3"
+      "gitBlob": "cbb04750d70ad5de9ee5d2a91c0164264bde898c",
+      "sizeBytes": 127,
+      "sha256": "a35f2ebe0ef54eb7609f39aa23db0e0a2acd21a56571dba59961424337a2f232"
     },
     {
       "path": ".gitignore",
@@ -22,9 +22,9 @@
     },
     {
       "path": "AGENTS.md",
-      "gitBlob": "8b636bcd2c2f9a1745255523762eb81f33473c15",
-      "sizeBytes": 1798,
-      "sha256": "af15e0029d0227258cf4e7cb25d58536cdf47ef14e2015c84b495ea9237ec151"
+      "gitBlob": "977f8cac3242aeb954a84ff6f844f1b23782ad94",
+      "sizeBytes": 2185,
+      "sha256": "c11ca36f544d948c32e1889503ea0ead20323044959814e53b3f997bb8693c13"
     },
     {
       "path": "GLOSSARY.md",
@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "da934f745197c99593b3e8bd8633b60e1469a0ad",
-      "sizeBytes": 4544,
-      "sha256": "de9e4a3b437116478dd1cca316fb2463fec5688d2dca0cf82dae1faf782529fb"
+      "gitBlob": "65403ecc282a73b2214aea9d7cc31a8e4ed2bd3f",
+      "sizeBytes": 5129,
+      "sha256": "9127343a2ad72d0e3a7c0ccdf33d2aeb4e9d9c65987b3d2d104440a825e3fe5b"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
@@ -97,6 +97,24 @@
       "gitBlob": "5f19e6b73396ae5fc3b7d05cc58ca06c4f8e0ab6",
       "sizeBytes": 5349,
       "sha256": "648d3eece8a3f9964dcc11a5588864e83169eb9c805f606e069c1209ff1369c9"
+    },
+    {
+      "path": "docs/reviews/M15-android-native-results.md",
+      "gitBlob": "2f4b0283070d8cfc039db2390db1d5410acf9e7d",
+      "sizeBytes": 9584,
+      "sha256": "f25e115cd0912869e7206098a69ebd294fbd7b4b7ccccc46c8bfbbe64f451858"
+    },
+    {
+      "path": "docs/reviews/M15-integration-qa.md",
+      "gitBlob": "f9039b30a62091c9ece9eeddad2786fa59e9cb45",
+      "sizeBytes": 9560,
+      "sha256": "95f03e0e9765212600ba0fa3ae09f4b9505c00e316a4b13cfe1d1d6be09dd6f0"
+    },
+    {
+      "path": "docs/reviews/M15-windows-background-results.md",
+      "gitBlob": "9a185546f4af9412fd79df4934e171d13a8ee859",
+      "sizeBytes": 2388,
+      "sha256": "0a889326a184d3adc093c2817b9017abd767cb537d292212612536a485f20400"
     },
     {
       "path": "packages/playback_core/README.md",
@@ -909,6 +927,372 @@
       "sha256": "ea4d831ba535b1795cc2cd4c899c829e7d4c4ea003ca7a09522a7972460410b4"
     },
     {
+      "path": "third_party/audio_service/CHANGELOG.md",
+      "gitBlob": "0efbe7fc529d5eeea734fa403569c8bfa346271d",
+      "sizeBytes": 10201,
+      "sha256": "565ad5c4c5b76a0eb2f0b66d94ccaf7948c1a11991be225e222e4010e480b6e0"
+    },
+    {
+      "path": "third_party/audio_service/LICENSE",
+      "gitBlob": "3bab693e13f62c7cf9e1d7cba9876b77f18ba6b2",
+      "sizeBytes": 1102,
+      "sha256": "9cad5d44e82dccb45ceb822e16932e3a127db1960dc68b0e49a33ba7ab62477f"
+    },
+    {
+      "path": "third_party/audio_service/README.md",
+      "gitBlob": "8ca0cc1c58407384a8ac862d04d352ef118b332d",
+      "sizeBytes": 18218,
+      "sha256": "577155e2b25d8cdcd2d6924e7810379461d61da5d8018904665c5c9797f2768c"
+    },
+    {
+      "path": "third_party/audio_service/SHIYU_PATCH.md",
+      "gitBlob": "e45f285dcdad89733b60d8f01e92f4856200d00d",
+      "sizeBytes": 1421,
+      "sha256": "3fd788fd07fbf5cf36b71285f7cc21b11363f3a5122ccac88c887b5a83a7ff0d"
+    },
+    {
+      "path": "third_party/audio_service/UPSTREAM.json",
+      "gitBlob": "b8ced0092150ff768489961769c430e31b08c2af",
+      "sizeBytes": 11197,
+      "sha256": "f71ed9f5cfebf91a8130b505f1f6abe98378cae1cea5c5defeee31014697073f"
+    },
+    {
+      "path": "third_party/audio_service/android/build.gradle.kts",
+      "gitBlob": "0e1f9e5ac7524afb76a8fd87a0b42e47e37a961f",
+      "sizeBytes": 1635,
+      "sha256": "6dbea445b85a3bed8a241823461cb23a6acaca2eeedd5bb5e98d1a9b8d3f1cdc"
+    },
+    {
+      "path": "third_party/audio_service/android/gradle.properties",
+      "gitBlob": "38c8d4544ff1c4419409796aa6c1caee2c262ff7",
+      "sizeBytes": 104,
+      "sha256": "3c1fc1d9cad8765e2b44821c4774644b590bb58ecab6beb4bae2470ece0175be"
+    },
+    {
+      "path": "third_party/audio_service/android/gradle/wrapper/gradle-wrapper.properties",
+      "gitBlob": "48c0a02ca419eba23d8f48d55cb047c9366698ef",
+      "sizeBytes": 200,
+      "sha256": "efa4245a68c56c8bb873611ade567981727262d994b419f77d1be873ad6ffd02"
+    },
+    {
+      "path": "third_party/audio_service/android/settings.gradle.kts",
+      "gitBlob": "b731caaa3baab3fd7d25dfd1b3454c074d6ec9a1",
+      "sizeBytes": 35,
+      "sha256": "949153b8bd1710e3178968032b72ff99b45e2f4d3f3a0ce929f87cdfe6519e6e"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/AndroidManifest.xml",
+      "gitBlob": "a2f47b6057db70071e9080281db29d78ac165e66",
+      "sizeBytes": 82,
+      "sha256": "bfe643676c7bfecf2683b1ad8044a754bc53141c9e4fc6714ad58c1530937b6d"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioProcessingState.java",
+      "gitBlob": "d083855c5b0ea9c8bc7a73531e9c13eba309e269",
+      "sizeBytes": 149,
+      "sha256": "c1deed698e77883fc2b3c1efecdd159894ceb4b72a868d1fc71bb97ce3617377"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioService.java",
+      "gitBlob": "3a4ecec90e4bf0d063fbfae224c983b92e61244a",
+      "sizeBytes": 49732,
+      "sha256": "90435b80617ee6f7800f2093d8158ee5ab90f47340767d95e49f777c88a42db3"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioServiceActivity.java",
+      "gitBlob": "f91f663bc072a6e2059a36437552e4c364d42f0a",
+      "sizeBytes": 428,
+      "sha256": "4bf3674ac3484a8d9d9ae5690692849368fd14fbbf4998ee458e6f642ee039f8"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioServiceConfig.java",
+      "gitBlob": "1917989d6b50965e11a3de685b8a22e82cffa694",
+      "sizeBytes": 6619,
+      "sha256": "85a280bf8ad1507a7228473c3bb1606284f8c17b0ddc91aec7f62982af47c5d9"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioServiceFragmentActivity.java",
+      "gitBlob": "723fbbaaf79fb9a885ea5a245af004a50e64bb47",
+      "sizeBytes": 1377,
+      "sha256": "80c159e42cdba5077ca4c7d961a79e4dc31cbaf4412910b97682c57ffeb3f7c9"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/AudioServicePlugin.java",
+      "gitBlob": "b776a8407500544c5acea50faaebe4bc7b20ee99",
+      "sizeBytes": 56602,
+      "sha256": "afd40121a51d32ac4aed3b8142897e62460b57524df0ecdd0bfc97313262b1e0"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/CustomMediaAction.java",
+      "gitBlob": "da942aa75b45602136ce1fe26b6a06ae57948bbb",
+      "sizeBytes": 699,
+      "sha256": "589709a69ae2ae44718fd5575c71e085e5d3b56584806a5ac7647821855af3e8"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/MediaButton.java",
+      "gitBlob": "89d937f5c9751d23067395e30760dc5d5902c7f2",
+      "sizeBytes": 99,
+      "sha256": "9557657688418b02fe2cf633d65b35fd51f163dff2b8ad67d0f8cedd430a7cbf"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/MediaButtonReceiver.java",
+      "gitBlob": "e414381ce27be645202ec215c69166a21d163ab8",
+      "sizeBytes": 687,
+      "sha256": "546dc6106f2920129d5e1c6eaaf5cd7856845f56f71028e48a8579dc8280e7e9"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/java/com/ryanheise/audioservice/MediaControl.java",
+      "gitBlob": "d78f7e99fe8a529ffb02d3acc360e4be8b7fcfeb",
+      "sizeBytes": 890,
+      "sha256": "a193bc77b42439cdf749b1298e655339e742d07694b728ee5e8423cbaca0a295"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_fast_forward.png",
+      "gitBlob": "24d97839de7159e1edb16bc276b6b1443ae72dd2",
+      "sizeBytes": 561,
+      "sha256": "35e2bd70cbd4eb81fac0ae26c0d2fadd04a3e909f45c31acf08dc0c089b26afc"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_fast_rewind.png",
+      "gitBlob": "3b564bab3a27de4375dceae4df977bf11a54c891",
+      "sizeBytes": 584,
+      "sha256": "479b3404b26c4850da21741553fbd1049eb1807454102a4ffa4cb23d9120b0c7"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_pause.png",
+      "gitBlob": "794f350d6ccec372ae6282ab4cc6057d9a573306",
+      "sizeBytes": 157,
+      "sha256": "863bd248afdb619930952198b7a555a31eb15c749d0e4b0f121bcf88240ebb66"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_play_arrow.png",
+      "gitBlob": "84998dd616629e6503b3099ec928da901730f28e",
+      "sizeBytes": 352,
+      "sha256": "23a4f509b5d428c713cc52417249ccea8ebd519e31b5632639bae1eedc5a36f7"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_skip_next.png",
+      "gitBlob": "100237c5d95761354ac5a83ab32923c1f0fba957",
+      "sizeBytes": 379,
+      "sha256": "480f567ccb9d0bffeff0476883a99e74aff1f58e4720d0807cb23fb982ee05f5"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_skip_previous.png",
+      "gitBlob": "7dd69775a3fbd0d8696a94034d975aeee396b777",
+      "sizeBytes": 410,
+      "sha256": "0c96daf5b300d6e12d6567fbe1448aa4fc866a87633fcae6bd4caa3e718fe023"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-hdpi/audio_service_stop.png",
+      "gitBlob": "7494d0305e57b6e576b1cd1e35577291e0ae38d4",
+      "sizeBytes": 121,
+      "sha256": "1ff6b6dae3a87e542d28b2f3aebdb18fe16e5ea7c203f715c8c27606da53af66"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_fast_forward.png",
+      "gitBlob": "f81de6fad1367a43ee797696c4f402655d0eada8",
+      "sizeBytes": 241,
+      "sha256": "e3cf6310fdb117fd358f7884f40294a622009a91cb8e66a2ae269c740b9d4754"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_fast_rewind.png",
+      "gitBlob": "7d1797e5df64705e03982a45b3d3ded854f6565e",
+      "sizeBytes": 267,
+      "sha256": "f940e2ec96e028d09a1dfadf9ecba9883080f14b55593945ef48f850e6d73c53"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_pause.png",
+      "gitBlob": "e2f63777288fa6c24c4420d70ddb26c1be00234c",
+      "sizeBytes": 170,
+      "sha256": "30c905b7bc1e45850fb11e5d2c8c62084f30321018513e5ca4000bc5de19b680"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_play_arrow.png",
+      "gitBlob": "084d6f311c01c79e91a7e4c23e26eed419435ce0",
+      "sizeBytes": 285,
+      "sha256": "c2ca162726e16546203137a500740f4e38c23438c584c6d771db823143f133f6"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_skip_next.png",
+      "gitBlob": "13663f156e035c474b5b89f8e947a811627bf855",
+      "sizeBytes": 344,
+      "sha256": "8efd583b968d92b27ebb034ef0db3a213bbed0982ff05e20875793aafb2fb6e2"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_skip_previous.png",
+      "gitBlob": "bca4c3a92db7baf3b2f09b2b780d30df84b45cbf",
+      "sizeBytes": 354,
+      "sha256": "b447a13d27c6297e8b861a6f8a2d7a751859f016143690e6d2734f2134ef5b28"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-mdpi/audio_service_stop.png",
+      "gitBlob": "413184aebf2947ba5b0406918c8e233e88d3183a",
+      "sizeBytes": 114,
+      "sha256": "cda1351e37680de3d2dc9e44bfbd3240b34bd641cfa314f6dd723311cfc0305d"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_fast_forward.png",
+      "gitBlob": "ceec9797a7d22aa6248b35a7ac36243507225761",
+      "sizeBytes": 389,
+      "sha256": "282ec622750625727522065f23749c16f8a047fe8b5aeb422fb80947bc9b7bff"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_fast_rewind.png",
+      "gitBlob": "52c5e7c3dc18a3c243de87f5305368ac92550eac",
+      "sizeBytes": 460,
+      "sha256": "024b35f62c62e80818b6cfca27b29cd9138b4bea79bb9858c8a520d3a664944b"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_pause.png",
+      "gitBlob": "04759eedfc4d55860ef2ae9b3b92bd8ab79efeec",
+      "sizeBytes": 188,
+      "sha256": "1f98a50b019309e53d7f604dc0ca454fc3d1bcf44b9c84fa9b142cea06c2b852"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_play_arrow.png",
+      "gitBlob": "7b9b221e344fcf0c610ee5f2c447bcbbabb3b276",
+      "sizeBytes": 538,
+      "sha256": "1d98d2d7cf0bdd8c1114eccb583eed008878e28fe0a0624fad9aed1b5f6acecd"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_skip_next.png",
+      "gitBlob": "f8662731e4ba9eaba8ff8dcd7dcebcf7b2924f39",
+      "sizeBytes": 602,
+      "sha256": "62f7fe4984dd82205e9c2be8ddd1364f73bcd385ca37b37c0fda9adbf8301227"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_skip_previous.png",
+      "gitBlob": "f5a741e9a08a279d160e5d0b849909e0a65db0c1",
+      "sizeBytes": 639,
+      "sha256": "6c404d7dca1a0bb459b20c50cfd1794b8bd01339c4ab2b529d6ea97e3cf5e737"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xhdpi/audio_service_stop.png",
+      "gitBlob": "f7d0bc903efd8269da2202637e54add14ff576a4",
+      "sizeBytes": 152,
+      "sha256": "b1670cb37bc0b2adeb68efd396683883016ff4a25d6c64aaac6950851f26c2e9"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_fast_forward.png",
+      "gitBlob": "058b149c5725e88d70e61af80e565e398bfd6da4",
+      "sizeBytes": 684,
+      "sha256": "1b5cda8e57fec23f3b6950e0a36075ec69339f729f8604eda5b04e67bf93a8c8"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_fast_rewind.png",
+      "gitBlob": "3f2bde87573926dd9ff45b6ad94aef4b92d4329f",
+      "sizeBytes": 770,
+      "sha256": "262326542dbb4899b534dd4fba427bd740ff67c3b768922fe7facad884212b06"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_pause.png",
+      "gitBlob": "4a58a391822f7785f9728bd090d33a20deada4d5",
+      "sizeBytes": 315,
+      "sha256": "8f3d3f9e819f9e8ad56974609c8947ef2cafecf53a06ee4bcdc5d7622f3bbf2c"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_play_arrow.png",
+      "gitBlob": "4c3fc47402e90284ac7dee072b268870d8fdbe48",
+      "sizeBytes": 720,
+      "sha256": "9dff6cab4e68440772fb1b0802f151ac50b5e98087c62c15f123ac85a0843ce3"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_skip_next.png",
+      "gitBlob": "ff67957331d151d5432c9c9a96ce730a1e6f0080",
+      "sizeBytes": 832,
+      "sha256": "ca7ce674081a4362c4ab73b44dcdbb0f86b5260f6b1d6841b528366607ad73dc"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_skip_previous.png",
+      "gitBlob": "c4d858e60cb7503f25b338e7b4d92578a6bae266",
+      "sizeBytes": 857,
+      "sha256": "1b4df1110917c2a88c9559b1bfd0dcb1b81a9724adbca5073105ae4f0222854c"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxhdpi/audio_service_stop.png",
+      "gitBlob": "7f8775aea29b98810ead442e6acfa8e6e40a8a43",
+      "sizeBytes": 252,
+      "sha256": "ad85bcdb158b5c53eba2a09d87efd0a1781764f5a8e881246842b7e8f7610576"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_fast_forward.png",
+      "gitBlob": "6153646aed29c4cf803ea3685f2bee38370afad5",
+      "sizeBytes": 838,
+      "sha256": "43775750c14aad142df0ad9a2d2fe836a01c9fa29ed738dc1e4ba8a0f46609e6"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_fast_rewind.png",
+      "gitBlob": "5de2f31eadd6529bf26bdcc41ff5e22dffe7d283",
+      "sizeBytes": 952,
+      "sha256": "ac74a6e154794271feecb9e0508e79197a933250b96eee86f8f261fde60753a3"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_pause.png",
+      "gitBlob": "1d0ff1b0f70283312eee2deb92f4006c98f17f6e",
+      "sizeBytes": 461,
+      "sha256": "83e76638f27ded9d93a05bda5fc47ee6ac4efb1d6ba00f2de725ec6d0a5d8d73"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_play_arrow.png",
+      "gitBlob": "6fedb6fab36596d6a1380da62b58e79862be51a4",
+      "sizeBytes": 1119,
+      "sha256": "930cf4a6b6d33e694c9bfb392106216fcdf99b59737e9f000b343cea72d52607"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_skip_next.png",
+      "gitBlob": "464a3cca718eabe8a2b4d1e9a2ee1b39bb4a7b61",
+      "sizeBytes": 1243,
+      "sha256": "85b5ad72aa20313caa77e964c42bc4e3ccbbee01c6dc65eee2917cb14f25006b"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_skip_previous.png",
+      "gitBlob": "fe0efaabf0b6d87548a39a06bb5d2b28e1eea506",
+      "sizeBytes": 1276,
+      "sha256": "602261a9880406393db4b29b7a6894b5f44a9ab7046fba79b9598e6635feef24"
+    },
+    {
+      "path": "third_party/audio_service/android/src/main/res/drawable-xxxhdpi/audio_service_stop.png",
+      "gitBlob": "580c623737b309142a77027ab85b68285e6f4c13",
+      "sizeBytes": 316,
+      "sha256": "971447f07522f9e8b6b0a417aee9f4e54bff19bce592bec045ef3c53a6c048a0"
+    },
+    {
+      "path": "third_party/audio_service/darwin/audio_service.podspec",
+      "gitBlob": "9a5ad98754ab373ac79ec4ceb1b280bf2c243bdf",
+      "sizeBytes": 970,
+      "sha256": "73824ae92f5ad2d005964b1396b082dbb9d682a13a347711f2eab3194fcb9cea"
+    },
+    {
+      "path": "third_party/audio_service/darwin/audio_service/Package.swift",
+      "gitBlob": "df3678525555e23dde21ffa7166fd533d6cfaf5b",
+      "sizeBytes": 599,
+      "sha256": "f36dafde68f04eb041a9e99dbc97280df5692d6d39cf4b6bc3882626809b105f"
+    },
+    {
+      "path": "third_party/audio_service/darwin/audio_service/Sources/audio_service/AudioServicePlugin.m",
+      "gitBlob": "4e39524ce335e5f92155e2b99619d9e0dbc87e4b",
+      "sizeBytes": 23257,
+      "sha256": "fed592f28065dcdcf1819754c83a34f046f7583a897cd53365d845a8d4920b22"
+    },
+    {
+      "path": "third_party/audio_service/darwin/audio_service/Sources/audio_service/include/audio_service/AudioServicePlugin.h",
+      "gitBlob": "3f70439727652a1bd71f629f64caf63b77fe5bf3",
+      "sizeBytes": 912,
+      "sha256": "363505b403889eadee46a9a3bdd1222cb684296acb2735905142a19bd9454b26"
+    },
+    {
+      "path": "third_party/audio_service/lib/audio_service.dart",
+      "gitBlob": "3104d7be0ecc3809c12f13903db07879a8c7e225",
+      "sizeBytes": 139186,
+      "sha256": "f0821ecbe718a6cb70cb0af63d537fdcefd3829efbbd864d1238af2d2a65512e"
+    },
+    {
+      "path": "third_party/audio_service/pubspec.yaml",
+      "gitBlob": "c91282b884412b829b293b6d48a485146695b559",
+      "sizeBytes": 1737,
+      "sha256": "9a4d230fb2e0ab22bd0a887056b3896831897a45d4ffc22e5f48bca5c52a60ed"
+    },
+    {
       "path": "tools/android_exit_regression.py",
       "gitBlob": "ddda4b8c60afdda13e40be6ce35c181596caec8a",
       "sizeBytes": 2229,
@@ -1285,6 +1669,324 @@
       "gitBlob": "e901dde684ea8ba25c50ea5dc7d5900da31a30d4",
       "sizeBytes": 3522,
       "sha256": "7dd03746b19dcf3542829b2f6e8ed40a2714ce5f2cb3b0e23f0118a2fcf62d62"
+    },
+    {
+      "path": "validation/playback-01/.gitignore",
+      "gitBlob": "79f7ecabd5c79ed432e463c2304a605523961083",
+      "sizeBytes": 746,
+      "sha256": "441eaa1de5b3db9fae056e7503567e9f8dd94173e1389c60f76956abf729015a"
+    },
+    {
+      "path": "validation/playback-01/README.md",
+      "gitBlob": "11ccc48ff64990b499e6c67b7e3c29a650e0b00c",
+      "sizeBytes": 2637,
+      "sha256": "9453525e94bb31acced6a88e7336256081676f6d7f9aeb3b37a270cbc056cf3d"
+    },
+    {
+      "path": "validation/playback-01/analysis_options.yaml",
+      "gitBlob": "745670d28671d0e73f76f6bd70a657bf21139395",
+      "sizeBytes": 1491,
+      "sha256": "9932af44285f42f569a54f5e35791a927b6a387c513107ccdc26fb0e3c29e0a5"
+    },
+    {
+      "path": "validation/playback-01/android/.gitignore",
+      "gitBlob": "be3943c96d8eed92e2a329ce8327616d5e7dc440",
+      "sizeBytes": 253,
+      "sha256": "b027c9de1011765c015e5819bf857c0d75bfcd0886fb01721c091159012e50f1"
+    },
+    {
+      "path": "validation/playback-01/android/app/build.gradle.kts",
+      "gitBlob": "f78223d158deb9aa9c634ddd2e2d4074c953aa23",
+      "sizeBytes": 1798,
+      "sha256": "fc1b24a96e920fb1e8ab3aa9c50b9789fe7901aeacc6881e69d8d4ea0a955237"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/debug/AndroidManifest.xml",
+      "gitBlob": "399f6981d5d35475eb18e6068ae67cdd7c731978",
+      "sizeBytes": 378,
+      "sha256": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/AndroidManifest.xml",
+      "gitBlob": "95f975724724bab02ee3e802d9fb1d1d3160d700",
+      "sizeBytes": 3316,
+      "sha256": "3de0b4c20838f610357ced5d8d1a4ff40e5f70fcae4799db1886e0e4f822d8dc"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/kotlin/com/shiyu/probe/shiyu_playback_probe/MainActivity.kt",
+      "gitBlob": "acc58d8e51b08aab6c5bfb033c9dca5fe7189916",
+      "sizeBytes": 2882,
+      "sha256": "33e2fc37db6af3c9d9f4cc9d5185120bf6579ccb187b1290f1b7059938f678dc"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/drawable-v21/launch_background.xml",
+      "gitBlob": "f74085f3f6a2b995f8ad1f9ff7b2c46dc118a9e0",
+      "sizeBytes": 438,
+      "sha256": "7ca6d5cec2169c5a98661a119db23a6f3399c8fef2256ff04f3a642831282478"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/drawable/ic_audio_notification.xml",
+      "gitBlob": "f00249a29493e87d9f79bc3fdda36c69341174d3",
+      "sizeBytes": 262,
+      "sha256": "dc972acd0ef58872cb7fec44693592ff615217a99c79bf597fe86e66f4f9bbdd"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/drawable/launch_background.xml",
+      "gitBlob": "304732f8842013497e14bd02f67a55f2614fb8f7",
+      "sizeBytes": 434,
+      "sha256": "94433756fe10005ddd6fc55cc5c0b1e9f3c10b66a08ceac795ece6713d34e28a"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "gitBlob": "db77bb4b7b0906d62b1847e87f15cdcacf6a4f29",
+      "sizeBytes": 544,
+      "sha256": "6a7c8f0d703e3682108f9662f813302236240d3f8f638bb391e32bfb96055fef"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "gitBlob": "17987b79bb8a35cc66c3c1fd44f5a5526c1b78be",
+      "sizeBytes": 442,
+      "sha256": "c7c0c0189145e4e32a401c61c9bdc615754b0264e7afae24e834bb81049eaf81"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "gitBlob": "09d4391482be68e9e4a07fab769b5de337d16eb1",
+      "sizeBytes": 721,
+      "sha256": "e14aa40904929bf313fded22cf7e7ffcbf1d1aac4263b5ef1be8bfce650397aa"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "gitBlob": "d5f1c8d34e7a88e3f88bea192c3a370d44689c3c",
+      "sizeBytes": 1031,
+      "sha256": "4d470bf22d5c17d84edc5f82516d1ba8a1c09559cd761cefb792f86d9f52b540"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "gitBlob": "4d6372eebdb28e45604e46eeda8dd24651419bc0",
+      "sizeBytes": 1443,
+      "sha256": "3c34e1f298d0c9ea3455d46db6b7759c8211a49e9ec6e44b635fc5c87dfb4180"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/values-night/styles.xml",
+      "gitBlob": "06952be745f9fa6fa75196e830d9578eb2ee631d",
+      "sizeBytes": 995,
+      "sha256": "8c5bad5152f217e837519f9c15211d19f39bd45f5f67faf6dd81cb4b299e518f"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/main/res/values/styles.xml",
+      "gitBlob": "cb1ef88056edd1caf99a935e434e7ff6943a0ef6",
+      "sizeBytes": 996,
+      "sha256": "937d7c82f539c72eb94fd3a3773f29b3d3fef1997213c92cb632298cedf4bda9"
+    },
+    {
+      "path": "validation/playback-01/android/app/src/profile/AndroidManifest.xml",
+      "gitBlob": "399f6981d5d35475eb18e6068ae67cdd7c731978",
+      "sizeBytes": 378,
+      "sha256": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b"
+    },
+    {
+      "path": "validation/playback-01/android/build.gradle.kts",
+      "gitBlob": "dbee657bb5b9158516486b3a1b47ef8b6fc72a2a",
+      "sizeBytes": 537,
+      "sha256": "6a26dba2cb8dfba1e74f540b0d17a89d96c1301d3c3bfda14348bed257fddcba"
+    },
+    {
+      "path": "validation/playback-01/android/gradle.properties",
+      "gitBlob": "94744475e97aec4f97514beee7962f92ecea3e0c",
+      "sizeBytes": 383,
+      "sha256": "c578d65dca4a44e11e2130bbf2e77410ff68aa17fd37ac6b9b691a27c2f0cfcf"
+    },
+    {
+      "path": "validation/playback-01/android/gradle/wrapper/gradle-wrapper.properties",
+      "gitBlob": "76d4386de74b096e1a86b9d0090b0f8c118f0e49",
+      "sizeBytes": 202,
+      "sha256": "b6af85f4d33860b32baaa0b95368061157e4374b190b81cb658f8757b2db88df"
+    },
+    {
+      "path": "validation/playback-01/android/settings.gradle.kts",
+      "gitBlob": "989ac5e463b472d59780570a3616e969e3a728f0",
+      "sizeBytes": 771,
+      "sha256": "fd28aa10f4f4f4d8adb544e83b8c7c80b27fb4425044f951f6a5434d01d0b8bb"
+    },
+    {
+      "path": "validation/playback-01/lib/audio_material_store.dart",
+      "gitBlob": "91d616e79e700b55ee7734d49a859f4ede264e15",
+      "sizeBytes": 2363,
+      "sha256": "dba1e3c8721369ffff59a07eda02214b362d4b4cefe546fa8c2c4dc6a701d3f4"
+    },
+    {
+      "path": "validation/playback-01/lib/background_regression.dart",
+      "gitBlob": "6bbd66bd4567fcfcdba7d04b1d800cb8044598e5",
+      "sizeBytes": 19230,
+      "sha256": "8c29a6199f682ca8f338a98ab2aecb73a44762d87fb4daff3ed0158e99784612"
+    },
+    {
+      "path": "validation/playback-01/lib/main.dart",
+      "gitBlob": "c75ef02fa70efd88f1afe17fcb4fa2d53d443022",
+      "sizeBytes": 16025,
+      "sha256": "80338148609574bc8218fc56457b96956475eaa48572606c50d76e6a7e4cb113"
+    },
+    {
+      "path": "validation/playback-01/lib/playback/android_audio_host.dart",
+      "gitBlob": "eb76f211560045032ad4ed2b9448d07675f9ff76",
+      "sizeBytes": 22350,
+      "sha256": "8b185892c46c191c27f757112c53b6d017aad676b706504a560ce20af4b468bb"
+    },
+    {
+      "path": "validation/playback-01/lib/playback/foreground_host.dart",
+      "gitBlob": "63a19f75a7c4203f25793be11801e0e3372606a0",
+      "sizeBytes": 1123,
+      "sha256": "001ec02c3bb100d618c71c90aac1782bc2d63d4d9418786c00fd22c6bef3c3fd"
+    },
+    {
+      "path": "validation/playback-01/lib/playback/media_kit_engine.dart",
+      "gitBlob": "b6d581174e1f44f4e9afa7c5ba3d0156d652290a",
+      "sizeBytes": 18495,
+      "sha256": "9685ecaf1b6e39a0e403371ccc639e8dd0186b90e12ae0d65c7c59b030dd5eac"
+    },
+    {
+      "path": "validation/playback-01/lib/playback/playback_host.dart",
+      "gitBlob": "09f2ce132660a326cebed0afb3d954d3d4722fd4",
+      "sizeBytes": 321,
+      "sha256": "56c7a605ad79020462fd06d8b25321f16885809fef937c010b63c16d670aeb62"
+    },
+    {
+      "path": "validation/playback-01/lib/playback/windows_playback_host.dart",
+      "gitBlob": "7fda491b302a724226f94e6f23b4276ca27c10dc",
+      "sizeBytes": 17357,
+      "sha256": "d197bef87f6cef3e74627a170f4fd654fd4ca86aea10c59456825f4d3e08f4e1"
+    },
+    {
+      "path": "validation/playback-01/pubspec.lock",
+      "gitBlob": "c7104515868162c65fb57ed481e3a5b27d61c744",
+      "sizeBytes": 20078,
+      "sha256": "cfc85659062543b7c9168065f77a5167a6373e353be9b2241532db96a1cacf79"
+    },
+    {
+      "path": "validation/playback-01/pubspec.yaml",
+      "gitBlob": "4d549aa27215e88a0790ca3d6cc3309e1db69ada",
+      "sizeBytes": 622,
+      "sha256": "9060b2f63b944d4cdc59535d9d3a1bbc610183150670483c587224fed36eca15"
+    },
+    {
+      "path": "validation/playback-01/windows/.gitignore",
+      "gitBlob": "d492d0d98c8fdc9f93ad2543bb4f531803e9df72",
+      "sizeBytes": 291,
+      "sha256": "96345475f1a3c66bd32d28178fba151ab1506b35b1f7857b8f7651863093ea11"
+    },
+    {
+      "path": "validation/playback-01/windows/CMakeLists.txt",
+      "gitBlob": "bf8c1015930009e0a1b1d9de9bb96985a2cb552d",
+      "sizeBytes": 4179,
+      "sha256": "e4e62e794e4a87e4a4494802e7341e020acaabc59158237696b1e1543745be78"
+    },
+    {
+      "path": "validation/playback-01/windows/flutter/CMakeLists.txt",
+      "gitBlob": "903f4899d6fced0eb941e159f7322b21b320c40c",
+      "sizeBytes": 3742,
+      "sha256": "1fe418971b6f41bb35ceb3d64113a835f3f6f171ecaa707bf232492b57a588d6"
+    },
+    {
+      "path": "validation/playback-01/windows/flutter/generated_plugin_registrant.cc",
+      "gitBlob": "8f1db8ff57e25122e3efef6f873cd15cf0191654",
+      "sizeBytes": 549,
+      "sha256": "19b939c7072be79d231b3078781300e7627840811c46b9a7d811b05de282abaf"
+    },
+    {
+      "path": "validation/playback-01/windows/flutter/generated_plugin_registrant.h",
+      "gitBlob": "dc139d85a93101cc0f6e9db03a3e1a9f68e8dd7e",
+      "sizeBytes": 302,
+      "sha256": "dbc11635d7b1ba1887adf40df5b83d634e9c3ab0bee34510c71528bb4d73602a"
+    },
+    {
+      "path": "validation/playback-01/windows/flutter/generated_plugins.cmake",
+      "gitBlob": "a74ce38ea56044c5f7a29b2cfa4388d6bd794bda",
+      "sizeBytes": 804,
+      "sha256": "1d4fc722a6531b06a4cae7a464cab284c833cb1d22a9861732fbb6f00c6bcaa6"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/CMakeLists.txt",
+      "gitBlob": "a558a77be0e7b6ff4db040e1b1d6d46e51a95680",
+      "sizeBytes": 2043,
+      "sha256": "852154256d30f0febb8380e542efcb7ec6a199b2df77676a1dbcfc2753856dd8"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/Runner.rc",
+      "gitBlob": "9b64e3b35b627e7cf224d924169262ad50a0cfed",
+      "sizeBytes": 3085,
+      "sha256": "504700dbec267d1db94b50b0cb93bf550e528a97f50b0954927f75a9c70cbe9a"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/flutter_window.cpp",
+      "gitBlob": "f4d48848d181dfcb6c76fd4f71c9d1ae07b54c47",
+      "sizeBytes": 2648,
+      "sha256": "d419c1597432038373497a8234837446f38a6a79a598b6bdd3d2ffa5caeff319"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/flutter_window.h",
+      "gitBlob": "3ba1e38c47492a11373ea15c0959c7ff3d916f4c",
+      "sizeBytes": 1046,
+      "sha256": "00afe63385ead8cda4605d78d8d9999080410db45bcf5b6697fef184fe18023e"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/main.cpp",
+      "gitBlob": "7e825d15894cc3ce5f87b35a3612c1e1091d4bf4",
+      "sizeBytes": 1493,
+      "sha256": "8a077a41d129e61a0f7bd8f964a5149195f8fc5076dc7d8f719285571d7c834a"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/resource.h",
+      "gitBlob": "66a65d1e4a79f230031ec0e0959a721039e7282f",
+      "sizeBytes": 432,
+      "sha256": "1fa98588b04561590ba1cf0521ab86a9db4a878312f21c9d5861d965ddd8d1ae"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/resources/app_icon.ico",
+      "gitBlob": "c04e20caf6370ebb9253ad831cc31de4a9c965f6",
+      "sizeBytes": 33772,
+      "sha256": "c098d3fc85cacff98b8e69811b48e9f0d852fcee278132d794411d978869cbf8"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/runner.exe.manifest",
+      "gitBlob": "153653e8d67f81b901d28257a65908f3278e058d",
+      "sizeBytes": 602,
+      "sha256": "825d243e9fa1542619909c1b72d09b3ed7c1f3b225bb8367c125835e5dc3f8aa"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/utils.cpp",
+      "gitBlob": "3cb71466549c0c087512f3465765191e4f7507be",
+      "sizeBytes": 2168,
+      "sha256": "6c2c87106b4b29d534c7edcafb3b7f7b9079caa3cdafa7e56671ad2adf5a2543"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/utils.h",
+      "gitBlob": "3879d54755798567f0f318d63340508d5668eb96",
+      "sizeBytes": 672,
+      "sha256": "95a7f7dddb832997cefa937a96f89472332277e75734a5de553610760b744b03"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/win32_window.cpp",
+      "gitBlob": "27f842a9709f5b2a327e72ced0af784ead9bd17e",
+      "sizeBytes": 8634,
+      "sha256": "3380321e168d37944abf89e21086617343426e31cb403ef186b9d913f5b8d3cc"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/win32_window.h",
+      "gitBlob": "e563a1863201eebf2adee9e81028cf9b654bbea9",
+      "sizeBytes": 3581,
+      "sha256": "d1678a1052305a2b61988f5314ecdfe41b79217097593085a9aa11a525652add"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/windows_smtc.cpp",
+      "gitBlob": "2201da3232f24dfb1adf800d843c24fd0698d6aa",
+      "sizeBytes": 19176,
+      "sha256": "8df48c6f5bf1d4fbb3f5e78ec6a7a9c7eeb727df95f5cab380094583925c9197"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/windows_smtc.h",
+      "gitBlob": "8fa360fa9172e61dd325e27835a7bedcf6d1c15c",
+      "sizeBytes": 761,
+      "sha256": "96747cbb7a538d5b965d6201e8721f4a8eada644d0ceb8019c5909ca8849ade4"
     }
   ]
 }

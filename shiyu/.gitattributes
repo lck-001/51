@@ -1,5 +1,2 @@
-* text=auto eol=lf
-*.bat text eol=crlf
-*.png -text
-*.ico -text
-*.jar -text
+# Preserve exact upstream runtime bytes and original whitespace for provenance.
+third_party/audio_service/** -text -whitespace

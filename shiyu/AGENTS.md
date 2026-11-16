@@ -11,3 +11,5 @@
 - Use isolated local test services and adapters; no production data/service changes or automatic sharing.
 - Routine reversible engineering work and scoped Git delivery can proceed under the user's stated authorization; do not repeatedly ask users to pick framework parameters. Respect actual external data, cost, device and release boundaries.
 - End engineering replies with the current stage, next recommended action, and user action required (none when none). Do not claim work continues after the turn without an actual running task.
+
+- Unattended work must not activate host desktop windows, move the mouse, send keyboard input, lock the computer or play host audio. Use background builds/tests and explicitly hidden, muted, task-owned probes. Defer real desktop input, lock/unlock and audible acceptance until the user explicitly agrees to participate. Do not let a first-frame Show/SetFocus defeat a hidden test flag.
