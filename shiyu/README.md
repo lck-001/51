@@ -83,3 +83,7 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 ## 后台开发与原生接入更新
 
 播放策略模块52项独立回归已过，Android有限后台链路和Windows隐藏静音原生回归已分别收口。见 [策略验证](docs/reviews/M13-state-validation.md)、[Android实际记录](docs/reviews/M15-android-native-results.md)、[Windows后台记录](docs/reviews/M15-windows-background-results.md)。真实锁屏/媒体键/音质与四端实机仍未验，不操作用户主界面进行自动验收。下一包是 [材料持久化与受限送入](docs/reviews/M16-first-user-flow-workpack.md)，不是继续堆媒体实验。
+
+## M16 业务纵切
+
+[材料与送入验证](docs/reviews/M16-local-flow-results.md)：本地材料缓存30项、受限接收/版本及localhost HTTP37项通过。专业Speech离线34项通过但云请求0；[免费资源方案](docs/reviews/M16-free-speech-resource-plan.md)仍需本人核对F0/额度与开通。SQLite只用于验证，PG/真实身份/真实外部Agent及学习生成没有冒称接通。

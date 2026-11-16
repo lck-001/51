@@ -1,0 +1,6 @@
+fixtures/*.wav
+fixtures/*.local.json
+*.local.json
+results/
+__pycache__/
+*.pyc

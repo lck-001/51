@@ -1,0 +1,5 @@
+# Existing local runtime used for limited localhost verification, not newly installed.
+fastapi==0.122.0
+uvicorn==0.38.0
+pydantic==2.12.5
+starlette==0.50.0

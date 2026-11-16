@@ -1,0 +1,33 @@
+{
+  "schema": "shiyu.speech.approval.v1",
+  "approved": false,
+  "approvalReference": null,
+  "expiresAt": null,
+  "region": null,
+  "resourceId": null,
+  "resourceTier": null,
+  "data": {
+    "originalSyntheticOnly": true,
+    "audioSha256": null,
+    "referenceSha256": null,
+    "allowAudioAndReferenceToAzure": false
+  },
+  "maxCalls": 2,
+  "maxAudioSeconds": 30,
+  "prosodyApproved": false,
+  "pricing": {
+    "confirmed": false,
+    "evidenceReference": null,
+    "evidenceDate": null,
+    "currency": null,
+    "maxCost": null,
+    "basePerHour": null,
+    "prosodyPerHour": null,
+    "billingIncrementSeconds": null,
+    "minimumBillableSecondsPerRequest": null,
+    "perRequestFee": null,
+    "taxRate": null,
+    "freeAllowanceVerified": false,
+    "remainingFreeSeconds": null
+  }
+}
