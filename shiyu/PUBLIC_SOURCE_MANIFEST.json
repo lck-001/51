@@ -141,6 +141,66 @@
       "sha256": "a00110c8c83ee3ea4680fa7d6822804de7fb84ec77d6ccb816b1f761f27e5f93"
     },
     {
+      "path": "docs/reviews/M17-learning-version-results.md",
+      "gitBlob": "c6a601f28d795815c419903e45005fd0e101f268",
+      "sizeBytes": 1433,
+      "sha256": "189350e1d4320dca5b6097286b446e9e1f3dea5a6eb1c35fc44651669ee13b8c"
+    },
+    {
+      "path": "packages/learning_core/README.md",
+      "gitBlob": "9b34235295ac155a694ccefc75977dab526b8543",
+      "sizeBytes": 7911,
+      "sha256": "964865ebd75b136f521001fa61e2a7691b9f756ba9592a13cd17c98f9a91bf7e"
+    },
+    {
+      "path": "packages/learning_core/lib/learning_core.dart",
+      "gitBlob": "2000a0e4700c8669d2667f733c2cf88c7a328381",
+      "sizeBytes": 5542,
+      "sha256": "55245cc349e2f63412cce61de1dccf197988dd61f9aa4354d78af0841f4e34bf"
+    },
+    {
+      "path": "packages/learning_core/lib/src/file_learning_store.dart",
+      "gitBlob": "8b5f576775e7957cf5a9a005c6cd6c8771ca7c64",
+      "sizeBytes": 25823,
+      "sha256": "3e44fa61aa4ef2f5e897ada1d18fc37ff44f74e1c7e6d6b5265dc0ff4a874769"
+    },
+    {
+      "path": "packages/learning_core/pubspec.lock",
+      "gitBlob": "0c75f962c6c612e9672dbab4dcb8a45fd4fb1e19",
+      "sizeBytes": 644,
+      "sha256": "e0fa031a055f6711b2639d564ba1a6ea8e33609c6eb1b7c4f6a25600971e5ff5"
+    },
+    {
+      "path": "packages/learning_core/pubspec.yaml",
+      "gitBlob": "f27cb9c60ac655a9beb2e21a9bb33754fc5302b5",
+      "sizeBytes": 294,
+      "sha256": "02389932dc087a19d21fdcd8bf2f088521f9f7203e1324022885b69212ddb1d3"
+    },
+    {
+      "path": "packages/learning_core/test/README.md",
+      "gitBlob": "369953444dfd177df46705ead0b910224434e14a",
+      "sizeBytes": 1315,
+      "sha256": "5ba36c89e5d3cac788938a0119365712231d0cbdbc7db2a9b5776794856b41c8"
+    },
+    {
+      "path": "packages/learning_core/test/learning_store_regression.dart",
+      "gitBlob": "8118ec2b1024af00237fe2c7d31859c99e281bd2",
+      "sizeBytes": 36180,
+      "sha256": "e3eaf56822ba54aacdb71cbbda250e6f3ec969c5cc03bc69264c5abd3d15a5b1"
+    },
+    {
+      "path": "packages/learning_core/test/support.dart",
+      "gitBlob": "8316398074b064500ef096229fa2d0e5059be5e1",
+      "sizeBytes": 1598,
+      "sha256": "df03d41c9581f9a6538862d5265c9a326c0157ccb1a63c0f5ba8e133e09a16e3"
+    },
+    {
+      "path": "packages/learning_core/test/wav_fixture.dart",
+      "gitBlob": "0689de0f7cc53bbf9ea5c049d8d756937e71d7f4",
+      "sizeBytes": 1223,
+      "sha256": "7824573b7a1bed4b21f873b851dc43a8a03226a31e5e8d570f8095c6a5b0f9e2"
+    },
+    {
       "path": "packages/material_core/README.md",
       "gitBlob": "53104766854ccba283c42d1fefb2c62f80b5c05c",
       "sizeBytes": 5375,

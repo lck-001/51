@@ -1,0 +1,12 @@
+name: learning_core
+description: Fixed material learning versions and paused local checkpoints for Shiyu.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+dependencies:
+  crypto: 3.0.8
+  material_core:
+    path: ../material_core
+  playback_core:
+    path: ../playback_core
