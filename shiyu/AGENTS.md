@@ -1,6 +1,8 @@
 # Shiyu engineering rules
 
 - Follow the reviewed product → requirements → architecture → implementation → human acceptance → staged release process. Do not expand a feasibility experiment into product implementation without the appropriate review.
+- The product manager owns the next work item; architects resolve internal design/build blockers. Each item requires independent expert/QA acceptance with scoped evidence before advancing. Preserve failed runs and do not weaken assertions to obtain approval.
+- Continue already authorized reversible work after a gate passes. Escalate actual user decisions, external resources/data/cost, human acceptance or release boundaries only after a concrete reviewable result is prepared; do not repeatedly ask the user to choose implementation parameters.
 - Use the newest approved prototype; navigation is 学习、材料、添加、分享、我的. Adding materials and sharing works are separate flows.
 - Keep reading content, playback/progress, practice controls, and the compact bottom dictionary in the agreed order.
 - Professional acoustic assessment is required for pronunciation scoring. ASR text similarity is not pronunciation accuracy.

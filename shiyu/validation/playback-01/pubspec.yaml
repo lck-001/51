@@ -1,7 +1,7 @@
 name: shiyu_playback_probe
 description: Isolated app-owned playback module and Android host validation.
 publish_to: none
-version: 0.1.0+1
+version: 0.1.1+2
 environment:
   sdk: '>=3.14.0 <4.0.0'
   flutter: '>=3.50.0'
@@ -15,10 +15,13 @@ dependencies:
   media_kit_libs_video: 1.0.7
   audio_service: 0.18.19
   audio_session: 0.2.4
+  crypto: 3.0.8
   playback_core:
     path: ../../packages/playback_core
   material_core:
     path: ../../packages/material_core
+  material_import:
+    path: ../../packages/material_import
   learning_core:
     path: ../../packages/learning_core
   learning_playback:

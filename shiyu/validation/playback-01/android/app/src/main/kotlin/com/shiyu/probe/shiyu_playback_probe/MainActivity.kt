@@ -3,6 +3,7 @@ package com.shiyu.probe.shiyu_playback_probe
 import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Process
@@ -11,8 +12,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
+    private var documentImport: BoundedDocumentImport? = null
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        documentImport = BoundedDocumentImport(this, flutterEngine.dartExecutor.binaryMessenger)
         // Capture application scope, not this Activity: the cached engine may
         // continue after its foreground Activity has been detached/destroyed.
         val probe = PlaybackHostStatus(applicationContext)
@@ -21,6 +24,18 @@ class MainActivity : AudioServiceActivity() {
                 if (call.method == "hostStatus") result.success(probe.read())
                 else result.notImplemented()
             }
+    }
+
+    @Deprecated("Deprecated by Android")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (documentImport?.onActivityResult(requestCode, resultCode, data) == true) return
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onDestroy() {
+        documentImport?.dispose()
+        documentImport = null
+        super.onDestroy()
     }
 }
 

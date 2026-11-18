@@ -18,6 +18,8 @@ dependencies:
     path: ../learning_playback
   client_shell:
     path: ../client_shell
+  material_import:
+    path: ../material_import
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,0 +1,12 @@
+name: material_import
+description: Bounded local TXT and DOCX text extraction and app import session contracts.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+dependencies:
+  archive: 4.6.0
+  crypto: 3.0.8
+  xml: 7.1.0
+  material_core:
+    path: ../material_core

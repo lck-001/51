@@ -9,9 +9,11 @@ import 'package:learning_core/learning_core.dart';
 import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'client_cached_engine.dart';
 import 'client_command_barrier.dart';
+import 'client_material_import.dart';
 import 'client_shutdown.dart';
 import 'playback/android_audio_host.dart';
 import 'playback/foreground_host.dart';
@@ -30,6 +32,7 @@ final class ClientApplicationOwner {
   late final PlaybackController playback;
   late final LearningPlaybackCoordinator coordinator;
   late final ShiyuClientRuntime runtime;
+  late final ClientMaterialImportController materialImports;
   final frozen = ValueNotifier<bool>(false);
   final notice = ValueNotifier<String?>(null);
   late final ClientShutdown shutdown;
@@ -43,6 +46,7 @@ final class ClientApplicationOwner {
     FileLearningStore? learning;
     PlaybackHost? host;
     ClientCachedEngine? engine;
+    ClientMaterialImportController? materialImports;
     try {
       materials = await FileMaterialStore.open(
         root: Directory('${root.path}/materials'),
@@ -54,6 +58,12 @@ final class ClientApplicationOwner {
         materials: materials,
       );
       owner.learning = learning;
+      final temporary = await getTemporaryDirectory();
+      materialImports = ClientMaterialImportController(
+        materials: materials,
+        stagingRoot: Directory('${temporary.path}/material_import_v1'),
+      );
+      owner.materialImports = materialImports;
       final cache = FilePlayableCache(
         root: Directory('${root.path}/playable-cache'),
         materials: materials,
@@ -89,11 +99,13 @@ final class ClientApplicationOwner {
           owner.frozen.value = true;
           FocusManager.instance.primaryFocus?.unfocus();
           owner.engine.retireOpenAdmission();
+          owner.materialImports.retire();
         },
         retireBookkeeping: () async {
           await Future.wait([
             owner.runtime.detach(),
             owner.coordinator.close(),
+            owner.materialImports.close(),
           ]);
         },
         stopAndRelease: owner._stopAndReleaseNative,
@@ -126,6 +138,9 @@ final class ClientApplicationOwner {
     } catch (_) {
       // Startup has no selected media and cannot have started playback. Best
       // effort cleanup is not reported as confirmed hardware release.
+      try {
+        await materialImports?.close();
+      } catch (_) {}
       try {
         await engine?.native.dispose();
       } catch (_) {}
@@ -193,6 +208,7 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
     super.initState();
     _shell = widget.owner.runtime.createShell(
       onRootBack: Platform.isAndroid ? widget.owner.closeAndExit : null,
+      onStartImport: widget.owner.materialImports.start,
     );
     WidgetsBinding.instance.addObserver(this);
   }

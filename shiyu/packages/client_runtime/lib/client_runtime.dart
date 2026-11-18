@@ -7,6 +7,7 @@ import 'package:client_shell/client_shell.dart';
 import 'package:learning_core/learning_core.dart';
 import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
+import 'package:material_import/material_import.dart';
 import 'package:playback_core/playback_core.dart';
 
 enum ClientRuntimeErrorCode {
@@ -195,6 +196,7 @@ final class ShiyuClientRuntime {
     WordLookupCallback? onLookupWord,
     PracticeCallback? onPractice,
     Future<void> Function()? onRootBack,
+    StartMaterialImport? onStartImport,
   }) {
     if (_closed)
       throw const ClientRuntimeException(ClientRuntimeErrorCode.closed);
@@ -212,6 +214,7 @@ final class ShiyuClientRuntime {
       onLookupWord: onLookupWord,
       onPractice: onPractice,
       onRootBack: onRootBack,
+      onStartImport: onStartImport,
     );
   }
 

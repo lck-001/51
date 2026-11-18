@@ -103,4 +103,6 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 
 [M19 本地生成任务](services/backend/GENERATION_VALIDATION.md) 完成持久创建/查询/取消、幂等、预算与调用上限、未知结果保护和私有制品清单；生成相关 23 项、后端完整 60 项回归通过。执行 Adapter 仅为 fixture，默认 blocked，不调用真实供应商、不导入 Dart 学习版，不代表已能翻译配音。
 
-用户暂不开通云账号，继续按 [M20 文件导入工作包](docs/reviews/M20-material-import-workpack.md) 评审 TXT/DOCX 真实 App 纵切；该工作包不是已实现或已支持所有格式的声明。
+用户暂不开通云账号，[M20 TXT/DOCX 导入](docs/reviews/M20-material-import-results.md) 已完成限定工程验收：原文预览/校对、私有来源与草稿、确认与重启，Android真实SAF验证及Windows构建；未宣称所有格式或四端人验完成。
+
+下一优先项为 [外部助手到学习内容](docs/reviews/M19B-external-assistant-learning-workpack.md)：先评审持久候选、真实来源与确认幂等，再实施受限桥接；[PPTX](docs/reviews/M21-pptx-import-workpack.md) 与 PDF 保留队列。未经核验的来源声明、无音频的文本或测试静音不冒充听力/发音效果。

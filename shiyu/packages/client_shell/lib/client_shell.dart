@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:material_core/material_core.dart';
+import 'package:material_import/material_import.dart';
 import 'package:learning_core/learning_core.dart';
 import 'package:playback_core/playback_core.dart';
 
@@ -108,6 +109,7 @@ class ShiyuClientShell extends StatefulWidget {
     this.onLookupWord,
     this.onPractice,
     this.onRootBack,
+    this.onStartImport,
   });
   final MaterialStore materials;
   final LearningStore learning;
@@ -117,6 +119,7 @@ class ShiyuClientShell extends StatefulWidget {
   final WordLookupCallback? onLookupWord;
   final PracticeCallback? onPractice;
   final Future<void> Function()? onRootBack;
+  final StartMaterialImport? onStartImport;
   @override
   State<ShiyuClientShell> createState() => _ShiyuClientShellState();
 }
@@ -149,6 +152,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _showChinese = true;
   String? _focusedSentence;
   bool _handlingBack = false;
+  bool _importing = false;
+  MaterialImportSession? _importSession;
+  MaterialImportPreview? _importPreview;
+  int _importRequest = 0;
   double? _seekPreview;
   bool get _sameOwner =>
       widget.materials.trustedOwnerId == widget.learning.trustedOwnerId;
@@ -168,6 +175,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _selectionEpoch++;
       _lookupEpoch++;
       _inputEpoch++;
+      _retireImport();
       _drafts = [];
       _versions = {};
       _learning = [];
@@ -196,6 +204,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     _selectionEpoch++;
     _lookupEpoch++;
     _inputEpoch++;
+    _retireImport();
     _title.dispose();
     _text.dispose();
     // External stores, playback, and coordinator remain owned by the app.
@@ -203,6 +212,164 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   bool _scope(int value) => mounted && value == _scopeEpoch;
+
+  void _retireImport() {
+    _importRequest++;
+    final previous = _importSession;
+    _importSession = null;
+    _importPreview = null;
+    _importing = false;
+    if (previous != null) unawaited(_cancelImport(previous));
+  }
+
+  Future<void> _cancelImport(MaterialImportSession session) async {
+    try {
+      await session.cancel();
+    } catch (_) {
+      // App-owned shutdown also waits for its import controller. A failed
+      // cleanup is not reported as a complete rollback or a deleted artifact.
+    }
+  }
+
+  Future<bool> _discardEdits() async {
+    if (!_dirty) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('放弃未保存的内容？'),
+        content: const Text('这次修改还没有保存，离开后将丢失。'),
+        actions: [
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('继续编辑'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('放弃修改'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  String _importMessage(Object error) => switch (error) {
+    MaterialImportException(code: MaterialImportErrorCode.cancelled) =>
+      '已取消导入。',
+    MaterialImportException(code: MaterialImportErrorCode.busy) =>
+      '上一次导入仍在结束，请稍后重试。',
+    MaterialImportException(code: MaterialImportErrorCode.emptyMaterial) =>
+      '没有找到可导入的正文；图片或扫描内容尚不能提取。',
+    MaterialImportException(code: MaterialImportErrorCode.unsupportedFormat) =>
+      '目前支持 TXT 和 Word（.docx）文件。',
+    MaterialImportException(
+      code: MaterialImportErrorCode.sourceTooLarge ||
+          MaterialImportErrorCode.outputTooLarge,
+    ) =>
+      '这份内容超过本次处理上限，请按章节拆分后再导入。',
+    MaterialImportException(code: MaterialImportErrorCode.encrypted) =>
+      '请先移除文件密码，再导入副本。',
+    MaterialImportException(code: MaterialImportErrorCode.readDenied) =>
+      '无法读取这份文件，请重新选择并允许读取。',
+    MaterialImportException(code: MaterialImportErrorCode.timedOut) =>
+      '处理时间较长，请拆分文件后重试。',
+    MaterialImportException(code: MaterialImportErrorCode.writeFailed) =>
+      '文件来源保存未确认，原文件未改动，请重试。',
+    MaterialImportException(
+      code: MaterialImportErrorCode.sessionClosed ||
+          MaterialImportErrorCode.ownerMismatch ||
+          MaterialImportErrorCode.bindingMismatch,
+    ) =>
+      '这次导入已结束，请重新选择文件。',
+    _ => '这份文件暂时无法处理，请确认文件完整或另存为 TXT、DOCX。',
+  };
+
+  String _importWarning(MaterialImportWarning warning) => switch (warning) {
+    MaterialImportWarning.formattingOmitted => '未保留原排版。',
+    MaterialImportWarning.imagesOmitted => '图片内容未提取。',
+    MaterialImportWarning.headersFootersOmitted => '页眉页脚未提取。',
+    MaterialImportWarning.annotationsOmitted => '批注未提取。',
+    MaterialImportWarning.externalLinksNotFollowed => '未打开文档中的外部链接。',
+    MaterialImportWarning.embeddedObjectsOmitted => '嵌入对象未提取。',
+    MaterialImportWarning.trackedChangesOmitted => '修订内容可能不完整，请对照原文核对。',
+  };
+
+  Future<void> _startImport() async {
+    final start = widget.onStartImport;
+    if (start == null ||
+        !_sameOwner ||
+        _saving ||
+        _confirming ||
+        _importing ||
+        _importSession != null ||
+        _handlingBack)
+      return;
+    final scope = _scopeEpoch, input = _inputEpoch, request = ++_importRequest;
+    setState(() => _importing = true);
+    MaterialImportSession? session;
+    try {
+      if (!await _discardEdits() || !_scope(scope) || input != _inputEpoch) {
+        return;
+      }
+      final previous = _importSession;
+      _importSession = null;
+      _importPreview = null;
+      if (previous != null) await _cancelImport(previous);
+      if (!_scope(scope) || input != _inputEpoch) return;
+      session = start();
+      if (session.ownerId != widget.materials.trustedOwnerId) {
+        throw const MaterialImportException(
+          MaterialImportErrorCode.ownerMismatch,
+        );
+      }
+      _importSession = session;
+      final preview = await session.preview;
+      if (!_scope(scope) ||
+          input != _inputEpoch ||
+          !identical(_importSession, session))
+        return;
+      if (preview == null) {
+        _importSession = null;
+        await _cancelImport(session);
+        return;
+      }
+      if (preview.ownerId != session.ownerId ||
+          preview.sessionId != session.sessionId) {
+        throw const MaterialImportException(
+          MaterialImportErrorCode.bindingMismatch,
+        );
+      }
+      _inputEpoch++;
+      setState(() {
+        _importPreview = preview;
+        _editing = null;
+        _title.text = preview.title;
+        _text.text = preview.text;
+        _dirty = true;
+        _tab = 2;
+        _importing = false;
+        _message = '文件已在本机提取，请校对后保存。尚未创建草稿。';
+      });
+    } catch (error) {
+      if (_scope(scope) && input == _inputEpoch) {
+        setState(() {
+          _importSession = null;
+          _importPreview = null;
+          _message = _importMessage(error);
+        });
+      }
+      if (session != null) await _cancelImport(session);
+    } finally {
+      if (session != null && !identical(_importSession, session)) {
+        await _cancelImport(session);
+      }
+      if (_scope(scope) && request == _importRequest) {
+        setState(() => _importing = false);
+      }
+    }
+  }
+
   Future<void> _reload() async {
     final scope = _scopeEpoch, load = ++_loadEpoch;
     final materials = widget.materials, learning = widget.learning;
@@ -250,6 +417,11 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   void _navigate(int tab) {
+    if (_saving || _confirming) return;
+    if (_importing && tab != 2) {
+      _inputEpoch++;
+      _retireImport();
+    }
     setState(() {
       _tab = tab;
       _message = null;
@@ -258,7 +430,9 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   void _newDraft() {
+    if (_saving || _confirming) return;
     _inputEpoch++;
+    _retireImport();
     setState(() {
       _editing = null;
       _title.clear();
@@ -272,7 +446,9 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   void _edit(MaterialDraft draft) {
+    if (_saving || _confirming) return;
     _inputEpoch++;
+    _retireImport();
     setState(() {
       _editing = draft;
       _title.text = draft.title;
@@ -287,26 +463,55 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _saveDraft() async {
     if (_saving ||
+        _importing ||
         _confirming ||
         !_sameOwner ||
         _title.text.trim().isEmpty ||
         _text.text.trim().isEmpty)
       return;
     final scope = _scopeEpoch, input = _inputEpoch;
-    final store = widget.materials, old = _editing;
+    final store = widget.materials, old = _editing, session = _importSession;
     final title = _title.text.trim(), text = _text.text;
     setState(() {
       _saving = true;
       _message = null;
     });
     try {
+      List<ArtifactRef>? importedRefs;
+      if (session != null) {
+        if (session.ownerId != store.trustedOwnerId) {
+          throw const MaterialImportException(
+            MaterialImportErrorCode.ownerMismatch,
+          );
+        }
+        importedRefs = await session.prepareArtifacts();
+        if (!_scope(scope) ||
+            input != _inputEpoch ||
+            !identical(_importSession, session))
+          return;
+        if (importedRefs.length != 2 ||
+            importedRefs.map((r) => r.artifactId).toSet().length != 2 ||
+            importedRefs.any((r) => r.ownerId != store.trustedOwnerId)) {
+          throw const MaterialImportException(
+            MaterialImportErrorCode.bindingMismatch,
+          );
+        }
+      }
+      // Recheck immediately before the irreversible-to-this-form draft commit.
+      // Artifact preparation is not itself a saved/confirmed material.
+      if (!_scope(scope) || input != _inputEpoch) return;
       final draft = old == null
-          ? await store.createDraft(title: title, text: text)
+          ? await store.createDraft(
+              title: title,
+              text: text,
+              artifacts: importedRefs ?? const [],
+            )
           : await store.updateDraft(
               materialId: old.materialId,
               expectedRevision: old.revision,
               title: title,
               text: text,
+              artifacts: importedRefs,
             );
       final persisted = await store.readDraft(draft.materialId);
       if (!_scope(scope) || input != _inputEpoch) return;
@@ -315,7 +520,30 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         _dirty = false;
         _message = '草稿已保存在本机。确认后才会创建固定版本。';
       });
+      if (session != null) {
+        try {
+          await session.finish(savedMaterialId: persisted.materialId);
+          if (_scope(scope) &&
+              input == _inputEpoch &&
+              identical(_importSession, session)) {
+            setState(() {
+              _importSession = null;
+              _importPreview = null;
+            });
+          }
+        } catch (_) {
+          if (_scope(scope) && input == _inputEpoch) {
+            setState(() {
+              _message = '草稿已保存，导入来源的收尾尚未确认；原文件未改动。';
+            });
+          }
+        }
+      }
       await _reload();
+    } on MaterialImportException catch (error) {
+      if (_scope(scope) && input == _inputEpoch) {
+        setState(() => _message = _importMessage(error));
+      }
     } on MaterialStoreException catch (error) {
       if (_scope(scope) && input == _inputEpoch)
         setState(() {
@@ -338,7 +566,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _confirm() async {
     final draft = _editing;
-    if (draft == null || _dirty || _saving || _confirming) return;
+    if (draft == null || _dirty || _saving || _confirming || _importing) return;
     final scope = _scopeEpoch, input = _inputEpoch, store = widget.materials;
     setState(() {
       _confirming = true;
@@ -537,6 +765,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   Future<void> _handleBack() async {
     if (_handlingBack || !mounted || _saving || _confirming) return;
     _handlingBack = true;
+    if (_importing) {
+      _inputEpoch++;
+      _retireImport();
+    }
     final scope = _scopeEpoch, input = _inputEpoch;
     try {
       if (_tab == 0 && _selected != null) {
@@ -546,26 +778,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       // Text can remain in the editor while another tab is selected. Protect
       // those edits at root exit too, not just when returning from the editor.
       if (_dirty && (_tab == 2 || _tab == 0)) {
-        final discard = await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('放弃未保存的内容？'),
-            content: const Text('这次修改还没有保存，离开后将丢失。'),
-            actions: [
-              TextButton(
-                autofocus: true,
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('继续编辑'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('放弃修改'),
-              ),
-            ],
-          ),
-        );
-        if (!_scope(scope) || input != _inputEpoch || discard != true) return;
+        final discard = await _discardEdits();
+        if (!_scope(scope) || input != _inputEpoch || !discard) return;
         _inputEpoch++;
+        _retireImport();
         setState(() {
           _title.text = _editing?.title ?? '';
           _text.text = _editing?.text ?? '';
@@ -574,6 +790,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       }
       if (!_scope(scope)) return;
       if (_tab == 2) {
+        _retireImport();
         _navigate(1);
       } else if (_tab != 0) {
         _navigate(0);
@@ -689,7 +906,9 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                   selectedIndex: _tab,
                   backgroundColor: ShiyuClientTokens.paper,
                   indicatorColor: ShiyuClientTokens.hint,
-                  onDestinationSelected: _navigate,
+                  onDestinationSelected: _saving || _confirming
+                      ? null
+                      : _navigate,
                   destinations: [
                     const NavigationDestination(
                       key: Key('nav-learning'),
@@ -963,15 +1182,61 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         runSpacing: 8,
         children: [
           _tag('粘贴文字'),
-          const Chip(label: Text('上传文件 · 尚未接入')),
+          OutlinedButton.icon(
+            key: const Key('import-file'),
+            onPressed:
+                widget.onStartImport == null ||
+                    _importSession != null ||
+                    _importing ||
+                    _saving ||
+                    _confirming ||
+                    _handlingBack
+                ? null
+                : () => unawaited(_startImport()),
+            icon: const Icon(Icons.upload_file_outlined, size: 18),
+            label: Text(_importing ? '正在导入…' : '导入文件'),
+          ),
+          if (_importing)
+            TextButton(
+              key: const Key('import-cancel'),
+              onPressed: () {
+                _inputEpoch++;
+                _retireImport();
+                setState(() => _message = '未创建新草稿。');
+              },
+              child: const Text('取消导入'),
+            ),
           const Chip(label: Text('口述 · 尚未接入')),
         ],
       ),
+      if (widget.onStartImport != null)
+        const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: Text(
+            '支持 TXT、Word（.docx），仅在本机提取。过长内容请按章节拆分；PPT、PDF 后续接入。',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.7,
+              color: ShiyuClientTokens.muted,
+            ),
+          ),
+        ),
+      if (_importPreview != null)
+        Container(
+          key: const Key('import-preview-note'),
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(12),
+          color: ShiyuClientTokens.hint,
+          child: Text(
+            '${_editing != null && !_dirty ? '导入草稿已保存 · 来源收尾待确认' : '导入预览 · 尚未保存'}${_importPreview!.warnings.isEmpty ? '' : '\n${_importPreview!.warnings.map(_importWarning).join(' ')}'}\n请先保存或返回处理当前预览，再选择其他文件。',
+            style: const TextStyle(fontSize: 12, height: 1.7),
+          ),
+        ),
       const SizedBox(height: 18),
       TextField(
         key: const Key('draft-title'),
         controller: _title,
-        enabled: !_saving && !_confirming,
+        enabled: !_saving && !_confirming && !_importing,
         onChanged: (_) => setState(() {
           _dirty = true;
         }),
@@ -986,7 +1251,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       TextField(
         key: const Key('draft-text'),
         controller: _text,
-        enabled: !_saving && !_confirming,
+        enabled: !_saving && !_confirming && !_importing,
         onChanged: (_) => setState(() {
           _dirty = true;
         }),
@@ -1004,6 +1269,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         key: const Key('draft-save'),
         onPressed:
             _saving ||
+                _importing ||
                 _confirming ||
                 _title.text.trim().isEmpty ||
                 _text.text.trim().isEmpty
@@ -1015,7 +1281,8 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       const SizedBox(height: 12),
       OutlinedButton(
         key: const Key('draft-confirm'),
-        onPressed: _editing == null || _dirty || _saving || _confirming
+        onPressed:
+            _editing == null || _dirty || _saving || _confirming || _importing
             ? null
             : () => unawaited(_confirm()),
         child: Text(_confirming ? '正在确认…' : '确认此版本'),
