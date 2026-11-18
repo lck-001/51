@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "f48225ac95210b2dbdd29a8c0702e331b2fa7617",
-      "sizeBytes": 6652,
-      "sha256": "6828dd0de214e43afcfd1fa40ef1dd6015fbb6ac2224063cb382e06d8e2a8f9f"
+      "gitBlob": "f5fb3f249aeefc3070cd9404c6582034049c12ff",
+      "sizeBytes": 7331,
+      "sha256": "d71c85094b972915c2319c9034dea5db497e8264704943370836362d8df2a80a"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
@@ -163,6 +163,12 @@
       "gitBlob": "44ffec34bd007a9d2c600f711226af8e219ed61a",
       "sizeBytes": 13269,
       "sha256": "6d926936d77f182cd0c99a85b29b409ca88a14302631e6c56661628296dd2ab2"
+    },
+    {
+      "path": "docs/reviews/M20-material-import-workpack.md",
+      "gitBlob": "8aa29c6e8d4ecabef1be5e7acbfe19653ba791e6",
+      "sizeBytes": 13898,
+      "sha256": "f864fa25dd0f07b08d6492a85e06d1c76f7d8fc50781a080f0d79eee4211e727"
     },
     {
       "path": "packages/client_runtime/README.md",
@@ -1215,6 +1221,12 @@
       "sha256": "ea4d831ba535b1795cc2cd4c899c829e7d4c4ea003ca7a09522a7972460410b4"
     },
     {
+      "path": "services/backend/GENERATION_VALIDATION.md",
+      "gitBlob": "454e4b9db16b0f4aed75d3cd8d5899119b95aac0",
+      "sizeBytes": 6844,
+      "sha256": "dae51f4dc514ee5dac9aa986f81c49bc9b7b56a1a2ffd59f1b410f75391b2442"
+    },
+    {
       "path": "services/backend/README.md",
       "gitBlob": "8dc828b410f099f668cb3656bc8e4e95bda93a38",
       "sizeBytes": 7550,
@@ -1237,6 +1249,24 @@
       "gitBlob": "b2f08f9bed0c01ef0d65dd71745ebc48f7288d1d",
       "sizeBytes": 80,
       "sha256": "1f705baf8b6d517f4cd8b917eb41a0f2a6f07b4b7e6a76ece4236cf96e704317"
+    },
+    {
+      "path": "services/backend/src/shiyu_backend/generation.py",
+      "gitBlob": "033908f17a4f719740da7c2c82a7ce3040f51c0c",
+      "sizeBytes": 11362,
+      "sha256": "55acc69590319f479e68e403aa892f244b7c2b98fef2f8ca247909c8330613ff"
+    },
+    {
+      "path": "services/backend/src/shiyu_backend/generation_models.py",
+      "gitBlob": "374a126ffe9bc39e7726ef55465627963b24d17a",
+      "sizeBytes": 4027,
+      "sha256": "87f9971e022193bc9114e932dba193d37e6b21154c5d5a6e1c88e8bf0993d0ef"
+    },
+    {
+      "path": "services/backend/src/shiyu_backend/generation_sqlite_validation.py",
+      "gitBlob": "64e2a11ccd61011a5ddcb7f639b7152ffbd4be6b",
+      "sizeBytes": 21270,
+      "sha256": "cc9e3330151ccbc3474eafe2502e01908e73750f2fa86de2a059de34360a4e92"
     },
     {
       "path": "services/backend/src/shiyu_backend/http_api.py",
@@ -1291,6 +1321,18 @@
       "gitBlob": "8f240875c599cf114d44e0f235512c25d4d41647",
       "sizeBytes": 2137,
       "sha256": "e55c9d0aec41f183a3b2fb62e9b545b2852b25939ae97fc9ea756444bb46d102"
+    },
+    {
+      "path": "services/backend/tests/test_generation_independent.py",
+      "gitBlob": "f825ae03723291df2b2aded1db45b620af5cf6ef",
+      "sizeBytes": 26871,
+      "sha256": "e18359b47dcbca3cf320c066e53d279fbb39831a97703f914c74bacad909e92d"
+    },
+    {
+      "path": "services/backend/tests/test_generation_local.py",
+      "gitBlob": "f4d3eced67ba09f8a0de7ad0e60dd1a34c960f41",
+      "sizeBytes": 7315,
+      "sha256": "276a800251dfe9d395888dff67509ff0d0e82da0b92c5025439d19482460b7fb"
     },
     {
       "path": "services/backend/tests/test_http_loopback.py",

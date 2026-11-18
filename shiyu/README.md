@@ -97,4 +97,10 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 - [client_shell](packages/client_shell/README.md)：材料输入与确认、阅读、播放控制、紧凑底部词卡及系统返回/未保存保护；12项无窗口 Widget 测试通过。
 - [client_runtime](packages/client_runtime/README.md)：把页面回调接到真实存储与播放协调器；9项独立回调/文件集成测试通过。
 
-以上结果证明各自限定的实现与集成合同。原生整应用组装、安装运行、真实英语生成/配音/专业纠音以及人工验收仍需后续证据；不是生产可交付声明。缺少词典、生成或评测服务时显示未接入，不用合成样例冒充真实功能。
+原生组装、Windows 隐藏播放链与 Android 材料保存/系统返回已有 [M18 限定验证](docs/reviews/M18-client-flow-results.md)。真实英语生成/配音/专业纠音和整产品人工验收仍未完成，不是生产可交付声明。缺少词典、生成或评测服务时显示未接入，不用合成样例冒充真实功能。
+
+## 生成任务与无需账号的后续研发
+
+[M19 本地生成任务](services/backend/GENERATION_VALIDATION.md) 完成持久创建/查询/取消、幂等、预算与调用上限、未知结果保护和私有制品清单；生成相关 23 项、后端完整 60 项回归通过。执行 Adapter 仅为 fixture，默认 blocked，不调用真实供应商、不导入 Dart 学习版，不代表已能翻译配音。
+
+用户暂不开通云账号，继续按 [M20 文件导入工作包](docs/reviews/M20-material-import-workpack.md) 评审 TXT/DOCX 真实 App 纵切；该工作包不是已实现或已支持所有格式的声明。
