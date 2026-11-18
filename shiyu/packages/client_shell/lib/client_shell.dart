@@ -107,6 +107,7 @@ class ShiyuClientShell extends StatefulWidget {
     this.onPlaybackCommand,
     this.onLookupWord,
     this.onPractice,
+    this.onRootBack,
   });
   final MaterialStore materials;
   final LearningStore learning;
@@ -115,6 +116,7 @@ class ShiyuClientShell extends StatefulWidget {
   final PlaybackCommandCallback? onPlaybackCommand;
   final WordLookupCallback? onLookupWord;
   final PracticeCallback? onPractice;
+  final Future<void> Function()? onRootBack;
   @override
   State<ShiyuClientShell> createState() => _ShiyuClientShellState();
 }
@@ -146,6 +148,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _dirty = false,
       _showChinese = true;
   String? _focusedSentence;
+  bool _handlingBack = false;
   double? _seekPreview;
   bool get _sameOwner =>
       widget.materials.trustedOwnerId == widget.learning.trustedOwnerId;
@@ -519,144 +522,211 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Theme(
-    data: ShiyuClientTokens.lightTheme(),
-    child: Builder(
-      builder: (context) => Scaffold(
-        backgroundColor: ShiyuClientTokens.paper,
-        appBar: AppBar(
-          title: Text(
-            _tab == 0 && _selected != null
-                ? _selected!.materialTitle
-                : const ['学习', '我的材料', '添加学习材料', '分享', '我的'][_tab],
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          leading: _tab == 0 && _selected != null
-              ? IconButton(
-                  tooltip: '返回学习列表',
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                  onPressed: () {
-                    _selectionEpoch++;
-                    _lookupEpoch++;
-                    setState(() {
-                      _selected = null;
-                      _word = null;
-                      _wordResult = null;
-                      _opening = false;
-                      _commandBusy = false;
-                    });
-                  },
-                )
-              : null,
-          actions: [
-            if (_tab == 0 && _selected != null)
-              PopupMenuButton<String>(
-                tooltip: '更多播放操作',
-                onSelected: (_) => unawaited(_command(const Stop())),
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'stop',
-                    enabled: widget.onPlaybackCommand != null,
-                    child: const Text('停止播放'),
-                  ),
-                ],
+  void _leaveReader() {
+    _selectionEpoch++;
+    _lookupEpoch++;
+    setState(() {
+      _selected = null;
+      _word = null;
+      _wordResult = null;
+      _opening = false;
+      _commandBusy = false;
+    });
+  }
+
+  Future<void> _handleBack() async {
+    if (_handlingBack || !mounted || _saving || _confirming) return;
+    _handlingBack = true;
+    final scope = _scopeEpoch, input = _inputEpoch;
+    try {
+      if (_tab == 0 && _selected != null) {
+        _leaveReader();
+        return;
+      }
+      // Text can remain in the editor while another tab is selected. Protect
+      // those edits at root exit too, not just when returning from the editor.
+      if (_dirty && (_tab == 2 || _tab == 0)) {
+        final discard = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('放弃未保存的内容？'),
+            content: const Text('这次修改还没有保存，离开后将丢失。'),
+            actions: [
+              TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('继续编辑'),
               ),
-            IconButton(
-              key: const Key('refresh-data'),
-              tooltip: '重新读取本机数据',
-              onPressed: _loading ? null : () => unawaited(_reload()),
-              icon: const Icon(Icons.refresh, size: 20),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              if (_message != null)
-                Container(
-                  key: const Key('status-message'),
-                  width: double.infinity,
-                  color: ShiyuClientTokens.hint,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    _message!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: ShiyuClientTokens.ink,
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : !_sameOwner
-                    ? _empty(Icons.lock_outline, '账号不一致，未读取其他账号的材料。')
-                    : switch (_tab) {
-                        0 => _learningPage(),
-                        1 => _materialsPage(),
-                        2 => _addPage(),
-                        3 => _empty(
-                          Icons.ios_share_outlined,
-                          '分享还未接入',
-                          detail: '材料保持私有，不会自动上传或发布到第三方。',
-                        ),
-                        _ => _myPage(),
-                      },
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('放弃修改'),
               ),
             ],
           ),
-        ),
-        bottomNavigationBar: _tab == 0 && _selected != null
-            ? null
-            : NavigationBar(
-                height: 68,
-                selectedIndex: _tab,
-                backgroundColor: ShiyuClientTokens.paper,
-                indicatorColor: ShiyuClientTokens.hint,
-                onDestinationSelected: _navigate,
-                destinations: [
-                  const NavigationDestination(
-                    key: Key('nav-learning'),
-                    icon: Icon(Icons.headphones_outlined),
-                    label: '学习',
-                  ),
-                  const NavigationDestination(
-                    key: Key('nav-materials'),
-                    icon: Icon(Icons.folder_outlined),
-                    label: '材料',
-                  ),
-                  NavigationDestination(
-                    key: const Key('nav-add'),
-                    icon: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: ShiyuClientTokens.action,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white),
+        );
+        if (!_scope(scope) || input != _inputEpoch || discard != true) return;
+        _inputEpoch++;
+        setState(() {
+          _title.text = _editing?.title ?? '';
+          _text.text = _editing?.text ?? '';
+          _dirty = false;
+        });
+      }
+      if (!_scope(scope)) return;
+      if (_tab == 2) {
+        _navigate(1);
+      } else if (_tab != 0) {
+        _navigate(0);
+      } else {
+        // Native stop/release remains app-owned. Ordinary page back never calls
+        // this callback, creates a Player, or closes the externally owned stores.
+        await widget.onRootBack?.call();
+      }
+    } catch (_) {
+      if (_scope(scope)) {
+        setState(() {
+          _message = '暂时无法返回，请稍后重试。';
+        });
+      }
+    } finally {
+      _handlingBack = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope<Object?>(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) unawaited(_handleBack());
+    },
+    child: Theme(
+      data: ShiyuClientTokens.lightTheme(),
+      child: Builder(
+        builder: (context) => Scaffold(
+          backgroundColor: ShiyuClientTokens.paper,
+          appBar: AppBar(
+            title: Text(
+              _tab == 0 && _selected != null
+                  ? _selected!.materialTitle
+                  : const ['学习', '我的材料', '添加学习材料', '分享', '我的'][_tab],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            leading: _tab == 0 && _selected != null
+                ? IconButton(
+                    tooltip: '返回学习列表',
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                    onPressed: _leaveReader,
+                  )
+                : null,
+            actions: [
+              if (_tab == 0 && _selected != null)
+                PopupMenuButton<String>(
+                  tooltip: '更多播放操作',
+                  onSelected: (_) => unawaited(_command(const Stop())),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'stop',
+                      enabled: widget.onPlaybackCommand != null,
+                      child: const Text('停止播放'),
                     ),
-                    label: '添加',
-                  ),
-                  const NavigationDestination(
-                    key: Key('nav-share'),
-                    icon: Icon(Icons.ios_share_outlined),
-                    label: '分享',
-                  ),
-                  const NavigationDestination(
-                    key: Key('nav-my'),
-                    icon: Icon(Icons.person_outline),
-                    label: '我的',
-                  ),
-                ],
+                  ],
+                ),
+              IconButton(
+                key: const Key('refresh-data'),
+                tooltip: '重新读取本机数据',
+                onPressed: _loading ? null : () => unawaited(_reload()),
+                icon: const Icon(Icons.refresh, size: 20),
               ),
+            ],
+          ),
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                if (_message != null)
+                  Container(
+                    key: const Key('status-message'),
+                    width: double.infinity,
+                    color: ShiyuClientTokens.hint,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      _message!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ShiyuClientTokens.ink,
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : !_sameOwner
+                      ? _empty(Icons.lock_outline, '账号不一致，未读取其他账号的材料。')
+                      : switch (_tab) {
+                          0 => _learningPage(),
+                          1 => _materialsPage(),
+                          2 => _addPage(),
+                          3 => _empty(
+                            Icons.ios_share_outlined,
+                            '分享还未接入',
+                            detail: '材料保持私有，不会自动上传或发布到第三方。',
+                          ),
+                          _ => _myPage(),
+                        },
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: _tab == 0 && _selected != null
+              ? null
+              : NavigationBar(
+                  height: 68,
+                  selectedIndex: _tab,
+                  backgroundColor: ShiyuClientTokens.paper,
+                  indicatorColor: ShiyuClientTokens.hint,
+                  onDestinationSelected: _navigate,
+                  destinations: [
+                    const NavigationDestination(
+                      key: Key('nav-learning'),
+                      icon: Icon(Icons.headphones_outlined),
+                      label: '学习',
+                    ),
+                    const NavigationDestination(
+                      key: Key('nav-materials'),
+                      icon: Icon(Icons.folder_outlined),
+                      label: '材料',
+                    ),
+                    NavigationDestination(
+                      key: const Key('nav-add'),
+                      icon: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: ShiyuClientTokens.action,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white),
+                      ),
+                      label: '添加',
+                    ),
+                    const NavigationDestination(
+                      key: Key('nav-share'),
+                      icon: Icon(Icons.ios_share_outlined),
+                      label: '分享',
+                    ),
+                    const NavigationDestination(
+                      key: Key('nav-my'),
+                      icon: Icon(Icons.person_outline),
+                      label: '我的',
+                    ),
+                  ],
+                ),
+        ),
       ),
     ),
   );

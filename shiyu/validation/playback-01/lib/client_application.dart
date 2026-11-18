@@ -191,7 +191,9 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
   @override
   void initState() {
     super.initState();
-    _shell = widget.owner.runtime.createShell();
+    _shell = widget.owner.runtime.createShell(
+      onRootBack: Platform.isAndroid ? widget.owner.closeAndExit : null,
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -219,44 +221,33 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
     title: '拾语 · 本机预览',
     debugShowCheckedModeBanner: false,
     theme: ShiyuClientTokens.lightTheme(),
-    home: PopScope(
-      canPop: !Platform.isAndroid,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && Platform.isAndroid) {
-          unawaited(widget.owner.closeAndExit());
-        }
-      },
-      child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Material(
-              color: ShiyuClientTokens.hint,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: ValueListenableBuilder<String?>(
-                  valueListenable: widget.owner.notice,
-                  builder: (_, notice, _) => Text(
-                    notice ?? '本机预览 · 仅此设备保存，尚未接入翻译、配音和发音评分',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+    home: Column(
+      children: [
+        SafeArea(
+          bottom: false,
+          child: Material(
+            color: ShiyuClientTokens.hint,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: ValueListenableBuilder<String?>(
+                valueListenable: widget.owner.notice,
+                builder: (_, notice, _) => Text(
+                  notice ?? '本机预览 · 仅此设备保存，尚未接入翻译、配音和发音评分',
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ),
           ),
-          Expanded(
-            child: ValueListenableBuilder<bool>(
-              valueListenable: widget.owner.frozen,
-              builder: (_, frozen, child) =>
-                  ClientCommandBarrier(frozen: frozen, child: child!),
-              child: _shell,
-            ),
+        ),
+        Expanded(
+          child: ValueListenableBuilder<bool>(
+            valueListenable: widget.owner.frozen,
+            builder: (_, frozen, child) =>
+                ClientCommandBarrier(frozen: frozen, child: child!),
+            child: _shell,
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }

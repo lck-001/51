@@ -193,6 +193,7 @@ Future<void> mount(
   ValueListenable<ClientPlaybackView>? playback,
   PlaybackCommandCallback? command,
   PracticeCallback? practice,
+  Future<void> Function()? rootBack,
 }) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -210,6 +211,7 @@ Future<void> mount(
           playback: playback,
           onPlaybackCommand: command,
           onPractice: practice,
+          onRootBack: rootBack,
         ),
       ),
     ),
@@ -225,8 +227,7 @@ Future<void> capture(WidgetTester tester, String file) async {
         ('Microsoft YaHei UI', 'C:/Windows/Fonts/msyh.ttc'),
         (
           'MaterialIcons',
-          Platform.environment['SHIYU_TEST_ICON_FONT'] ??
-              'R:/dayline-prototype/.toolchains/flutter/bin/cache/artifacts/material_fonts/materialicons-regular.otf',
+          Platform.environment['SHIYU_TEST_ICON_FONT'] ?? 'R:/dayline-prototype/.toolchains/flutter/bin/cache/artifacts/material_fonts/materialicons-regular.otf',
         ),
       ]) {
         final source = File(item.$2);

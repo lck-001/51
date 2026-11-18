@@ -194,6 +194,7 @@ final class ShiyuClientRuntime {
     Key? key,
     WordLookupCallback? onLookupWord,
     PracticeCallback? onPractice,
+    Future<void> Function()? onRootBack,
   }) {
     if (_closed)
       throw const ClientRuntimeException(ClientRuntimeErrorCode.closed);
@@ -210,6 +211,7 @@ final class ShiyuClientRuntime {
       ),
       onLookupWord: onLookupWord,
       onPractice: onPractice,
+      onRootBack: onRootBack,
     );
   }
 
