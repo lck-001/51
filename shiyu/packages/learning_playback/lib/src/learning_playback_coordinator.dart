@@ -101,6 +101,7 @@ final class LearningPlaybackCoordinator {
     int generation,
     bool Function(PlaybackSnapshot) test, {
     bool Function()? abort,
+    bool allowStopRecovery = false,
   }) async {
     final done = Completer<bool>();
     void check() {
@@ -109,8 +110,8 @@ final class LearningPlaybackCoordinator {
       if (!_own(generation) ||
           (abort?.call() ?? false) ||
           (_token != null && !s.token.sameSession(_token!)) ||
-          s.actual == PlaybackActual.failed ||
-          !s.engineAvailable) {
+          (!allowStopRecovery &&
+              (s.actual == PlaybackActual.failed || !s.engineAvailable))) {
         done.complete(false);
       } else if (test(s)) {
         done.complete(true);
@@ -305,6 +306,72 @@ final class LearningPlaybackCoordinator {
     }
   }
 
+  /// Invalidate old open/restore work before selecting read-only content.
+  /// True is observed stopped/idle, never just an accepted Stop command.
+  /// A failed attempt keeps the old binding available for an explicit retry.
+  Future<bool> suspendForReadOnly() async {
+    if (_closed) return false;
+    final initial = _playback.current;
+    if (initial.item != null &&
+        initial.item!.ownerId != _learning.trustedOwnerId) {
+      throw const LearningPlaybackException(
+        LearningPlaybackErrorCode.ownerMismatch,
+      );
+    }
+    final generation = ++_generation;
+    _manual++;
+    _saving = false;
+    _protectCheckpoint = true;
+    _manualSeekToken = null;
+    _restored = false;
+    _phase = LearningPlaybackPhase.stopping;
+    _error = null;
+    _signal();
+    _emit();
+    var stopped =
+        initial.engineAvailable &&
+        initial.actual == PlaybackActual.idle &&
+        (initial.item == null || initial.intent == PlaybackIntent.stopped);
+    if (!stopped) {
+      try {
+        final result = await _playback.dispatch(const Stop());
+        if (!_own(generation)) return false;
+        if (result.accepted) {
+          _token = _playback.current.token;
+          stopped = await _wait(
+            generation,
+            (s) =>
+                s.token.sameSession(result.token) &&
+                s.token.commandEpoch >= result.token.commandEpoch &&
+                s.engineAvailable &&
+                s.intent == PlaybackIntent.stopped &&
+                s.actual == PlaybackActual.idle,
+            allowStopRecovery: true,
+          );
+        }
+      } catch (_) {
+        stopped = false;
+      }
+    }
+    if (!_own(generation)) return false;
+    if (!stopped) {
+      _phase = LearningPlaybackPhase.failed;
+      _error = 'read_only_stop_unconfirmed';
+      _emit();
+      return false;
+    }
+    _session = null;
+    _version = null;
+    _token = null;
+    _savedMs = null;
+    _savedSentence = null;
+    _revision = 0;
+    _phase = LearningPlaybackPhase.idle;
+    _error = null;
+    _emit();
+    return true;
+  }
+
   void _onSnapshot(PlaybackSnapshot s) {
     if (_closed || !_matches(s) || s.token.commandEpoch < _lastEpoch) return;
     _lastEpoch = s.token.commandEpoch;
@@ -410,7 +477,8 @@ final class LearningPlaybackCoordinator {
       // Native Stop unloads its source and reports idle. Fresh explicit Play is
       // allowed to reload that same verified session; Seek still requires load.
       // This is only admission, never evidence of actual playing or progress.
-      final stoppedReplay = command is Play &&
+      final stoppedReplay =
+          command is Play &&
           _matches(observed) &&
           observed.engineAvailable &&
           observed.error == null &&

@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:agent_bridge/agent_bridge_contracts.dart';
 import 'package:client_shell/client_shell.dart';
 import 'package:learning_core/learning_core.dart';
 import 'package:learning_playback/learning_playback.dart';
@@ -16,6 +17,7 @@ enum ClientRuntimeErrorCode {
   notReady,
   openPending,
   openRejected,
+  stopUnconfirmed,
   closed,
 }
 
@@ -108,8 +110,9 @@ final class ShiyuClientRuntime {
     if (_closed)
       throw const ClientRuntimeException(ClientRuntimeErrorCode.closed);
     final epoch = ++_epoch;
+    final previous = _requested;
+    var succeeded = false;
     _opening = true;
-    _requested = null;
     _clear();
     try {
       if (expected.binding.ownerId != materials.trustedOwnerId) {
@@ -126,10 +129,27 @@ final class ShiyuClientRuntime {
           ClientRuntimeErrorCode.bindingMismatch,
         );
       }
-      if (actual.state != LearningState.ready) {
-        throw const ClientRuntimeException(ClientRuntimeErrorCode.notReady);
+      if (actual.state == LearningState.ready &&
+          previous != null &&
+          previous.sameAs(actual.binding) &&
+          _bound(actual.binding) &&
+          coordinator.current.phase == LearningPlaybackPhase.ready &&
+          coordinator.current.error == null &&
+          playback.current.engineAvailable) {
+        succeeded = true;
+        return;
       }
+      final stopped = await coordinator.suspendForReadOnly();
+      if (_closed || epoch != _epoch) return;
+      if (!stopped)
+        throw const ClientRuntimeException(
+          ClientRuntimeErrorCode.stopUnconfirmed,
+        );
       _requested = actual.binding;
+      if (actual.state != LearningState.ready) {
+        succeeded = true;
+        return; // Readable only. Never forge a media session, Open or Play.
+      }
       final result = await coordinator.open(actual.binding.learningVersionId);
       if (_closed || epoch != _epoch) return;
       if (result.status == LearningOpenStatus.pending) {
@@ -141,12 +161,14 @@ final class ShiyuClientRuntime {
           !_bound(actual.binding)) {
         throw const ClientRuntimeException(ClientRuntimeErrorCode.openRejected);
       }
+      succeeded = true;
     } on ClientRuntimeException {
       rethrow;
     } catch (_) {
       throw const ClientRuntimeException(ClientRuntimeErrorCode.openRejected);
     } finally {
       if (!_closed && epoch == _epoch) {
+        if (!succeeded) _requested = previous;
         _opening = false;
         _publish();
       }
@@ -197,6 +219,11 @@ final class ShiyuClientRuntime {
     PracticeCallback? onPractice,
     Future<void> Function()? onRootBack,
     StartMaterialImport? onStartImport,
+    ValueListenable<AgentBridgeStatus>? assistantStatus,
+    Future<void> Function(AgentBridgeGrantRequest)? onAuthorizeAssistant,
+    Future<void> Function()? onRevokeAssistant,
+    Future<AgentBridgeSetup> Function()? onAssistantSetup,
+    ValueListenable<bool>? applicationRetired,
   }) {
     if (_closed)
       throw const ClientRuntimeException(ClientRuntimeErrorCode.closed);
@@ -215,6 +242,11 @@ final class ShiyuClientRuntime {
       onPractice: onPractice,
       onRootBack: onRootBack,
       onStartImport: onStartImport,
+      assistantStatus: assistantStatus,
+      onAuthorizeAssistant: onAuthorizeAssistant,
+      onRevokeAssistant: onRevokeAssistant,
+      onAssistantSetup: onAssistantSetup,
+      applicationRetired: applicationRetired,
     );
   }
 

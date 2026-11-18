@@ -7,8 +7,12 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:material_core/material_core.dart';
 import 'package:material_import/material_import.dart';
+import 'package:agent_bridge/agent_bridge_contracts.dart';
 import 'package:learning_core/learning_core.dart';
 import 'package:playback_core/playback_core.dart';
+
+import 'src/candidate_review_sheet.dart';
+import 'src/assistant_connection_widgets.dart';
 
 /// Frozen v0.13 colors. No new palette or layout language is introduced.
 abstract final class ShiyuClientTokens {
@@ -110,6 +114,11 @@ class ShiyuClientShell extends StatefulWidget {
     this.onPractice,
     this.onRootBack,
     this.onStartImport,
+    this.assistantStatus,
+    this.onAuthorizeAssistant,
+    this.onRevokeAssistant,
+    this.onAssistantSetup,
+    this.applicationRetired,
   });
   final MaterialStore materials;
   final LearningStore learning;
@@ -120,6 +129,11 @@ class ShiyuClientShell extends StatefulWidget {
   final PracticeCallback? onPractice;
   final Future<void> Function()? onRootBack;
   final StartMaterialImport? onStartImport;
+  final ValueListenable<AgentBridgeStatus>? assistantStatus;
+  final Future<void> Function(AgentBridgeGrantRequest)? onAuthorizeAssistant;
+  final Future<void> Function()? onRevokeAssistant;
+  final Future<AgentBridgeSetup> Function()? onAssistantSetup;
+  final ValueListenable<bool>? applicationRetired;
   @override
   State<ShiyuClientShell> createState() => _ShiyuClientShellState();
 }
@@ -130,8 +144,15 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   List<MaterialDraft> _drafts = [];
   Map<String, List<MaterialVersion>> _versions = {};
   List<LearningVersion> _learning = [];
+  List<LearningCandidate> _candidates = [];
+  String? _lastAssistantCandidate;
+  bool _reviewingCandidate = false;
+  bool _assistantBusy = false;
+  final _privateRoutes = <ModalRoute<dynamic>>{};
+  int _candidateReviewRequest = 0;
   MaterialDraft? _editing;
   LearningVersion? _selected;
+  LearningVersion? _retryLearning;
   WordLookupRequest? _word;
   WordLookupResult? _wordResult;
   String? _wordMessage, _message;
@@ -159,19 +180,36 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   double? _seekPreview;
   bool get _sameOwner =>
       widget.materials.trustedOwnerId == widget.learning.trustedOwnerId;
+  LearningCandidateStore? get _candidateStore =>
+      widget.learning is LearningCandidateStore
+      ? widget.learning as LearningCandidateStore
+      : null;
+  int get _pendingCandidateCount => _candidates
+      .where((c) => c.state == LearningCandidateState.pendingReview)
+      .length;
 
   @override
   void initState() {
     super.initState();
+    widget.assistantStatus?.addListener(_assistantChanged);
     unawaited(_reload());
   }
 
   @override
   void didUpdateWidget(covariant ShiyuClientShell oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.assistantStatus, widget.assistantStatus)) {
+      oldWidget.assistantStatus?.removeListener(_assistantChanged);
+      widget.assistantStatus?.addListener(_assistantChanged);
+      _lastAssistantCandidate = null;
+    }
     if (!identical(oldWidget.materials, widget.materials) ||
         !identical(oldWidget.learning, widget.learning)) {
       _scopeEpoch++;
+      _dismissPrivateRoutes();
+      _candidateReviewRequest++;
+      _reviewingCandidate = false;
+      _assistantBusy = false;
       _selectionEpoch++;
       _lookupEpoch++;
       _inputEpoch++;
@@ -179,7 +217,9 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _drafts = [];
       _versions = {};
       _learning = [];
+      _candidates = [];
       _selected = null;
+      _retryLearning = null;
       _editing = null;
       _word = null;
       _wordResult = null;
@@ -201,17 +241,58 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   @override
   void dispose() {
     _scopeEpoch++;
+    _dismissPrivateRoutes();
     _selectionEpoch++;
     _lookupEpoch++;
     _inputEpoch++;
     _retireImport();
+    widget.assistantStatus?.removeListener(_assistantChanged);
     _title.dispose();
     _text.dispose();
     // External stores, playback, and coordinator remain owned by the app.
     super.dispose();
   }
 
-  bool _scope(int value) => mounted && value == _scopeEpoch;
+  bool _scope(int value) =>
+      mounted &&
+      value == _scopeEpoch &&
+      !(widget.applicationRetired?.value ?? false);
+
+  void _trackPrivateRoute(BuildContext routeContext) {
+    final route = ModalRoute.of(routeContext);
+    if (route == null || !_privateRoutes.add(route)) return;
+    unawaited(
+      route.popped.then<void>((_) {
+        _privateRoutes.remove(route);
+      }),
+    );
+  }
+
+  Widget _privateSurface(BuildContext routeContext, Widget child) {
+    _trackPrivateRoute(routeContext);
+    return child;
+  }
+
+  void _dismissPrivateRoutes() {
+    final stale = _privateRoutes.toList(growable: false).reversed.toList();
+    _privateRoutes.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final route in stale) {
+        if (route.isActive) route.navigator?.removeRoute(route);
+      }
+    });
+  }
+
+  void _assistantChanged() {
+    if (!mounted) return;
+    final id = widget.assistantStatus?.value.lastCandidateId;
+    if (id != null && id != _lastAssistantCandidate) {
+      _lastAssistantCandidate = id;
+      // Arrival refreshes the inbox only. It never navigates, confirms, plays
+      // or overwrites the user's current editor/reading selection.
+      unawaited(_reload());
+    }
+  }
 
   void _retireImport() {
     _importRequest++;
@@ -298,6 +379,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   Future<void> _startImport() async {
     final start = widget.onStartImport;
     if (start == null ||
+        !_scope(_scopeEpoch) ||
         !_sameOwner ||
         _saving ||
         _confirming ||
@@ -390,13 +472,19 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         );
       }
       final items = List<LearningVersion>.of(await learning.listVersions());
+      final candidateStore = _candidateStore;
+      final candidates = candidateStore == null
+          ? <LearningCandidate>[]
+          : List<LearningCandidate>.of(await candidateStore.listCandidates());
       if (!_scope(scope) || load != _loadEpoch) return;
       drafts.sort((a, b) => b.updatedAtUtc.compareTo(a.updatedAtUtc));
       items.sort((a, b) => b.createdAtUtc.compareTo(a.createdAtUtc));
+      candidates.sort((a, b) => b.updatedAtUtc.compareTo(a.updatedAtUtc));
       setState(() {
         _drafts = drafts;
         _versions = versions;
         _learning = items;
+        _candidates = candidates;
         _loading = false;
         if (_selected != null) {
           final current = items.where(
@@ -425,6 +513,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     setState(() {
       _tab = tab;
       _message = null;
+      _retryLearning = null;
     });
     if (tab == 0 || tab == 1 || tab == 4) unawaited(_reload());
   }
@@ -434,6 +523,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     _inputEpoch++;
     _retireImport();
     setState(() {
+      _retryLearning = null;
       _editing = null;
       _title.clear();
       _text.clear();
@@ -450,6 +540,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     _inputEpoch++;
     _retireImport();
     setState(() {
+      _retryLearning = null;
       _editing = draft;
       _title.text = draft.title;
       _text.text = draft.text;
@@ -462,7 +553,8 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   Future<void> _saveDraft() async {
-    if (_saving ||
+    if (!_scope(_scopeEpoch) ||
+        _saving ||
         _importing ||
         _confirming ||
         !_sameOwner ||
@@ -566,7 +658,13 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _confirm() async {
     final draft = _editing;
-    if (draft == null || _dirty || _saving || _confirming || _importing) return;
+    if (!_scope(_scopeEpoch) ||
+        draft == null ||
+        _dirty ||
+        _saving ||
+        _confirming ||
+        _importing)
+      return;
     final scope = _scopeEpoch, input = _inputEpoch, store = widget.materials;
     setState(() {
       _confirming = true;
@@ -599,37 +697,43 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   Future<void> _choose(LearningVersion version) async {
+    if (!_scope(_scopeEpoch) || _saving || _confirming) return;
     final scope = _scopeEpoch, request = ++_selectionEpoch;
     _lookupEpoch++;
-    setState(() {
-      _selected = version;
-      _word = null;
-      _wordResult = null;
-      _wordMessage = null;
-      _wordLoading = false;
-      _wordExpanded = false;
-      _focusedSentence = null;
-      _commandBusy = false;
-      _seekPreview = null;
-      _tab = 0;
-      _message = null;
-      _opening = false;
-    });
     final callback = widget.onOpenLearning;
-    if (version.state != LearningState.ready || callback == null) return;
     setState(() {
-      _opening = true;
+      _tab = 0;
+      _retryLearning = null;
+      _message = callback == null ? null : '正在切换学习内容…';
+      _opening = callback != null;
     });
     try {
-      await callback(version);
+      // Every explicit selection, including text-only content, goes through
+      // the app's selection protocol before replacing the visible reader.
+      if (callback != null) await callback(version);
       if (!_scope(scope) || request != _selectionEpoch) return;
+      _lookupEpoch++;
       setState(() {
-        _message = '已提交打开。播放与定位状态以实际回执为准，不会自动播放。';
+        _selected = version;
+        _word = null;
+        _wordResult = null;
+        _wordMessage = null;
+        _wordLoading = false;
+        _wordExpanded = false;
+        _focusedSentence = null;
+        _commandBusy = false;
+        _seekPreview = null;
+        _message = switch (version.state) {
+          LearningState.ready => null,
+          LearningState.partial => '可先阅读文字，音频尚未提供。',
+          LearningState.pending => '内容尚待补全，当前未开放播放。',
+        };
       });
     } catch (_) {
       if (_scope(scope) && request == _selectionEpoch)
         setState(() {
-          _message = '打开未确认，请保留当前版本并重试。';
+          _retryLearning = version;
+          _message = '切换未完成，已保留当前阅读。请重试切换；上一段音频停止未确认时，不会切到新内容。';
         });
     } finally {
       if (_scope(scope) && request == _selectionEpoch)
@@ -641,7 +745,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _lookup(String word, SentenceAnchor sentence) async {
     final version = _selected;
-    if (version == null) return;
+    if (version == null || _opening || !_scope(_scopeEpoch)) return;
     final scope = _scopeEpoch,
         selection = _selectionEpoch,
         request = ++_lookupEpoch;
@@ -720,7 +824,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _practice(PracticeKind kind) async {
     final version = _selected, callback = widget.onPractice;
-    if (version == null || callback == null || version.sentences.isEmpty)
+    if (version == null ||
+        callback == null ||
+        version.sentences.isEmpty ||
+        _opening)
       return;
     final view = widget.playback?.value;
     final currentIndex = _playbackSentenceIndex(
@@ -750,11 +857,233 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     }
   }
 
+  Future<void> _openCandidateReview(LearningCandidate candidate) async {
+    final store = _candidateStore;
+    if (store == null ||
+        !_scope(_scopeEpoch) ||
+        _reviewingCandidate ||
+        _saving ||
+        _confirming ||
+        !_sameOwner ||
+        candidate.ownerId != widget.materials.trustedOwnerId)
+      return;
+    final scope = _scopeEpoch;
+    final request = ++_candidateReviewRequest;
+    _reviewingCandidate = true;
+    try {
+      await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        useSafeArea: true,
+        builder: (sheetContext) => _privateSurface(
+          sheetContext,
+          CandidateReviewSheet(
+            candidates: store,
+            materials: widget.materials,
+            candidateId: candidate.candidateId,
+            isCurrentScope: () =>
+                _scope(scope) && identical(_candidateStore, store),
+            onPrivateRoute: _trackPrivateRoute,
+          ),
+        ),
+      );
+      if (!_scope(scope)) return;
+      // Confirmation refreshes available versions, not the active reader or
+      // playback. Choosing a learning version remains a separate user action.
+      await _reload();
+    } finally {
+      if (request == _candidateReviewRequest) _reviewingCandidate = false;
+    }
+  }
+
+  List<Widget> _candidateInbox() {
+    final pending = _candidates
+        .where((c) => c.state == LearningCandidateState.pendingReview)
+        .toList();
+    if (pending.isEmpty) return const [];
+    return [
+      Container(
+        key: const Key('candidate-inbox'),
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: ShiyuClientTokens.hint,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Material(
+          color: ShiyuClientTokens.hint,
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '待你校对 · ${pending.length} 份',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '助手送来的内容先由你核对；确认后才加入自己的学习列表。',
+                style: TextStyle(fontSize: 12, height: 1.7),
+              ),
+              for (final candidate in pending)
+                ListTile(
+                  key: Key('candidate-review-${candidate.candidateId}'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    candidate.materialTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${candidate.sentences.length} 句 · ${candidate.submission.transport == CandidateTransport.controlledTest ? '受控测试内容' : '外部助手提供'}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => unawaited(_openCandidateReview(candidate)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  String _assistantFailure(Object error) => switch (error) {
+    AgentBridgeException(code: AgentBridgeErrorCode.sourceMismatch) =>
+      '原文版本未匹配，请重新打开固定版本后授权。',
+    AgentBridgeException(
+      code: AgentBridgeErrorCode.expired || AgentBridgeErrorCode.revoked,
+    ) =>
+      '本机授权已结束，请重新选择需要的版本授权。',
+    AgentBridgeException(
+      code: AgentBridgeErrorCode.busy || AgentBridgeErrorCode.outcomeUnknown,
+    ) =>
+      '上一项操作还在收尾，请先等待，避免重复提交。',
+    AgentBridgeException(
+      code: AgentBridgeErrorCode.sourceTooLarge ||
+          AgentBridgeErrorCode.tooLarge,
+    ) =>
+      '内容超过本次连接上限，请按章节拆分后再授权。',
+    _ => '本机连接尚未确认，请在“我的”中查看高级连接说明。',
+  };
+
+  Future<void> _authorizeAssistant(MaterialVersion version) async {
+    final authorize = widget.onAuthorizeAssistant;
+    if (authorize == null ||
+        !_scope(_scopeEpoch) ||
+        _assistantBusy ||
+        _saving ||
+        _confirming ||
+        version.ownerId != widget.materials.trustedOwnerId)
+      return;
+    final scope = _scopeEpoch;
+    setState(() => _assistantBusy = true);
+    try {
+      final allowRead = await showAssistantGrantDialog(
+        context,
+        version,
+        onPrivateRoute: _trackPrivateRoute,
+      );
+      if (!_scope(scope) || allowRead == null) return;
+      await authorize(
+        AgentBridgeGrantRequest(
+          materialVersionId: version.versionId,
+          allowSourceRead: allowRead,
+        ),
+      );
+      if (!_scope(scope)) return;
+      final state = widget.assistantStatus?.value;
+      setState(
+        () => _message =
+            state?.phase == AgentBridgePhase.enabled &&
+                state?.materialVersionId == version.versionId
+            ? '这一版的临时授权已开启。请在已连接的助手中整理并送入英文候选。'
+            : '授权状态正在更新，请查看本机连接状态。',
+      );
+    } catch (error) {
+      if (_scope(scope)) setState(() => _message = _assistantFailure(error));
+    } finally {
+      if (_scope(scope)) setState(() => _assistantBusy = false);
+    }
+  }
+
+  Future<void> _revokeAssistant() async {
+    final revoke = widget.onRevokeAssistant;
+    if (revoke == null || _assistantBusy || !_scope(_scopeEpoch)) return;
+    final scope = _scopeEpoch;
+    setState(() => _assistantBusy = true);
+    try {
+      await revoke();
+      if (_scope(scope)) setState(() => _message = '本机授权已结束；已收到的内容仍由你决定是否使用。');
+    } catch (error) {
+      if (_scope(scope)) setState(() => _message = _assistantFailure(error));
+    } finally {
+      if (_scope(scope)) setState(() => _assistantBusy = false);
+    }
+  }
+
+  Future<void> _assistantSetup() async {
+    final setup = widget.onAssistantSetup;
+    if (setup == null || _assistantBusy || !_scope(_scopeEpoch)) return;
+    final scope = _scopeEpoch;
+    setState(() => _assistantBusy = true);
+    try {
+      final instructions = await setup();
+      if (!_scope(scope)) return;
+      await showAssistantSetupDialog(
+        context,
+        instructions,
+        onPrivateRoute: _trackPrivateRoute,
+      );
+    } catch (error) {
+      if (_scope(scope)) setState(() => _message = _assistantFailure(error));
+    } finally {
+      if (_scope(scope)) setState(() => _assistantBusy = false);
+    }
+  }
+
+  String? _assistantSourceLabel(AgentBridgeStatus? state) {
+    if (state?.materialVersionId == null) return null;
+    for (final versions in _versions.values) {
+      for (final version in versions) {
+        if (version.versionId == state!.materialVersionId) {
+          return '${version.title} · 第 ${version.versionNumber} 版';
+        }
+      }
+    }
+    return '已选定的原文版本';
+  }
+
+  Widget _assistantCard() {
+    Widget card(AgentBridgeStatus? state) => AssistantConnectionCard(
+      status: state,
+      sourceLabel: _assistantSourceLabel(state),
+      busy: _assistantBusy,
+      onRevoke: widget.onRevokeAssistant == null
+          ? null
+          : () => unawaited(_revokeAssistant()),
+      onSetup: widget.onAssistantSetup == null
+          ? null
+          : () => unawaited(_assistantSetup()),
+    );
+    final status = widget.assistantStatus;
+    if (status == null) return card(null);
+    return ValueListenableBuilder<AgentBridgeStatus>(
+      valueListenable: status,
+      builder: (_, value, __) => card(value),
+    );
+  }
+
   void _leaveReader() {
     _selectionEpoch++;
     _lookupEpoch++;
     setState(() {
       _selected = null;
+      _retryLearning = null;
       _word = null;
       _wordResult = null;
       _opening = false;
@@ -763,7 +1092,17 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   }
 
   Future<void> _handleBack() async {
-    if (_handlingBack || !mounted || _saving || _confirming) return;
+    if (_handlingBack || !mounted) return;
+    if (widget.applicationRetired?.value ?? false) {
+      _handlingBack = true;
+      try {
+        await widget.onRootBack?.call();
+      } finally {
+        _handlingBack = false;
+      }
+      return;
+    }
+    if (_saving || _confirming) return;
     _handlingBack = true;
     if (_importing) {
       _inputEpoch++;
@@ -838,6 +1177,23 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                   )
                 : null,
             actions: [
+              if (_pendingCandidateCount > 0)
+                IconButton(
+                  key: const Key('open-candidate-inbox'),
+                  tooltip: '待校对内容 · $_pendingCandidateCount 份',
+                  onPressed: _saving || _confirming
+                      ? null
+                      : () {
+                          _leaveReader();
+                          _navigate(0);
+                        },
+                  icon: Badge(
+                    backgroundColor: ShiyuClientTokens.action,
+                    textColor: ShiyuClientTokens.paper,
+                    label: Text('$_pendingCandidateCount'),
+                    child: const Icon(Icons.inbox_outlined),
+                  ),
+                ),
               if (_tab == 0 && _selected != null)
                 PopupMenuButton<String>(
                   tooltip: '更多播放操作',
@@ -871,12 +1227,25 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                       horizontal: 18,
                       vertical: 8,
                     ),
-                    child: Text(
-                      _message!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: ShiyuClientTokens.ink,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _message!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: ShiyuClientTokens.ink,
+                          ),
+                        ),
+                        if (_retryLearning != null)
+                          TextButton(
+                            key: const Key('retry-learning-selection'),
+                            onPressed: _opening || _saving || _confirming
+                                ? null
+                                : () => unawaited(_choose(_retryLearning!)),
+                            child: const Text('重试切换'),
+                          ),
+                      ],
                     ),
                   ),
                 Expanded(
@@ -1114,45 +1483,67 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SizedBox(
-            height: 360,
-            child: ListView(
-              children: [
-                Text(
-                  draft.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                for (final version
-                    in _versions[draft.materialId] ?? <MaterialVersion>[])
-                  Padding(
-                    padding: const EdgeInsets.only(top: 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '已确认第 ${version.versionNumber} 版',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(version.text, style: const TextStyle(height: 1.8)),
-                        const SizedBox(height: 8),
-                        const Text(
-                          '固定原文版本，不表示已生成学习内容。',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: ShiyuClientTokens.muted,
-                          ),
-                        ),
-                      ],
+      builder: (context) => _privateSurface(
+        context,
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              height: 360,
+              child: ListView(
+                children: [
+                  if (widget.onAuthorizeAssistant != null) _assistantCard(),
+                  Text(
+                    draft.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-              ],
+                  for (final version
+                      in _versions[draft.materialId] ?? <MaterialVersion>[])
+                    Padding(
+                      padding: const EdgeInsets.only(top: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '已确认第 ${version.versionNumber} 版',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            version.text,
+                            style: const TextStyle(height: 1.8),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '固定原文版本，不表示已生成学习内容。',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: ShiyuClientTokens.muted,
+                            ),
+                          ),
+                          if (widget.onAuthorizeAssistant != null)
+                            OutlinedButton.icon(
+                              key: Key(
+                                'assistant-authorize-${version.versionId}',
+                              ),
+                              onPressed: _assistantBusy
+                                  ? null
+                                  : () =>
+                                        unawaited(_authorizeAssistant(version)),
+                              icon: const Icon(
+                                Icons.auto_awesome_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('允许外部助手送入学习候选'),
+                            ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1312,7 +1703,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         builder: (_, view, __) => _reader(view),
       );
     }
-    if (_learning.isEmpty)
+    if (_learning.isEmpty &&
+        !_candidates.any(
+          (c) => c.state == LearningCandidateState.pendingReview,
+        ))
       return _empty(
         Icons.headphones_outlined,
         '从自己的材料开始学习',
@@ -1324,13 +1718,14 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        ..._candidateInbox(),
         const Text(
           '我的学习内容',
           style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         const Text(
-          '就绪、待准备和部分内容分别显示；不把人工或合成来源说成AI生成。',
+          '选择自己要学的内容。只有文字时可以先阅读，音频另行准备。',
           style: TextStyle(
             fontSize: 12,
             color: ShiyuClientTokens.muted,
@@ -1338,6 +1733,11 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
           ),
         ),
         const SizedBox(height: 20),
+        if (_learning.isEmpty)
+          const Text(
+            '确认上方候选后，学习内容会显示在这里。',
+            style: TextStyle(color: ShiyuClientTokens.muted),
+          ),
         for (final version in _learning)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -1367,8 +1767,11 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     LearningState.partial => '部分内容',
     LearningState.pending => '待准备',
   };
-  String _originLabel(ContentOrigin origin) =>
-      origin == ContentOrigin.synthetic ? '合成示例' : '人工整理';
+  String _originLabel(ContentOrigin origin) => switch (origin) {
+    ContentOrigin.manual => '人工整理',
+    ContentOrigin.synthetic => '合成示例',
+    ContentOrigin.external => '外部助手提供',
+  };
   String _time(Duration value) =>
       '${value.inMinutes.toString().padLeft(2, '0')}:${(value.inSeconds % 60).toString().padLeft(2, '0')}';
 
@@ -1870,6 +2273,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
           ),
         ),
         const SizedBox(height: 22),
+        _assistantCard(),
         ListTile(
           title: const Text('材料'),
           trailing: Text(
@@ -1884,7 +2288,14 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
             key: const Key('confirmed-version-count'),
           ),
         ),
-        ListTile(title: const Text('结构就绪的学习版本'), trailing: Text('$ready')),
+        ListTile(
+          title: const Text('已加入学习的内容'),
+          trailing: Text(
+            '${_learning.length}',
+            key: const Key('my-learning-count'),
+          ),
+        ),
+        ListTile(title: const Text('含可播放音频'), trailing: Text('$ready')),
         const Divider(),
         const ListTile(
           leading: Icon(Icons.insights_outlined),
@@ -1894,7 +2305,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         const ListTile(
           leading: Icon(Icons.privacy_tip_outlined),
           title: Text('数据保存在本机'),
-          subtitle: Text('分享、云同步和第三方上传未接入，不会自动外发。'),
+          subtitle: Text('默认保存在此设备。外部助手只能在你明确授权后读取指定原文，不会自动公开或分享。'),
         ),
       ],
     );

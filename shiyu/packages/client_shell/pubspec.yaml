@@ -17,6 +17,8 @@ dependencies:
     path: ../playback_core
   material_import:
     path: ../material_import
+  agent_bridge:
+    path: ../agent_bridge
 dev_dependencies:
   flutter_test:
     sdk: flutter

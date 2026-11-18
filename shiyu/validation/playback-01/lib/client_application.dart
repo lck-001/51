@@ -10,6 +10,7 @@ import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:agent_bridge/agent_bridge.dart';
 
 import 'client_cached_engine.dart';
 import 'client_command_barrier.dart';
@@ -33,6 +34,13 @@ final class ClientApplicationOwner {
   late final LearningPlaybackCoordinator coordinator;
   late final ShiyuClientRuntime runtime;
   late final ClientMaterialImportController materialImports;
+  late final LearningRootLock rootLock;
+  late final AgentBridgeController agentBridge;
+  StreamSubscription<AgentBridgeStatus>? _assistantEvents;
+  Future<void>? _assistantEventCancellation;
+  final assistantStatus = ValueNotifier<AgentBridgeStatus>(
+    const AgentBridgeStatus(phase: AgentBridgePhase.disabled),
+  );
   final frozen = ValueNotifier<bool>(false);
   final notice = ValueNotifier<String?>(null);
   late final ClientShutdown shutdown;
@@ -47,17 +55,36 @@ final class ClientApplicationOwner {
     PlaybackHost? host;
     ClientCachedEngine? engine;
     ClientMaterialImportController? materialImports;
+    LearningRootLock? rootLock;
+    AgentBridgeController? bridge;
     try {
+      // This must precede both Store.open calls, including schema migration.
+      rootLock = await LearningRootLock.acquire(root);
+      owner.rootLock = rootLock;
+      final ownedRoot = rootLock.rootDirectory;
       materials = await FileMaterialStore.open(
-        root: Directory('${root.path}/materials'),
+        root: Directory('${ownedRoot.path}/materials'),
         trustedOwnerId: 'local-device-only',
       );
       owner.materials = materials;
       learning = await FileLearningStore.open(
-        root: Directory('${root.path}/learning'),
+        root: Directory('${ownedRoot.path}/learning'),
         materials: materials,
       );
       owner.learning = learning;
+      final binaryDirectory = File(Platform.resolvedExecutable).parent;
+      bridge = AgentBridgeController.attach(
+        materials: materials,
+        candidates: learning,
+        privateDirectory: Directory('${ownedRoot.path}/agent_bridge'),
+        rootLock: rootLock,
+        proxyCommand: ['${binaryDirectory.path}/tools/shiyu_agent_proxy.exe'],
+      );
+      owner.agentBridge = bridge;
+      owner.assistantStatus.value = bridge.current;
+      owner._assistantEvents = bridge.snapshots.listen((status) {
+        owner.assistantStatus.value = status;
+      });
       final temporary = await getTemporaryDirectory();
       materialImports = ClientMaterialImportController(
         materials: materials,
@@ -65,7 +92,7 @@ final class ClientApplicationOwner {
       );
       owner.materialImports = materialImports;
       final cache = FilePlayableCache(
-        root: Directory('${root.path}/playable-cache'),
+        root: Directory('${ownedRoot.path}/playable-cache'),
         materials: materials,
         learning: learning,
       );
@@ -100,12 +127,19 @@ final class ClientApplicationOwner {
           FocusManager.instance.primaryFocus?.unfocus();
           owner.engine.retireOpenAdmission();
           owner.materialImports.retire();
+          owner._assistantEventCancellation = owner._assistantEvents?.cancel();
+          owner._assistantEvents = null;
+          owner.agentBridge.retire();
+          owner.assistantStatus.value = owner.agentBridge.current;
         },
         retireBookkeeping: () async {
           await Future.wait([
             owner.runtime.detach(),
             owner.coordinator.close(),
             owner.materialImports.close(),
+            owner.agentBridge.close(),
+            if (owner._assistantEventCancellation != null)
+              owner._assistantEventCancellation!,
           ]);
         },
         stopAndRelease: owner._stopAndReleaseNative,
@@ -113,6 +147,9 @@ final class ClientApplicationOwner {
         closeMaterials: owner.materials.close,
         closeHost: owner.host.close,
         exitApplication: SystemNavigator.pop,
+        // Store close success flags live in ClientShutdown, so a retry of this
+        // OS release can never close non-idempotent Stores a second time.
+        afterStoresClosed: owner.rootLock.release,
       );
       if (host is AndroidAudioHost) {
         host.beforeBackgroundStop = engine.native.releaseNative;
@@ -138,6 +175,15 @@ final class ClientApplicationOwner {
     } catch (_) {
       // Startup has no selected media and cannot have started playback. Best
       // effort cleanup is not reported as confirmed hardware release.
+      var authoritySafeToRelease = true;
+      try {
+        await bridge?.close();
+      } catch (_) {
+        authoritySafeToRelease = false;
+      }
+      try {
+        await owner._assistantEvents?.cancel();
+      } catch (_) {}
       try {
         await materialImports?.close();
       } catch (_) {}
@@ -149,10 +195,19 @@ final class ClientApplicationOwner {
       } catch (_) {}
       try {
         await learning?.close();
-      } catch (_) {}
+      } catch (_) {
+        authoritySafeToRelease = false;
+      }
       try {
         await materials?.close();
-      } catch (_) {}
+      } catch (_) {
+        authoritySafeToRelease = false;
+      }
+      if (authoritySafeToRelease) {
+        try {
+          await rootLock?.release();
+        } catch (_) {}
+      }
       rethrow;
     }
   }
@@ -209,6 +264,19 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
     _shell = widget.owner.runtime.createShell(
       onRootBack: Platform.isAndroid ? widget.owner.closeAndExit : null,
       onStartImport: widget.owner.materialImports.start,
+      assistantStatus: widget.owner.assistantStatus,
+      applicationRetired: widget.owner.frozen,
+      onAuthorizeAssistant: Platform.isWindows
+          ? (request) async {
+              await widget.owner.agentBridge.authorize(request);
+            }
+          : null,
+      onRevokeAssistant: Platform.isWindows
+          ? widget.owner.agentBridge.revoke
+          : null,
+      onAssistantSetup: Platform.isWindows
+          ? widget.owner.agentBridge.setup
+          : null,
     );
     WidgetsBinding.instance.addObserver(this);
   }
@@ -237,6 +305,16 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
     title: '拾语 · 本机预览',
     debugShowCheckedModeBanner: false,
     theme: ShiyuClientTokens.lightTheme(),
+    // Above the Navigator, so dialogs/sheets/route overlays are retired too.
+    // Guarding only the home shell leaves their focused actions reachable.
+    builder: (_, child) => ValueListenableBuilder<bool>(
+      valueListenable: widget.owner.frozen,
+      builder: (_, frozen, navigator) => ClientCommandBarrier(
+        frozen: frozen,
+        child: navigator ?? const SizedBox.shrink(),
+      ),
+      child: child,
+    ),
     home: Column(
       children: [
         SafeArea(
@@ -255,14 +333,7 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
             ),
           ),
         ),
-        Expanded(
-          child: ValueListenableBuilder<bool>(
-            valueListenable: widget.owner.frozen,
-            builder: (_, frozen, child) =>
-                ClientCommandBarrier(frozen: frozen, child: child!),
-            child: _shell,
-          ),
-        ),
+        Expanded(child: _shell),
       ],
     ),
   );

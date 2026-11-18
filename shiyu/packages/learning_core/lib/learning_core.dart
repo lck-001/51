@@ -7,7 +7,7 @@ export 'src/file_learning_store.dart';
 
 enum LearningState { pending, partial, ready }
 
-enum ContentOrigin { manual, synthetic }
+enum ContentOrigin { manual, synthetic, external }
 
 enum LearningErrorCode {
   invalidInput,
@@ -22,6 +22,10 @@ enum LearningErrorCode {
   writeFailed,
   closed,
   mediaUnavailable,
+  deliveryConflict,
+  candidateLimitExceeded,
+  invalidState,
+  unsupportedMedia,
 }
 
 enum LearningRecoveryStatus {
@@ -40,11 +44,189 @@ final class LearningStoreException implements Exception {
 }
 
 final class ContentProvenance {
-  const ContentProvenance({required this.origin, required this.reference});
+  const ContentProvenance({
+    required this.origin,
+    required this.reference,
+    this.external,
+  });
   final ContentOrigin origin;
 
   /// Opaque source/fixture reference, not a local path or signed URL.
   final String reference;
+
+  /// External declarations are not verified model/copyright claims.
+  final ExternalContentSource? external;
+}
+
+enum LearningCandidateState { pendingReview, confirmed, rejected }
+
+enum CandidateTransport { localCapability, controlledTest }
+
+abstract final class LearningCandidateLimits {
+  static const maxSentences = 128;
+  static const maxTextBytes = 100 * 1024;
+  static const maxDeclarationBytes = 8 * 1024;
+  static const maxPendingCandidates = 32;
+  static const maxStoredCandidateBytes = 32 * 1024 * 1024;
+  static const maxDeliveryIdBytes = 256;
+}
+
+/// Provider-supplied statements only; none of these fields is verified identity.
+final class SourceDeclaration {
+  const SourceDeclaration({
+    required this.preparation,
+    this.provider,
+    this.model,
+    this.modelVersion,
+    this.notes,
+  });
+  final String preparation;
+  final String? provider, model, modelVersion, notes;
+}
+
+/// App-authenticated context. The Core does not verify a capability itself.
+/// integrationId is stable across capability rotation and process restarts.
+final class CandidateSender {
+  const CandidateSender({
+    required this.integrationId,
+    required this.transport,
+    this.transportPayloadSha256,
+  });
+  final String integrationId;
+  final CandidateTransport transport;
+  final String? transportPayloadSha256;
+}
+
+final class CandidateSubmission {
+  const CandidateSubmission({
+    required this.integrationId,
+    required this.transport,
+    required this.deliveryId,
+    required this.payloadSha256,
+    required this.receivedAtUtc,
+    this.transportPayloadSha256,
+  });
+  final String integrationId, deliveryId, payloadSha256;
+  final CandidateTransport transport;
+  final String? transportPayloadSha256;
+  final DateTime receivedAtUtc;
+}
+
+/// B1 intentionally has no media field. Wire decoders must reject its presence,
+/// even if null, rather than silently dropping unsupported supplied media.
+final class LearningCandidateInput {
+  LearningCandidateInput({
+    required this.materialId,
+    required this.materialVersionId,
+    required this.sourceTextSha256,
+    required this.deliveryId,
+    required List<LearningSentenceInput> sentences,
+    required this.declaration,
+  }) : sentences = _candidateSentences(sentences);
+  final String materialId, materialVersionId, sourceTextSha256, deliveryId;
+  final List<LearningSentenceInput> sentences;
+  final SourceDeclaration declaration;
+}
+
+List<LearningSentenceInput> _candidateSentences(
+  List<LearningSentenceInput> value,
+) {
+  if (value.length > LearningCandidateLimits.maxSentences) {
+    throw const LearningStoreException(
+      LearningErrorCode.candidateLimitExceeded,
+    );
+  }
+  return List.unmodifiable(value);
+}
+
+final class CandidateDeliveryReceipt {
+  const CandidateDeliveryReceipt({
+    required this.candidateId,
+    required this.payloadSha256,
+    required this.replayed,
+  });
+  final String candidateId, payloadSha256;
+  final bool replayed;
+}
+
+final class LearningCandidate {
+  LearningCandidate({
+    required this.candidateId,
+    required this.ownerId,
+    required this.materialTitle,
+    required this.materialId,
+    required this.materialVersionId,
+    required this.sourceTextSha256,
+    required this.revision,
+    required this.state,
+    required Iterable<LearningSentenceInput> originalSentences,
+    required Iterable<LearningSentenceInput> sentences,
+    required this.declaration,
+    required this.submission,
+    required this.updatedAtUtc,
+    required this.userEdited,
+    this.confirmedLearningVersionId,
+    this.confirmedRevision,
+  }) : originalSentences = List.unmodifiable(originalSentences),
+       sentences = List.unmodifiable(sentences);
+  final String candidateId,
+      ownerId,
+      materialId,
+      materialVersionId,
+      sourceTextSha256;
+  final String materialTitle;
+  final int revision;
+  final LearningCandidateState state;
+  final List<LearningSentenceInput> originalSentences, sentences;
+  final SourceDeclaration declaration;
+  final CandidateSubmission submission;
+  final DateTime updatedAtUtc;
+  final bool userEdited;
+  final String? confirmedLearningVersionId;
+  final int? confirmedRevision;
+}
+
+final class ExternalContentSource {
+  const ExternalContentSource({
+    required this.candidateId,
+    required this.candidateRevision,
+    required this.sourceTextSha256,
+    required this.declaration,
+    required this.submission,
+    required this.userEdited,
+    required this.confirmedAtUtc,
+  });
+  final String candidateId, sourceTextSha256;
+  final int candidateRevision;
+  final SourceDeclaration declaration;
+  final CandidateSubmission submission;
+  final bool userEdited;
+  final DateTime confirmedAtUtc;
+}
+
+/// Same owning instance and atomic snapshot as LearningStore. App/transport
+/// authorization is separate; no HTTP, model call or player is created here.
+abstract interface class LearningCandidateStore {
+  String get trustedOwnerId;
+  Future<CandidateDeliveryReceipt> receiveCandidate({
+    required CandidateSender sender,
+    required LearningCandidateInput input,
+  });
+  Future<LearningCandidate> readCandidate(String candidateId);
+  Future<List<LearningCandidate>> listCandidates();
+  Future<LearningCandidate> reviseCandidate({
+    required String candidateId,
+    required int expectedRevision,
+    required List<LearningSentenceInput> sentences,
+  });
+  Future<LearningVersion> confirmCandidate({
+    required String candidateId,
+    required int expectedRevision,
+  });
+  Future<LearningCandidate> rejectCandidate({
+    required String candidateId,
+    required int expectedRevision,
+  });
 }
 
 final class LearningSentenceInput {

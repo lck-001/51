@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:agent_bridge/agent_bridge.dart';
+import 'package:material_core/material_core.dart';
+import 'package:learning_core/learning_core.dart';
 
 import 'package:shiyu_playback_probe/client_command_barrier.dart';
 import 'package:shiyu_playback_probe/client_shutdown.dart';
@@ -58,6 +62,133 @@ class ControlledClose {
 Future<void> microtasks() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  test('Root OS authority remains held through drain and closes both real Stores first', () async {
+    final root = await Directory.systemTemp.createTemp(
+      'shiyu-shutdown-authority-',
+    );
+    final lock = await LearningRootLock.acquire(root);
+    final materials = await FileMaterialStore.open(
+      root: Directory('${root.path}/materials'),
+      trustedOwnerId: 'controlled-owner',
+    );
+    final learning = await FileLearningStore.open(
+      root: Directory('${root.path}/learning'),
+      materials: materials,
+    );
+    final retirement = Completer<void>();
+    var stopped = false, learningClosed = false, materialsClosed = false;
+    final sequence = ClientShutdown(
+      freezeBusiness: () {},
+      retireBookkeeping: () => retirement.future,
+      stopAndRelease: () async {
+        stopped = true;
+      },
+      closeLearning: () async {
+        await learning.close();
+        learningClosed = true;
+      },
+      closeMaterials: () async {
+        await materials.close();
+        materialsClosed = true;
+      },
+      afterStoresClosed: () async {
+        expect(learningClosed && materialsClosed, isTrue);
+        await lock.release();
+      },
+      closeHost: () async {},
+      exitApplication: () async {},
+    );
+    try {
+      final closing = sequence.requestExit();
+      await Future<void>.delayed(Duration.zero);
+      expect(stopped, isTrue);
+      expect(lock.isHeld, isTrue);
+      expect(learningClosed || materialsClosed, isFalse);
+      await expectLater(
+        LearningRootLock.acquire(root),
+        throwsA(isA<AgentBridgeException>()),
+      );
+      retirement.complete();
+      await closing;
+      expect(lock.isHeld, isFalse);
+      await expectLater(
+        learning.listVersions(),
+        throwsA(isA<LearningStoreException>()),
+      );
+      await expectLater(
+        materials.listDrafts(),
+        throwsA(isA<MaterialStoreException>()),
+      );
+      final next = await LearningRootLock.acquire(root);
+      await next.release();
+    } finally {
+      if (!retirement.isCompleted) retirement.complete();
+      try {
+        await learning.close();
+      } catch (_) {}
+      try {
+        await materials.close();
+      } catch (_) {}
+      await lock.release();
+      await root.delete(recursive: true);
+    }
+  });
+
+  test(
+    'failed final authority cleanup retries without closing real Stores twice',
+    () async {
+      final root = await Directory.systemTemp.createTemp(
+        'shiyu-shutdown-retry-',
+      );
+      final lock = await LearningRootLock.acquire(root);
+      final materials = await FileMaterialStore.open(
+        root: Directory('${root.path}/materials'),
+        trustedOwnerId: 'controlled-owner',
+      );
+      final learning = await FileLearningStore.open(
+        root: Directory('${root.path}/learning'),
+        materials: materials,
+      );
+      var learningCloses = 0, materialCloses = 0, attempts = 0;
+      final sequence = ClientShutdown(
+        freezeBusiness: () {},
+        retireBookkeeping: () async {},
+        stopAndRelease: () async {},
+        closeLearning: () async {
+          await learning.close();
+          learningCloses++;
+        },
+        closeMaterials: () async {
+          await materials.close();
+          materialCloses++;
+        },
+        afterStoresClosed: () async {
+          if (++attempts == 1) {
+            throw StateError('controlled final release failure');
+          }
+          await lock.release();
+        },
+        closeHost: () async {},
+        exitApplication: () async {},
+      );
+      try {
+        await expectLater(sequence.requestExit(), throwsStateError);
+        expect(lock.isHeld, isTrue);
+        await sequence.requestExit();
+        expect(lock.isHeld, isFalse);
+        expect([learningCloses, materialCloses, attempts], [1, 1, 2]);
+      } finally {
+        try {
+          await learning.close();
+        } catch (_) {}
+        try {
+          await materials.close();
+        } catch (_) {}
+        await lock.release();
+        await root.delete(recursive: true);
+      }
+    },
+  );
   test('failed stop can retry while business stays retired', () async {
     final c = ControlledClose()..failStop = true;
     await expectLater(c.sequence.requestExit(), throwsStateError);

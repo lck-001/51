@@ -65,7 +65,7 @@ final class _RealIoMaterialStore implements MaterialStore {
   Future<void> close() => zone.run(store.close);
 }
 
-final class _RealIoLearningStore implements LearningStore {
+final class _RealIoLearningStore implements LearningStore, LearningCandidateStore {
   _RealIoLearningStore(this.store, this.zone);
   final LearningStore store;
   final Zone zone;
@@ -116,6 +116,31 @@ final class _RealIoLearningStore implements LearningStore {
   @override
   Future<ProgressCheckpoint?> restoreProgress(String id) =>
       zone.run(() => store.restoreProgress(id));
+  @override
+  Future<CandidateDeliveryReceipt> receiveCandidate({required CandidateSender sender,
+      required LearningCandidateInput input}) => zone.run(() =>
+      (store as LearningCandidateStore).receiveCandidate(sender: sender, input: input));
+  @override
+  Future<LearningCandidate> readCandidate(String id) => zone.run(() =>
+      (store as LearningCandidateStore).readCandidate(id));
+  @override
+  Future<List<LearningCandidate>> listCandidates() => zone.run(() =>
+      (store as LearningCandidateStore).listCandidates());
+  @override
+  Future<LearningCandidate> reviseCandidate({required String candidateId,
+      required int expectedRevision, required List<LearningSentenceInput> sentences}) =>
+      zone.run(() => (store as LearningCandidateStore).reviseCandidate(
+          candidateId: candidateId, expectedRevision: expectedRevision, sentences: sentences));
+  @override
+  Future<LearningVersion> confirmCandidate({required String candidateId,
+      required int expectedRevision}) => zone.run(() =>
+      (store as LearningCandidateStore).confirmCandidate(candidateId: candidateId,
+                                                       expectedRevision: expectedRevision));
+  @override
+  Future<LearningCandidate> rejectCandidate({required String candidateId,
+      required int expectedRevision}) => zone.run(() =>
+      (store as LearningCandidateStore).rejectCandidate(candidateId: candidateId,
+                                                      expectedRevision: expectedRevision));
   @override
   Future<void> close() => zone.run(store.close);
 }

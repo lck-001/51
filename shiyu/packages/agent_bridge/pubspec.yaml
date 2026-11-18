@@ -1,0 +1,13 @@
+name: agent_bridge
+description: App-owned local candidate bridge and bounded stdio MCP proxy.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+dependencies:
+  crypto: 3.0.8
+  ffi: 2.2.0
+  material_core:
+    path: ../material_core
+  learning_core:
+    path: ../learning_core

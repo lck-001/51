@@ -15,6 +15,9 @@ class TestEngine implements PlaybackEngineAdapter {
   final stream = StreamController<EngineEvent>.broadcast(sync: true);
   final opens = <PlaybackToken>[];
   int plays = 0, stops = 0;
+  // Ordinary setup follows a real Stop observation. Tests that distinguish
+  // acknowledgement from observation explicitly disable this and emit later.
+  bool autoStopObservation = true;
   @override
   Stream<EngineEvent> get events => stream.stream;
   @override
@@ -30,6 +33,10 @@ class TestEngine implements PlaybackEngineAdapter {
   @override
   Future<void> stop(PlaybackToken token) async {
     stops++;
+    if (autoStopObservation) {
+      stream.add(EngineStateChanged(token, PlaybackActual.idle));
+      stream.add(EngineProgress(token, position: Duration.zero));
+    }
   }
 
   @override

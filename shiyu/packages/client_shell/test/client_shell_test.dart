@@ -478,8 +478,10 @@ void main() {
         find.byKey(Key('learning-select-${a.binding.learningVersionId}')),
       );
       await tester.pump();
-      await tester.tap(find.byTooltip('返回学习列表'));
-      await tester.pumpAndSettle();
+      // Selection is now committed only after the app confirms retirement/open.
+      // While A is pending the list remains visible, so B can supersede it
+      // directly instead of returning from an unconfirmed A reader.
+      expect(find.byTooltip('返回学习列表'), findsNothing);
       await tester.tap(
         find.byKey(Key('learning-select-${b.binding.learningVersionId}')),
       );
@@ -488,6 +490,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('打开测试 B'), findsOneWidget);
       expect(find.textContaining('打开未确认'), findsNothing);
+      expect(find.textContaining('切换未完成'), findsNothing);
       expect(opens, 2);
       expect(commands, 0);
     } finally {

@@ -43,6 +43,7 @@ enum LearningPlaybackPhase {
   opening,
   awaitingLoad,
   restoring,
+  stopping,
   ready,
   failed,
   closed,

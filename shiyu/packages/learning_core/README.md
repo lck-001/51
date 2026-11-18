@@ -25,11 +25,74 @@ English/translation input and source binding are immutable after creation.
 A changed material or authored translation must create a new learning version;
 there is no automatic sentence mapping or progress-percentage migration.
 
-`ContentProvenance` only accepts `manual` and `synthetic`. Its reference is a
-short opaque identifier, not an OS path, signed URL or access token. No provider
-origin, AI-generated flag, score or guessed receipt is fabricated. Actual
-provider-backed provenance needs its separately approved executed-receipt
-contract before it can be introduced; this packet does not simulate one.
+`createVersion` continues to accept `manual` and `synthetic` only. Its reference
+is a short opaque identifier, not an OS path, signed URL or access token. It
+rejects an external origin or an external snapshot attached to manual/synthetic.
+External text enters through the reviewed candidate confirmation below, with
+declarations explicitly unverified; it is not provider-backed execution evidence,
+an AI-generated certification, copyright proof or professional score.
+
+## M19-B1 text learning candidates
+
+The same `FileLearningStore` also implements `LearningCandidateStore`:
+
+```dart
+receiveCandidate(sender: ..., input: ...) // private delivery receipt only
+readCandidate(candidateId)
+listCandidates()
+reviseCandidate(candidateId: ..., expectedRevision: ..., sentences: ...)
+confirmCandidate(candidateId: ..., expectedRevision: ...) // fixed LearningVersion
+rejectCandidate(candidateId: ..., expectedRevision: ...)
+```
+
+The App's restricted transport must authenticate the local capability and scopes;
+Core is not a verifier. Owner is inherited from its MaterialStore. Sender's
+`integrationId` is a stable logical connector ID, never a rotating token/session
+ID. `(owner,integrationId,deliveryId)` is persistent semantic-content idempotency:
+same content replays the original receipt; changed content conflicts. The first
+submission/time/raw transport hash and original `SourceDeclaration` never change
+when a token rotates or the user edits text. Transport credentials/paths are not
+stored. A local-capability context requires the actual transport body SHA; a
+controlled-test context cannot be described as an official assistant identity.
+
+Input references an existing confirmed material ID/version and the SHA256 of its
+exact UTF-8 **text**, not its original document artifact. Core reads the actual
+MaterialStore version to check owner, IDs and hash; it never guesses Python/Dart
+ID mappings. Strings are not normalized, unpaired surrogates and forbidden
+controls are rejected before hashing, and sizes use actual UTF-8 bytes.
+
+Candidates remain pendingReview and absent from `listVersions` until the owner
+confirms. Original input plus latest correction are retained; intermediate full
+text revisions are not an unlimited history. Revision increments on correction
+only. Confirm/reject are terminal without changing that fixed text revision;
+same-revision confirm returns the identical edition, same-revision reject is
+idempotent, stale revision conflicts, and the other terminal action is denied.
+
+Candidate state, `(candidateId,fixed revision)` confirmation link and the new
+version are committed in **one** learning snapshot. No public `createVersion`
+call is nested in the Store queue; a private record builder is shared. Forward
+and backward links, source binding, text and external provenance are validated
+on load/commit. A process can die after creating the edition but before sending
+its transport acknowledgement; the next confirmation reads that same edition,
+not a second version. Confirmation does not select a page, change playback or
+dispatch Play.
+
+This first slice is text-only. Its input type has no media; a wire decoder must
+reject the presence of a media field with unsupportedMedia, even if null. It must
+not silently drop supplied media. A confirmed candidate is partial/readable with
+audio_missing; external origin stores the provider's self-declaration separately
+from the actual transport record and the owner's correction/confirmation.
+Audio remains a later B2 slice after idempotent artifact import and rights/source
+review. There is no fake narration, timing, score or automatically public content.
+
+`LearningCandidateLimits`: 128 bilingual sentences, combined text 100KiB,
+declaration 8KiB, 32 pending candidates, and 32MiB actual serialized UTF-8 candidate
+records retained across all states. The latter counts original plus latest text;
+rejection frees a pending slot but does not delete history or bypass total size.
+The transport also needs its own bounded byte stream/deadline/concurrency before
+JSON parsing. Candidate metadata caps are not a total disk/large-file throughput
+or production multi-user quota guarantee; backups and learning versions are
+separate retained data.
 
 ## Observable readiness
 
@@ -95,7 +158,23 @@ Within the private configured root, the partition is
 `learning.json`, `learning.bak`, `learning.next`, `learning.bak.next`, possible
 `learning.recovery.next`, and `store.marker`. This namespace is separate from
 material_core even when both receive the same root.
-Envelope: `{schema:1, payload:{ownerId,sequence,versions,checkpoints}, sha256:...}`.
+Current envelope is schema2, adding `candidates` and `candidateDeliveries` to the
+existing owner/sequence/versions/checkpoints payload. A current reader accepts a
+validated schema1 snapshot, retaining old manual/synthetic IDs and paused
+checkpoints. Migration first retains one byte-checked, validated legacy source
+as `learning.schema1.snapshot`, then writes backup2, primary2 and a v2 marker.
+No writable Store/candidate reception is returned until migration finishes.
+An interrupted backup2/primary1 upgrade can finish on reopen; a v2 marker is a
+one-way fence against silently restoring schema1. The legacy snapshot is for
+explicit diagnosis, never an automatic fallback after the fence.
+
+This is **new readers of old data**, not a downgrade compatibility claim. Old
+binaries reopening completed schema2 cannot read primary or backup. An old
+writer already running in memory may ignore new protocols, so upgrades require
+the old learning instance to end first. The owning App must enforce its root OS
+lock for cooperating new processes; this FileStore itself remains single-writer
+and does not close another application or the user's recording program.
+
 The digest covers UTF-8 `jsonEncode(payload)`. Schema/IDs/provenance/reference
 relations and paused checkpoint intent are validated on reopen.
 
@@ -126,8 +205,18 @@ global PATH change or dependency update is required.
 dart pub get --offline
 dart analyze
 dart run test/learning_store_regression.dart
+dart run test/candidate_local_regression.dart
+dart run test/candidate_independent.dart
 ```
 
 Independent tests use temporary FileIO and a separate Dart process for paused
 restore. They do not open audio/UI or prove PostgreSQL, real users/authentication,
 true speech quality, provider outputs, devices or product acceptance.
+
+The existing learning-version/checkpoint suite was rerun unchanged: 25/25.
+The supplemental candidate suite actually passed 4/4, including reopen-confirm
+uniqueness, source declarations, capability rotation, Unicode/UTF-8 limits and
+pending quota. Candidate confirmation acknowledgement-gap and migration evidence
+come from the independent suite's final report; they are not inferred from the
+in-process supplemental checks. No transport, assistant connection or audible
+learning acceptance is claimed by these Core tests.

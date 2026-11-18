@@ -10,6 +10,7 @@ final class ClientShutdown {
     required this.closeMaterials,
     required this.closeHost,
     required this.exitApplication,
+    this.afterStoresClosed,
   });
 
   final void Function() freezeBusiness;
@@ -17,8 +18,10 @@ final class ClientShutdown {
   final Future<void> Function() stopAndRelease;
   final Future<void> Function() closeLearning, closeMaterials, closeHost;
   final Future<void> Function() exitApplication;
+  final Future<void> Function()? afterStoresClosed;
   bool _retired = false, _exitInFlight = false;
   bool _learningClosed = false, _materialsClosed = false;
+  bool _authorityReleased = false;
   Future<void>? _retirement, _draining, _hostClose;
 
   void retire() {
@@ -40,6 +43,10 @@ final class ClientShutdown {
     if (!_materialsClosed) {
       await closeMaterials();
       _materialsClosed = true;
+    }
+    if (!_authorityReleased) {
+      await afterStoresClosed?.call();
+      _authorityReleased = true;
     }
   }
 
