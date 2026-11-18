@@ -177,6 +177,12 @@
       "sha256": "e36908659db1ac5945aeb24a6e2fb485e20e1d5a2bdbfb4e55677b6aa909c20a"
     },
     {
+      "path": "docs/reviews/M19B1-import-candidate-composition.md",
+      "gitBlob": "349fcd699ee14715ae6a13d6c66f9504e50f6061",
+      "sizeBytes": 2636,
+      "sha256": "8eafc6ef858637f60e9976636843445d5362779dcb58918f108475b8a58aec5e"
+    },
+    {
       "path": "docs/reviews/M19B1-local-bridge-design.md",
       "gitBlob": "ccadf31816731698d7214a89cc8184072b9023af",
       "sizeBytes": 8847,
@@ -2703,10 +2709,28 @@
       "sha256": "ee417aca0ef7c088d6183b01d11e45ad2771da92c7833fa9474fe4569863d7c4"
     },
     {
+      "path": "validation/playback-01/test/material_candidate_composition_test.dart",
+      "gitBlob": "0e5eece807c0a4af639cdb6426ac4aa9847e5c4e",
+      "sizeBytes": 19263,
+      "sha256": "0485d19ddf0b2d6d7e64d3bb5b1ce822eaaddf2c3922b44df64801457a800183"
+    },
+    {
       "path": "validation/playback-01/test/navigator_retirement_test.dart",
       "gitBlob": "f5924e01e894d5ac76ce11e783bad84bac16e5f1",
       "sizeBytes": 2410,
       "sha256": "8191526f3851dd7645786e7c098acfd6ca3bfafcf10ccff83dd402522722054c"
+    },
+    {
+      "path": "validation/playback-01/test/support/composition_fixtures.dart",
+      "gitBlob": "c31e41108b5c390159f4e1b844426f6d2a88c318",
+      "sizeBytes": 3582,
+      "sha256": "a184d8878e04349a52fcc7471ee4b74cf3bda65b0be63b462b2f3771e6f407f6"
+    },
+    {
+      "path": "validation/playback-01/test/support/composition_io.dart",
+      "gitBlob": "9a5817ea3c93d561b2c8c2cdf6564026fad2637b",
+      "sizeBytes": 6058,
+      "sha256": "2767f02f1dfb6807cccb0433e69b4fb80d2453c23be72cbf0e767238061bcf5d"
     },
     {
       "path": "validation/playback-01/windows/.gitignore",
