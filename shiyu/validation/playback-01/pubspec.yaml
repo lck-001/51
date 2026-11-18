@@ -17,7 +17,19 @@ dependencies:
   audio_session: 0.2.4
   playback_core:
     path: ../../packages/playback_core
+  material_core:
+    path: ../../packages/material_core
+  learning_core:
+    path: ../../packages/learning_core
+  learning_playback:
+    path: ../../packages/learning_playback
+  client_shell:
+    path: ../../packages/client_shell
+  client_runtime:
+    path: ../../packages/client_runtime
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: 6.0.0
 flutter:
   uses-material-design: true

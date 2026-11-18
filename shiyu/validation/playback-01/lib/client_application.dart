@@ -1,0 +1,262 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:client_runtime/client_runtime.dart';
+import 'package:client_shell/client_shell.dart';
+import 'package:learning_core/learning_core.dart';
+import 'package:learning_playback/learning_playback.dart';
+import 'package:material_core/material_core.dart';
+import 'package:playback_core/playback_core.dart';
+
+import 'client_cached_engine.dart';
+import 'client_command_barrier.dart';
+import 'client_shutdown.dart';
+import 'playback/android_audio_host.dart';
+import 'playback/foreground_host.dart';
+import 'playback/playback_host.dart';
+import 'playback/windows_playback_host.dart';
+
+/// App/process ownership, never page-owned native resources. This local preview
+/// has no login, cloud sync, generated content, dictionary or scoring provider.
+final class ClientApplicationOwner {
+  ClientApplicationOwner._();
+
+  late final FileMaterialStore materials;
+  late final FileLearningStore learning;
+  late final PlaybackHost host;
+  late final ClientCachedEngine engine;
+  late final PlaybackController playback;
+  late final LearningPlaybackCoordinator coordinator;
+  late final ShiyuClientRuntime runtime;
+  final frozen = ValueNotifier<bool>(false);
+  final notice = ValueNotifier<String?>(null);
+  late final ClientShutdown shutdown;
+
+  static Future<ClientApplicationOwner> open({
+    required Directory root,
+    bool silentValidation = false,
+  }) async {
+    final owner = ClientApplicationOwner._();
+    FileMaterialStore? materials;
+    FileLearningStore? learning;
+    PlaybackHost? host;
+    ClientCachedEngine? engine;
+    try {
+      materials = await FileMaterialStore.open(
+        root: Directory('${root.path}/materials'),
+        trustedOwnerId: 'local-device-only',
+      );
+      owner.materials = materials;
+      learning = await FileLearningStore.open(
+        root: Directory('${root.path}/learning'),
+        materials: materials,
+      );
+      owner.learning = learning;
+      final cache = FilePlayableCache(
+        root: Directory('${root.path}/playable-cache'),
+        materials: materials,
+        learning: learning,
+      );
+      host = Platform.isAndroid
+          ? await AndroidAudioHost.create()
+          : Platform.isWindows
+          ? await WindowsPlaybackHost.create()
+          : ForegroundPlaybackHost();
+      owner.host = host;
+      engine = ClientCachedEngine(
+        cache: cache,
+        currentScope: () => owner.playback.current.token,
+        beforePlay: host.preparePlay,
+        silentValidation: silentValidation,
+      );
+      owner.engine = engine;
+      owner.playback = PlaybackController(engine: engine, system: host);
+      owner.coordinator = LearningPlaybackCoordinator(
+        learning: learning,
+        playback: owner.playback,
+        mediaCache: cache,
+      );
+      owner.runtime = ShiyuClientRuntime.attach(
+        materials: materials,
+        learning: learning,
+        playback: owner.playback,
+        coordinator: owner.coordinator,
+      );
+      owner.shutdown = ClientShutdown(
+        freezeBusiness: () {
+          owner.frozen.value = true;
+          FocusManager.instance.primaryFocus?.unfocus();
+          owner.engine.retireOpenAdmission();
+        },
+        retireBookkeeping: () async {
+          await Future.wait([
+            owner.runtime.detach(),
+            owner.coordinator.close(),
+          ]);
+        },
+        stopAndRelease: owner._stopAndReleaseNative,
+        closeLearning: owner.learning.close,
+        closeMaterials: owner.materials.close,
+        closeHost: owner.host.close,
+        exitApplication: SystemNavigator.pop,
+      );
+      if (host is AndroidAudioHost) {
+        host.beforeBackgroundStop = engine.native.releaseNative;
+      }
+      if (host is WindowsPlaybackHost) {
+        host.beforeWindowClose = (token) async {
+          // Native callback draining is not a storage flush barrier.
+          await owner.shutdown.drainStores();
+          await engine!.native.releaseNative(token);
+        };
+        host.onClosingChanged = (closing) {
+          if (closing) {
+            owner.retireCommands();
+          } else {
+            // Failed cleanup is not a license to reopen a retired coordinator.
+            // Keep admission closed; the native close button can retry cleanup.
+            owner.notice.value = '关闭尚未完成，已暂停操作；请重试关闭窗口。';
+          }
+        };
+      }
+      host.bind(owner.playback);
+      return owner;
+    } catch (_) {
+      // Startup has no selected media and cannot have started playback. Best
+      // effort cleanup is not reported as confirmed hardware release.
+      try {
+        await engine?.native.dispose();
+      } catch (_) {}
+      try {
+        await host?.close();
+      } catch (_) {}
+      try {
+        await learning?.close();
+      } catch (_) {}
+      try {
+        await materials?.close();
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  void retireCommands() {
+    shutdown.retire();
+  }
+
+  bool _stopped(PlaybackSnapshot s) =>
+      s.intent == PlaybackIntent.stopped &&
+      s.actual == PlaybackActual.idle &&
+      s.engineAvailable;
+
+  Future<void> _stopAndReleaseNative() async {
+    await playback.dispatch(const Stop());
+    final token = playback.current.token;
+    if (!_stopped(playback.current)) {
+      await playback.snapshots
+          .firstWhere((s) => s.token.sameSession(token) && _stopped(s))
+          .timeout(const Duration(seconds: 15));
+    }
+    final expected = playback.current.token;
+    await engine.native
+        .releaseNative(expected)
+        .timeout(const Duration(seconds: 15));
+    if (playback.current.token != expected || !_stopped(playback.current)) {
+      throw StateError('shutdown_superseded');
+    }
+  }
+
+  /// Explicit Android exit, distinct from ordinary background playback.
+  Future<void> closeAndExit() async {
+    try {
+      await shutdown.requestExit();
+    } catch (_) {
+      notice.value = '停止或资源释放尚未确认，未提前退出；可再次返回重试退出。';
+    }
+  }
+}
+
+class ShiyuLocalClient extends StatefulWidget {
+  const ShiyuLocalClient({super.key, required this.owner});
+  final ClientApplicationOwner owner;
+  @override
+  State<ShiyuLocalClient> createState() => _ShiyuLocalClientState();
+}
+
+class _ShiyuLocalClientState extends State<ShiyuLocalClient>
+    with WidgetsBindingObserver {
+  late final Widget _shell;
+  @override
+  void initState() {
+    super.initState();
+    _shell = widget.owner.runtime.createShell();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed ||
+        (Platform.isWindows && state == AppLifecycleState.inactive)) {
+      widget.owner.host.appForeground(true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      widget.owner.host.appForeground(false);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Ordinary UI teardown never destroys app-owned native playback.
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: '拾语 · 本机预览',
+    debugShowCheckedModeBanner: false,
+    theme: ShiyuClientTokens.lightTheme(),
+    home: PopScope(
+      canPop: !Platform.isAndroid,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && Platform.isAndroid) {
+          unawaited(widget.owner.closeAndExit());
+        }
+      },
+      child: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Material(
+              color: ShiyuClientTokens.hint,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                child: ValueListenableBuilder<String?>(
+                  valueListenable: widget.owner.notice,
+                  builder: (_, notice, _) => Text(
+                    notice ?? '本机预览 · 仅此设备保存，尚未接入翻译、配音和发音评分',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: widget.owner.frozen,
+              builder: (_, frozen, child) =>
+                  ClientCommandBarrier(frozen: frozen, child: child!),
+              child: _shell,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}

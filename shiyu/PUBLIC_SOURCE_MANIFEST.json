@@ -147,10 +147,16 @@
       "sha256": "189350e1d4320dca5b6097286b446e9e1f3dea5a6eb1c35fc44651669ee13b8c"
     },
     {
+      "path": "docs/reviews/M18-client-flow-results.md",
+      "gitBlob": "575a1ba66fd9b8c138c0665864adf6358be7cbbe",
+      "sizeBytes": 5817,
+      "sha256": "af6e4dbb3518604426bc8e29e17bbaeab6d1779f83d849f8fc4edae4c37634a7"
+    },
+    {
       "path": "docs/reviews/M18-delivery-gates.md",
-      "gitBlob": "6e40398629f1d199f26362bc74d4332a82b6c1b7",
-      "sizeBytes": 12228,
-      "sha256": "778ab14919ea26b3054e6a918b89174f3a8c3b5267b186668cf8d85db6611e23"
+      "gitBlob": "789f70f9e2f7b501da7af20346def42c6d169648",
+      "sizeBytes": 12252,
+      "sha256": "fd02cac286e501a215e7ad2dc266dedac373cd384d9cea3135f652f327d10d83"
     },
     {
       "path": "packages/client_runtime/README.md",
@@ -2181,6 +2187,42 @@
       "sha256": "8c29a6199f682ca8f338a98ab2aecb73a44762d87fb4daff3ed0158e99784612"
     },
     {
+      "path": "validation/playback-01/lib/client_application.dart",
+      "gitBlob": "5c594c36b6427a59f533e5a0a2bf0931c377f289",
+      "sizeBytes": 8703,
+      "sha256": "7a149f1cfe25c4758e27acb67c830927d46f6023a8fdedf5c853a3d581708ee4"
+    },
+    {
+      "path": "validation/playback-01/lib/client_background_regression.dart",
+      "gitBlob": "698eb9383ce5677c73dcb7348523f9247b505ad1",
+      "sizeBytes": 18720,
+      "sha256": "e5af29543ade5693349c5b11107aaeef93cca92d27151986340b90aeca43823e"
+    },
+    {
+      "path": "validation/playback-01/lib/client_cached_engine.dart",
+      "gitBlob": "dcf85492d981f782b4c48768eab79034817ca55a",
+      "sizeBytes": 2567,
+      "sha256": "84cdc83827450cfe3229a362bc0448da140fafbd54054c1b0d3f6aa49debddcb"
+    },
+    {
+      "path": "validation/playback-01/lib/client_command_barrier.dart",
+      "gitBlob": "26edf805beea06b9e52a62a6e2d3ad2c5616bc20",
+      "sizeBytes": 624,
+      "sha256": "9181f6c3118a85854c85e785d170d678d9eae141cd3584b32c3f47fafa284bcb"
+    },
+    {
+      "path": "validation/playback-01/lib/client_main.dart",
+      "gitBlob": "135971ff0ff5d8c2e1f417cf003365d237b5f514",
+      "sizeBytes": 1042,
+      "sha256": "ea68a05f0de5fb7bad687342869e5ad5eb81d878e82e5067d6876ed57389f3ce"
+    },
+    {
+      "path": "validation/playback-01/lib/client_shutdown.dart",
+      "gitBlob": "7b04cb1c8be6ca187e43e890ab44140193a8450b",
+      "sizeBytes": 2628,
+      "sha256": "c5d9604809b71c74239573907332a996fa1d28642db29a85da980337a5e68787"
+    },
+    {
       "path": "validation/playback-01/lib/main.dart",
       "gitBlob": "c75ef02fa70efd88f1afe17fcb4fa2d53d443022",
       "sizeBytes": 16025,
@@ -2218,15 +2260,21 @@
     },
     {
       "path": "validation/playback-01/pubspec.lock",
-      "gitBlob": "c7104515868162c65fb57ed481e3a5b27d61c744",
-      "sizeBytes": 20078,
-      "sha256": "cfc85659062543b7c9168065f77a5167a6373e353be9b2241532db96a1cacf79"
+      "gitBlob": "a6a93c783f0b52b56b5a36070d22b2b539e3da76",
+      "sizeBytes": 23412,
+      "sha256": "0937ee36ddc79eb96143861990a0bfa901ba31cfb48c328d5a1e00c2d5fd0c5b"
     },
     {
       "path": "validation/playback-01/pubspec.yaml",
-      "gitBlob": "4d549aa27215e88a0790ca3d6cc3309e1db69ada",
-      "sizeBytes": 622,
-      "sha256": "9060b2f63b944d4cdc59535d9d3a1bbc610183150670483c587224fed36eca15"
+      "gitBlob": "7335093efbae021da8b1f95deea92cbd2e0e1137",
+      "sizeBytes": 943,
+      "sha256": "efe304b4f3ccc3e0c45f05374c6c5e6e203898258805411eddb473521eef2f2b"
+    },
+    {
+      "path": "validation/playback-01/test/client_shutdown_test.dart",
+      "gitBlob": "b1c06cd7c160d332115c30488c19cd13db5315fc",
+      "sizeBytes": 7221,
+      "sha256": "06c3aff89b1b8fec27dfbdc977a7fe3e06b7b2eeef38aa86cb06c24066314ec0"
     },
     {
       "path": "validation/playback-01/windows/.gitignore",
