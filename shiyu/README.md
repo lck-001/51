@@ -87,3 +87,14 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 ## M16 业务纵切
 
 [材料与送入验证](docs/reviews/M16-local-flow-results.md)：本地材料缓存30项、受限接收/版本及localhost HTTP37项通过。专业Speech离线34项通过但云请求0；[免费资源方案](docs/reviews/M16-free-speech-resource-plan.md)仍需本人核对F0/额度与开通。SQLite只用于验证，PG/真实身份/真实外部Agent及学习生成没有冒称接通。
+
+## 学习页面与版本化播放串接
+
+当前业务代码由以下本地包组成；它们保留已确认的 v0.13 布局和单独的原生宿主生命周期：
+
+- [learning_core](packages/learning_core/README.md)：固定学习版本、句锚点、来源与暂停续学位置；25项文件/进程测试通过。
+- [learning_playback](packages/learning_playback/README.md)：校验媒体缓存、等待实际加载后恢复同版位置；独立22项测试通过。
+- [client_shell](packages/client_shell/README.md)：材料输入与确认、阅读、播放控制、紧凑底部词卡；8项无窗口 Widget 测试通过。
+- [client_runtime](packages/client_runtime/README.md)：把页面回调接到真实存储与播放协调器；9项独立回调/文件集成测试通过。
+
+以上结果证明各自限定的实现与集成合同。原生整应用组装、安装运行、真实英语生成/配音/专业纠音以及人工验收仍需后续证据；不是生产可交付声明。缺少词典、生成或评测服务时显示未接入，不用合成样例冒充真实功能。

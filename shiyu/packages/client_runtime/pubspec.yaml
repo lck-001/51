@@ -1,0 +1,23 @@
+name: client_runtime
+description: Thin app-owned assembly between Shiyu stores, client shell and playback coordination.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+  flutter: '>=3.50.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  material_core:
+    path: ../material_core
+  learning_core:
+    path: ../learning_core
+  playback_core:
+    path: ../playback_core
+  learning_playback:
+    path: ../learning_playback
+  client_shell:
+    path: ../client_shell
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

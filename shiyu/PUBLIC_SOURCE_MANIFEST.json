@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "4a3d0b7f778f787f4a911104f7e546320e03241d",
-      "sizeBytes": 5538,
-      "sha256": "416a7e1606bd204ef2778948b5b057d55e1fad2164cbf9ce744f579f51f03562"
+      "gitBlob": "2ea112fa49c827e5b409d2d6e97dd15d8e2061e7",
+      "sizeBytes": 6620,
+      "sha256": "089feab2bc41ac2949f4433afa7ebcf5b823cb97ecfe510660795d94407f9bde"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
@@ -147,6 +147,90 @@
       "sha256": "189350e1d4320dca5b6097286b446e9e1f3dea5a6eb1c35fc44651669ee13b8c"
     },
     {
+      "path": "docs/reviews/M18-delivery-gates.md",
+      "gitBlob": "6e40398629f1d199f26362bc74d4332a82b6c1b7",
+      "sizeBytes": 12228,
+      "sha256": "778ab14919ea26b3054e6a918b89174f3a8c3b5267b186668cf8d85db6611e23"
+    },
+    {
+      "path": "packages/client_runtime/README.md",
+      "gitBlob": "eb9cfaa51cb463d05d8d67e31a56eac7fa9b3e32",
+      "sizeBytes": 8822,
+      "sha256": "76938cb4eb263953b43ab47a8ef5a1ecbca8b990150fbe6e24f05bc2ac00eeae"
+    },
+    {
+      "path": "packages/client_runtime/lib/client_runtime.dart",
+      "gitBlob": "6ed1077c29c4982e9e8266e81bace21b635fdf3d",
+      "sizeBytes": 7446,
+      "sha256": "d0dbb84069e9602ef6bfbf364ceca70f9928267a0a0da5546c13272b9c170d16"
+    },
+    {
+      "path": "packages/client_runtime/pubspec.lock",
+      "gitBlob": "52df11725d155943c89a0b09b51885f11d2fdcc3",
+      "sizeBytes": 7393,
+      "sha256": "45920497e7ac0e1981c7fc1b4f8aa7323f6af7d63a28c6544120a0084c9413be"
+    },
+    {
+      "path": "packages/client_runtime/pubspec.yaml",
+      "gitBlob": "1211abffe794c4748e9e0ce342a31207fb9494ba",
+      "sizeBytes": 531,
+      "sha256": "67bf939b17796d4b31e533ae42515d032bb4a85e6a5b7670d96c88866fbe488b"
+    },
+    {
+      "path": "packages/client_runtime/test/runtime_integration_test.dart",
+      "gitBlob": "28eafaff1d89285feaa28ecdc36c95882d7c667c",
+      "sizeBytes": 15785,
+      "sha256": "641fc5cddf3f9e5f085fce1fd1c60d1b632e0d6621170a873a6f4c756bb1da02"
+    },
+    {
+      "path": "packages/client_shell/.gitignore",
+      "gitBlob": "2ae687536611c9b43d75fe90d9526564eb41a7ff",
+      "sizeBytes": 44,
+      "sha256": "437df17f54351e728b39ca7b3d156998823712a447ffaad9286518892951576f"
+    },
+    {
+      "path": "packages/client_shell/README.md",
+      "gitBlob": "b2207b51fea25ce147fdaddca6ccf7024ceb80eb",
+      "sizeBytes": 4430,
+      "sha256": "3fd77846d645b68e969bc4bfbcccc5548759b04443960f858e91864fa8ab35fd"
+    },
+    {
+      "path": "packages/client_shell/lib/client_shell.dart",
+      "gitBlob": "fd24e76c3c78b2b733ca8994096cae764daec2be",
+      "sizeBytes": 54788,
+      "sha256": "9231b8293c3988472c40ada470e61e88903eb8ee8792cc66902c1154379f0d59"
+    },
+    {
+      "path": "packages/client_shell/pubspec.lock",
+      "gitBlob": "e77f8f3924e0d1b1d80f5d94c9dac7047bd908b4",
+      "sizeBytes": 7542,
+      "sha256": "755a0f4b7e7e0e20cc653f3b96835d7f7c087eeb9cb9b85e7ff2ec65e3bd7e80"
+    },
+    {
+      "path": "packages/client_shell/pubspec.yaml",
+      "gitBlob": "24f877b6704c898a588478c4c9a2cfc30b0e3bc7",
+      "sizeBytes": 467,
+      "sha256": "decdf72c817039ec80e8f6848c9a9a75aab862f929a480187b876f3f60f0c4c9"
+    },
+    {
+      "path": "packages/client_shell/test/client_shell_test.dart",
+      "gitBlob": "51960330862acb5162855087d008a34caf9ea5ad",
+      "sizeBytes": 18749,
+      "sha256": "8fec446f2051f3518f894c2c7fc28bb58d70d7809c407c97548a9ed571554442"
+    },
+    {
+      "path": "packages/client_shell/test/reader_position_test.dart",
+      "gitBlob": "425976ba9942a6b8f52b62663621f8ccf7c9bbb6",
+      "sizeBytes": 10417,
+      "sha256": "bf8aa0d3ff84c66439f1b9eef517d1ff530d86c63b99f998ebece5913da40ecb"
+    },
+    {
+      "path": "packages/client_shell/test/real_io_stores.dart",
+      "gitBlob": "d0284faebc3af0932f1f0eb346447f7cdbdbd0cf",
+      "sizeBytes": 3874,
+      "sha256": "9ff0b474c2168ef322c06e550461d744cf5616aec124a097e8af761762e5fc22"
+    },
+    {
       "path": "packages/learning_core/README.md",
       "gitBlob": "9b34235295ac155a694ccefc75977dab526b8543",
       "sizeBytes": 7911,
@@ -199,6 +283,66 @@
       "gitBlob": "0689de0f7cc53bbf9ea5c049d8d756937e71d7f4",
       "sizeBytes": 1223,
       "sha256": "7824573b7a1bed4b21f873b851dc43a8a03226a31e5e8d570f8095c6a5b0f9e2"
+    },
+    {
+      "path": "packages/learning_playback/README.md",
+      "gitBlob": "59ba283727e2d51cb0fa1e19916a73d4731a4789",
+      "sizeBytes": 6150,
+      "sha256": "c49c86e5ce365b3998273ad1bba95aa6857e2e8900db2b6fab5f9e34b5ef0701"
+    },
+    {
+      "path": "packages/learning_playback/lib/learning_playback.dart",
+      "gitBlob": "ad0eec295030adf7228dbe6437db3f76b50f1f64",
+      "sizeBytes": 1896,
+      "sha256": "70f75f62893f68a14c5b5501e0341123a1196abb8a6d6a98a77a4596236b2964"
+    },
+    {
+      "path": "packages/learning_playback/lib/src/file_playable_cache.dart",
+      "gitBlob": "11516e90fd7e547745f3d37cd44ee5d69eccdc0e",
+      "sizeBytes": 5641,
+      "sha256": "0a1eb3db59fdf5282cf4e927cd7bc4f9bbe237081e5e456e5fbfbfaf46aff8d0"
+    },
+    {
+      "path": "packages/learning_playback/lib/src/learning_playback_coordinator.dart",
+      "gitBlob": "49c9724be688cf9dbe94a09135af443f27c9d702",
+      "sizeBytes": 15724,
+      "sha256": "60df3d3f4def79550de60c24d6c204a2d29a73e39776ff2fd762b5831c00339b"
+    },
+    {
+      "path": "packages/learning_playback/pubspec.lock",
+      "gitBlob": "b71da338c7c5b9a81d5e8621ff9cbc0dcb06ed99",
+      "sizeBytes": 798,
+      "sha256": "28747114f136477382c06e75c4c69e1213508ed45bc1b4ef86855588e9e33742"
+    },
+    {
+      "path": "packages/learning_playback/pubspec.yaml",
+      "gitBlob": "4a2dbf718d32ff2bd5dd76de326b171eeb835ab0",
+      "sizeBytes": 348,
+      "sha256": "876d1148213369aa7f4eba20c82acab6f0b02bb31e14eb30abc340e9554d74d8"
+    },
+    {
+      "path": "packages/learning_playback/test/README.md",
+      "gitBlob": "f48e19964150dbde576968107b58a5e98c358d84",
+      "sizeBytes": 1519,
+      "sha256": "00a29cc288d814b3624f13db9111deecf5fa5bb5195baee8434011818a24ebd7"
+    },
+    {
+      "path": "packages/learning_playback/test/controlled_playback.dart",
+      "gitBlob": "ceea43a9b7eb652f0749ad8dedae8aca0573072d",
+      "sizeBytes": 2375,
+      "sha256": "56960542824e5604217dd046550771ef9fa62cd3fe221e910764648232f8f918"
+    },
+    {
+      "path": "packages/learning_playback/test/coordinator_regression.dart",
+      "gitBlob": "98d37409dc8f392f4dd92c74dbd2283feddf564b",
+      "sizeBytes": 35891,
+      "sha256": "6e813325828598cfb3b44326beddd40c334035e71f69a2a1c9c629a9adf5d200"
+    },
+    {
+      "path": "packages/learning_playback/test/support.dart",
+      "gitBlob": "38a954df3c80f49e67675292aec3267ff0c863f2",
+      "sizeBytes": 2749,
+      "sha256": "05820f1f9bd5a233f8d81cca72270fc784f9afbb41dad0d7da41cfec20c74622"
     },
     {
       "path": "packages/material_core/README.md",

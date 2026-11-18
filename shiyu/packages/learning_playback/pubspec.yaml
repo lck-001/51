@@ -1,0 +1,14 @@
+name: learning_playback
+description: Version-bound learning media preparation and playback checkpoint coordination.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.14.0 <4.0.0'
+dependencies:
+  crypto: 3.0.8
+  material_core:
+    path: ../material_core
+  learning_core:
+    path: ../learning_core
+  playback_core:
+    path: ../playback_core
