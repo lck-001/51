@@ -4,6 +4,7 @@ import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
 
 export 'src/file_learning_store.dart';
+export 'src/external_candidate_media.dart';
 
 enum LearningState { pending, partial, ready }
 
@@ -395,6 +396,14 @@ abstract interface class LearningMediaCandidateStore {
   Future<CandidateDeliveryReceipt> receiveMediaCandidate({
     required CandidateSender sender,
     required LearningMediaCandidateInput input,
+  });
+
+  /// Neutral, direct authority lookup; does not assert current media availability.
+  Future<CandidateDeliveryReceipt?> findDeliveryReceipt({
+    required CandidateSender sender,
+    required String deliveryId,
+    required int inputVersion,
+    required String expectedPayloadSha256,
   });
 }
 

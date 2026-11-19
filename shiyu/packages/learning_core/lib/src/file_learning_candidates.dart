@@ -352,7 +352,10 @@ extension _FileLearningCandidates on FileLearningStore {
         input.materialVersionId,
         input.sourceTextSha256,
       );
-      await this._verifyMediaBytes(mediaRecord);
+      await this._verifyMediaBytes(
+        mediaRecord,
+        sentenceCount: sentences.length,
+      );
     }
     final payloadHash = _hash(
       utf8.encode(
@@ -493,6 +496,7 @@ extension _FileLearningCandidates on FileLearningStore {
         if (!old.containsKey('mediaInvalidation'))
           await this._verifyMediaBytes(
             old['originalMedia'] as Map<String, dynamic>,
+            sentenceCount: (old['originalSentences'] as List).length,
           );
         this._mediaGate();
       }
@@ -510,6 +514,7 @@ extension _FileLearningCandidates on FileLearningStore {
     if (media != null)
       await this._verifyMediaBytes(
         old['originalMedia'] as Map<String, dynamic>,
+        sentenceCount: (old['originalSentences'] as List).length,
       );
     final time = DateTime.now().toUtc();
     final external = ExternalContentSource(

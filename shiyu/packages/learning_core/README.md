@@ -190,6 +190,23 @@ media provenance/ref/timings when matched. Replays reuse the edition; a new medi
 candidate never overwrites a prior partial edition, sentence IDs or checkpoint.
 No page selection, progress copying or Player is invoked.
 
+`inspectExternalCandidateMedia(bytes:, timings:, sentenceCount:)` exposes the same
+strict pure container/timing preflight used by receive and matched confirmation.
+It bounds bytes/count/list before parsing or hashing and returns immutable actual
+SHA256, byte length and display duration. Timing limits use actual sample/byte
+arithmetic; display milliseconds do not relax the 60-second or end bounds. It
+performs no IO, registration, source lookup or speech/alignment assessment.
+
+`LearningMediaCandidateStore.findDeliveryReceipt(sender:, deliveryId:,
+inputVersion:, expectedPayloadSha256:)` directly checks the existing trusted-owner
+delivery map and immutable submission. Versions1/2 share a namespace; version or
+semantic-hash mismatch conflicts, only an absent key returns null. Existing
+pending/confirmed/rejected candidates return the same neutral replayed receipt.
+This reads no source/blob/list, changes no snapshot/sequence/audit and adds no
+index. Closed/hold/write-uncertainty and Material media gates precede early
+returns. The receipt proves delivery existence, not current media availability;
+actual submission still revalidates source and bytes.
+
 ## File/recovery contract for independent tests
 
 Within the private configured root, the partition is
@@ -259,6 +276,7 @@ dart run test/learning_store_regression.dart
 dart run test/candidate_local_regression.dart
 dart run test/candidate_independent.dart
 dart run test/media_candidate_regression.dart
+dart run test/media_seams_regression.dart
 ```
 
 Independent tests use temporary FileIO and a separate Dart process for paused

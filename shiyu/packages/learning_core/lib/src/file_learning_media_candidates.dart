@@ -126,7 +126,10 @@ extension _FileLearningMediaCandidates on FileLearningStore {
     };
   }
 
-  Future<void> _verifyMediaBytes(Map<String, dynamic> media) async {
+  Future<void> _verifyMediaBytes(
+    Map<String, dynamic> media, {
+    required int sentenceCount,
+  }) async {
     final input = _mediaInput(media);
     Uint8List bytes;
     try {
@@ -135,16 +138,16 @@ extension _FileLearningMediaCandidates on FileLearningStore {
       _fail(LearningErrorCode.mediaUnavailable);
       rethrow;
     }
-    if (bytes.length > 2 * 1024 * 1024 ||
-        bytes.length != input.artifact.byteLength ||
-        _hash(bytes) != input.artifact.sha256)
+    if (bytes.length != input.artifact.byteLength)
       _fail(LearningErrorCode.mediaUnavailable);
-    final info = inspectPcmWave(bytes, strictExternal: true);
-    if (info == null ||
-        input.timings.any(
-          (t) => t.endMs * info.byteRate > info.dataBytes * 1000,
-        )) {
-      _fail(LearningErrorCode.invalidInput);
+    final inspection = inspectExternalCandidateMedia(
+      bytes: bytes,
+      timings: input.timings,
+      sentenceCount: sentenceCount,
+    );
+    if (inspection.byteLength != input.artifact.byteLength ||
+        inspection.actualSha256 != input.artifact.sha256) {
+      _fail(LearningErrorCode.mediaUnavailable);
     }
   }
 
@@ -173,7 +176,10 @@ extension _FileLearningMediaCandidates on FileLearningStore {
   Future<List<String>> _mediaIssues(Map<String, dynamic> c) async {
     if ((c['inputVersion'] ?? 1) != 2) return const [];
     try {
-      await _verifyMediaBytes(c['originalMedia'] as Map<String, dynamic>);
+      await _verifyMediaBytes(
+        c['originalMedia'] as Map<String, dynamic>,
+        sentenceCount: (c['originalSentences'] as List).length,
+      );
       return const [];
     } on LearningStoreException catch (e) {
       return [

@@ -1067,6 +1067,45 @@ final class FileLearningStore
   });
 
   @override
+  Future<CandidateDeliveryReceipt?> findDeliveryReceipt({
+    required CandidateSender sender,
+    required String deliveryId,
+    required int inputVersion,
+    required String expectedPayloadSha256,
+  }) => _run(() async {
+    this._mediaGate();
+    if (!FileLearningStore._references.hasMatch(sender.integrationId) ||
+        sender.integrationId.contains(RegExp(r'[\x00-\x1f\x7f]')) ||
+        (inputVersion != 1 && inputVersion != 2) ||
+        !this._digest(expectedPayloadSha256)) {
+      _fail(LearningErrorCode.invalidInput);
+    }
+    final delivery = this._candidateString(
+      deliveryId,
+      LearningCandidateLimits.maxDeliveryIdBytes,
+      singleLine: true,
+    );
+    final id =
+        (_data['candidateDeliveries'] as Map<String, dynamic>)[this
+                ._deliveryKey(sender.integrationId, delivery)]
+            as String?;
+    if (id == null) return null;
+    final candidate = this._candidateRecord(id);
+    final hash =
+        (candidate['submission'] as Map<String, dynamic>)['payloadSha256']
+            as String;
+    if ((candidate['inputVersion'] ?? 1) != inputVersion ||
+        hash != expectedPayloadSha256) {
+      _fail(LearningErrorCode.deliveryConflict);
+    }
+    return CandidateDeliveryReceipt(
+      candidateId: id,
+      payloadSha256: hash,
+      replayed: true,
+    );
+  });
+
+  @override
   Future<CandidateDeliveryReceipt> receiveMediaCandidate({
     required CandidateSender sender,
     required LearningMediaCandidateInput input,
