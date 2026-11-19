@@ -175,7 +175,18 @@ extension _FileLearningCandidates on FileLearningStore {
   }
 
   CandidateSubmission _submissionView(Object? raw) {
-    if (raw is! Map<String, dynamic>) _fail(LearningErrorCode.invalidInput);
+    if (raw is! Map<String, dynamic> ||
+        raw.keys.any(
+          (k) => !{
+            'integrationId',
+            'transport',
+            'deliveryId',
+            'payloadSha256',
+            'transportPayloadSha256',
+            'receivedAt',
+          }.contains(k),
+        ))
+      _fail(LearningErrorCode.invalidInput);
     final p = raw as Map<String, dynamic>;
     final s = CandidateSubmission(
       integrationId: p['integrationId'] as String,
@@ -208,7 +219,18 @@ extension _FileLearningCandidates on FileLearningStore {
   ExternalContentSource _externalView(Object? raw) {
     if (raw is! Map<String, dynamic> ||
         raw['userEdited'] is! bool ||
-        raw['candidateRevision'] is! int) {
+        raw['candidateRevision'] is! int ||
+        raw.keys.any(
+          (k) => !{
+            'candidateId',
+            'candidateRevision',
+            'sourceTextSha256',
+            'declaration',
+            'submission',
+            'userEdited',
+            'confirmedAt',
+          }.contains(k),
+        )) {
       _fail(LearningErrorCode.invalidInput);
     }
     final p = raw as Map<String, dynamic>;
@@ -235,7 +257,10 @@ extension _FileLearningCandidates on FileLearningStore {
     return record!;
   }
 
-  LearningCandidate _candidateView(Map<String, dynamic> c) => LearningCandidate(
+  LearningCandidate _candidateView(
+    Map<String, dynamic> c, {
+    Iterable<String> mediaIssues = const [],
+  }) => LearningCandidate(
     candidateId: c['id'] as String,
     ownerId: trustedOwnerId,
     materialTitle: c['materialTitle'] as String,
@@ -252,6 +277,7 @@ extension _FileLearningCandidates on FileLearningStore {
     userEdited: c['userEdited'] as bool,
     confirmedLearningVersionId: c['confirmedLearningVersionId'] as String?,
     confirmedRevision: c['confirmedRevision'] as int?,
+    mediaReview: this._mediaReviewRecord(c, issues: mediaIssues),
   );
 
   void _candidateQuota(Map<String, dynamic> record, {String? replacing}) {
@@ -298,8 +324,11 @@ extension _FileLearningCandidates on FileLearningStore {
 
   Future<CandidateDeliveryReceipt> _receiveCandidate(
     CandidateSender sender,
-    LearningCandidateInput input,
-  ) async {
+    LearningCandidateInput input, {
+    LearningCandidateMediaInput? media,
+  }) async {
+    _writable();
+    if (media != null) this._mediaGate();
     if (!FileLearningStore._references.hasMatch(sender.integrationId))
       _fail(LearningErrorCode.invalidInput);
     final sentences = _candidateSentenceRecords(input.sentences);
@@ -313,16 +342,29 @@ extension _FileLearningCandidates on FileLearningStore {
     _checkId(input.materialVersionId);
     if (!FileLearningStore._hashes.hasMatch(input.sourceTextSha256))
       _fail(LearningErrorCode.invalidInput);
+    final mediaRecord = media == null ? null : this._mediaRecord(media);
+    if (mediaRecord != null) {
+      if (this._englishHash(sentences) != media!.englishSha256 ||
+          media.timings.length != sentences.length)
+        _fail(LearningErrorCode.bindingMismatch);
+      await _candidateSource(
+        input.materialId,
+        input.materialVersionId,
+        input.sourceTextSha256,
+      );
+      await this._verifyMediaBytes(mediaRecord);
+    }
     final payloadHash = _hash(
       utf8.encode(
         jsonEncode({
-          'schema': 1,
+          'schema': mediaRecord == null ? 1 : 2,
           'materialId': input.materialId,
           'materialVersionId': input.materialVersionId,
           'sourceTextSha256': input.sourceTextSha256,
           'deliveryId': delivery,
           'sentences': sentences,
           'declaration': declaration,
+          if (mediaRecord != null) 'media': this._mediaPayload(mediaRecord),
         }),
       ),
     );
@@ -371,11 +413,14 @@ extension _FileLearningCandidates on FileLearningStore {
       'submission': submissionRecord,
       'updatedAt': submissionRecord['receivedAt'],
       'userEdited': false,
+      if (mediaRecord != null) 'inputVersion': 2,
+      if (mediaRecord != null) 'originalMedia': mediaRecord,
     };
     _candidateQuota(record);
     final next = _copy();
     (next['candidates'] as Map<String, dynamic>)[id] = record;
     (next['candidateDeliveries'] as Map<String, dynamic>)[key] = id;
+    if (mediaRecord != null) this._mediaGate();
     await _commit(next);
     return CandidateDeliveryReceipt(
       candidateId: id,
@@ -394,30 +439,63 @@ extension _FileLearningCandidates on FileLearningStore {
     int expected,
     List<LearningSentenceInput> sentences,
   ) async {
+    _writable();
     final old = _candidateRecord(id);
     _candidateRevision(old, expected);
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     if (old['state'] != 'pendingReview') _fail(LearningErrorCode.invalidState);
     final values = _candidateSentenceRecords(sentences);
     final record = jsonDecode(jsonEncode(old)) as Map<String, dynamic>;
     record['sentences'] = values;
     record['revision'] = expected + 1;
+    if ((old['inputVersion'] ?? 1) == 2 &&
+        !old.containsKey('mediaInvalidation')) {
+      final oldEnglish = this
+          ._candidateSentenceRecords(
+            this._candidateSentenceViews(old['sentences']),
+          )
+          .map((s) => s['english'])
+          .toList();
+      if (jsonEncode(oldEnglish) !=
+          jsonEncode(values.map((s) => s['english']).toList())) {
+        record['mediaInvalidation'] = {
+          'firstRevision': expected + 1,
+          'englishSha256': this._englishHash(values),
+        };
+      }
+    }
     record['userEdited'] =
         jsonEncode(values) != jsonEncode(record['originalSentences']);
     record['updatedAt'] = DateTime.now().toUtc().toIso8601String();
     _candidateQuota(record, replacing: id);
     final next = _copy();
     (next['candidates'] as Map<String, dynamic>)[id] = record;
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     await _commit(next);
     return _candidateView(record);
   }
 
   Future<LearningVersion> _confirmCandidate(String id, int expected) async {
+    _writable();
     final old = _candidateRecord(id);
     _candidateRevision(old, expected);
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     if (old['state'] == 'rejected') _fail(LearningErrorCode.invalidState);
     if (old['state'] == 'confirmed') {
       // Link integrity was validated on load/commit, and is checked before use.
       _validateCandidates(_data);
+      if ((old['inputVersion'] ?? 1) == 2) {
+        await _candidateSource(
+          old['materialId'] as String,
+          old['materialVersionId'] as String,
+          old['sourceTextSha256'] as String,
+        );
+        if (!old.containsKey('mediaInvalidation'))
+          await this._verifyMediaBytes(
+            old['originalMedia'] as Map<String, dynamic>,
+          );
+        this._mediaGate();
+      }
       return _view(_record(old['confirmedLearningVersionId'] as String));
     }
     final source = await _candidateSource(
@@ -425,6 +503,14 @@ extension _FileLearningCandidates on FileLearningStore {
       old['materialVersionId'] as String,
       old['sourceTextSha256'] as String,
     );
+    final media =
+        (old['inputVersion'] ?? 1) == 2 && !old.containsKey('mediaInvalidation')
+        ? this._mediaInput(old['originalMedia'])
+        : null;
+    if (media != null)
+      await this._verifyMediaBytes(
+        old['originalMedia'] as Map<String, dynamic>,
+      );
     final time = DateTime.now().toUtc();
     final external = ExternalContentSource(
       candidateId: id,
@@ -437,6 +523,18 @@ extension _FileLearningCandidates on FileLearningStore {
     );
     final version = _buildVersionRecord(
       source: source,
+      media: media == null
+          ? null
+          : LearningMediaInput(
+              artifact: media.artifact,
+              provenance: ContentProvenance(
+                origin: ContentOrigin.external,
+                reference: 'candidate:$id:$expected',
+                external: external,
+              ),
+              timings: media.timings,
+            ),
+      allowExternalMedia: media != null,
       sentences: _candidateSentenceViews(old['sentences']),
       textProvenance: ContentProvenance(
         origin: ContentOrigin.external,
@@ -446,6 +544,13 @@ extension _FileLearningCandidates on FileLearningStore {
       allowExternal: true,
       createdAtUtc: time,
     );
+    if (media != null) {
+      (version['media'] as Map<String, dynamic>)['externalDetails'] = {
+        'englishSha256': media.englishSha256,
+        'declaration': this._declarationRecord(media.declaration),
+        'timingDeclaration': media.timingDeclaration,
+      };
+    }
     final record = jsonDecode(jsonEncode(old)) as Map<String, dynamic>;
     record['state'] = 'confirmed';
     record['confirmedLearningVersionId'] = version['id'];
@@ -457,13 +562,16 @@ extension _FileLearningCandidates on FileLearningStore {
     (next['candidates'] as Map<String, dynamic>)[id] = record;
     (next['versions'] as Map<String, dynamic>)[version['id'] as String] =
         version;
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     await _commit(next);
     return _view(version);
   }
 
   Future<LearningCandidate> _rejectCandidate(String id, int expected) async {
+    _writable();
     final old = _candidateRecord(id);
     _candidateRevision(old, expected);
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     if (old['state'] == 'confirmed') _fail(LearningErrorCode.invalidState);
     if (old['state'] == 'rejected') return _candidateView(old);
     final record = jsonDecode(jsonEncode(old)) as Map<String, dynamic>;
@@ -472,11 +580,12 @@ extension _FileLearningCandidates on FileLearningStore {
     _candidateQuota(record, replacing: id);
     final next = _copy();
     (next['candidates'] as Map<String, dynamic>)[id] = record;
+    if ((old['inputVersion'] ?? 1) == 2) this._mediaGate();
     await _commit(next);
     return _candidateView(record);
   }
 
-  void _validateCandidates(Map<String, dynamic> p) {
+  void _validateCandidates(Map<String, dynamic> p, {int schema = 3}) {
     void bad() => throw const FormatException('invalid_candidate_manifest');
     try {
       if (p['candidates'] is! Map<String, dynamic> ||
@@ -498,6 +607,37 @@ extension _FileLearningCandidates on FileLearningStore {
             c['materialTitle'] is! String ||
             c.containsKey('media'))
           bad();
+        if (c.keys.any(
+          (k) => !{
+            'id',
+            'ownerId',
+            'materialId',
+            'materialVersionId',
+            'materialTitle',
+            'sourceTextSha256',
+            'revision',
+            'state',
+            'originalSentences',
+            'sentences',
+            'declaration',
+            'submission',
+            'updatedAt',
+            'userEdited',
+            'confirmedLearningVersionId',
+            'confirmedRevision',
+            'confirmedAt',
+            'inputVersion',
+            'originalMedia',
+            'mediaInvalidation',
+          }.contains(k),
+        ))
+          bad();
+        if (schema < 3 &&
+            (c.containsKey('inputVersion') ||
+                c.containsKey('originalMedia') ||
+                c.containsKey('mediaInvalidation')))
+          bad();
+        this._validateMediaCandidate(c);
         _checkId(entry.key);
         _checkId(c['materialId'] as String);
         _checkId(c['materialVersionId'] as String);
@@ -519,13 +659,17 @@ extension _FileLearningCandidates on FileLearningStore {
         final expectedHash = _hash(
           utf8.encode(
             jsonEncode({
-              'schema': 1,
+              'schema': (c['inputVersion'] ?? 1) == 2 ? 2 : 1,
               'materialId': candidate.materialId,
               'materialVersionId': candidate.materialVersionId,
               'sourceTextSha256': candidate.sourceTextSha256,
               'deliveryId': candidate.submission.deliveryId,
               'sentences': original,
               'declaration': _declarationRecord(candidate.declaration),
+              if ((c['inputVersion'] ?? 1) == 2)
+                'media': this._mediaPayload(
+                  c['originalMedia'] as Map<String, dynamic>,
+                ),
             }),
           ),
         );
@@ -539,9 +683,9 @@ extension _FileLearningCandidates on FileLearningStore {
               v['materialId'] != candidate.materialId ||
               v['materialVersionId'] != candidate.materialVersionId ||
               v['materialTitle'] != candidate.materialTitle ||
-              v['media'] != null ||
               v['createdAt'] != c['confirmedAt'])
             bad();
+          this._validateMediaConfirmation(c, v);
           final provenance = v['textProvenance'] as Map<String, dynamic>;
           if (provenance['origin'] != 'external' ||
               provenance['reference'] !=
@@ -603,30 +747,5 @@ extension _FileLearningCandidates on FileLearningStore {
     } catch (_) {
       bad();
     }
-  }
-
-  Future<void> _archiveLegacy(
-    File selected,
-    Map<String, dynamic> payload,
-  ) async {
-    final archive = _file('learning.schema1.snapshot');
-    if (await _regular(archive)) {
-      final old = await _snapshot(archive);
-      if (_snapshotSchemas[archive.path] != 1 ||
-          jsonEncode(old) != jsonEncode(payload)) {
-        _fail(LearningErrorCode.corruptStore);
-      }
-      return;
-    }
-    final bytes = await selected.readAsBytes();
-    final next = _file('learning.schema1.snapshot.next');
-    await _regular(next);
-    await next.writeAsBytes(bytes, flush: true);
-    final copied = await _snapshot(next);
-    if (_snapshotSchemas[next.path] != 1 ||
-        jsonEncode(copied) != jsonEncode(payload) ||
-        _hash(await next.readAsBytes()) != _hash(bytes))
-      _fail(LearningErrorCode.writeFailed);
-    await next.rename(archive.path);
   }
 }

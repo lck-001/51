@@ -51,10 +51,22 @@
       "sha256": "f6b1193a1036e16c0844bd7efc712009fa982b38c736780476cf50063a0963c0"
     },
     {
+      "path": "docs/adr/0003-learning-media-candidate-schema.md",
+      "gitBlob": "01cf5e2ddec950e45e4abc9d72a1cc887a830e83",
+      "sizeBytes": 2479,
+      "sha256": "df0e3888fc9f146fc1bc76fab06bc37ecd67954aff93fdbc6b422050dfe855e7"
+    },
+    {
       "path": "docs/reviews/B2A-material-registration-results.md",
       "gitBlob": "d0c956181d451418950ff11d12668d26a96936c8",
       "sizeBytes": 4075,
       "sha256": "43d44f8534ce4397b5253fc04a4125b7ba803b51df792d9ff4845b9b02b9b48b"
+    },
+    {
+      "path": "docs/reviews/B2B-learning-media-candidate-results.md",
+      "gitBlob": "6244e2aa65073fbe6282a0af2af8e08db2130060",
+      "sizeBytes": 5709,
+      "sha256": "c5e3a0e64e0205de7a1654659499a76ee828a726bda58ffd02d1eda64ef478a8"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
@@ -514,27 +526,39 @@
     },
     {
       "path": "packages/learning_core/README.md",
-      "gitBlob": "cee8b2fcae7d4299b561a1a4c966953d3e938f83",
-      "sizeBytes": 13433,
-      "sha256": "e2b52ba5f1cf8a274bc1447a736a7d2c4186f22aba05a711fde63d14eb0b107b"
+      "gitBlob": "90f69c7f840a4965379dcf2d59133e54daa28878",
+      "sizeBytes": 16976,
+      "sha256": "5ede5301cecdc7e6606d7255919b7302d61a9633314b5c648569253d09e57971"
     },
     {
       "path": "packages/learning_core/lib/learning_core.dart",
-      "gitBlob": "7607ef27c7e8741099f521e0bdcf27ff2a4bf583",
-      "sizeBytes": 11221,
-      "sha256": "f31d67c05373fda9d28076c33ca4543309e986869bf4b7b9aa6f3be4d7463b01"
+      "gitBlob": "38f9f89332b9ed1ccbc1bcf4ca123d3e07a56f51",
+      "sizeBytes": 13601,
+      "sha256": "fa56a7a3b040bffaf0f39f1c560ee1f37639fdcf95aef78e1ca211339d66eee8"
     },
     {
       "path": "packages/learning_core/lib/src/file_learning_candidates.dart",
-      "gitBlob": "6d0ea56e28ed6143ad2a71055f10b0ed425844d8",
-      "sizeBytes": 23707,
-      "sha256": "844b888cd7471d5d1d3f22e67c3b70485e847615bcf2fc400db15cc98bfb7410"
+      "gitBlob": "9e1876b5e33ff6b5a630cdea757e2e3a8d3149fe",
+      "sizeBytes": 27802,
+      "sha256": "0fa4a0a883bbcef517541c0ca11d7a81d99c58a950f44107a9c71f58fc3b123d"
+    },
+    {
+      "path": "packages/learning_core/lib/src/file_learning_media_candidates.dart",
+      "gitBlob": "24f5ec90c7f84f98bfb33e552fd24f888ec7f965",
+      "sizeBytes": 9084,
+      "sha256": "ce64eb20d942dfab6454d83274498bffe100d29d3604e0f46bd8b537a6c5f23b"
     },
     {
       "path": "packages/learning_core/lib/src/file_learning_store.dart",
-      "gitBlob": "be4c3587e78586e9f35d043c1763977a5865607c",
-      "sizeBytes": 31708,
-      "sha256": "f4d36a766c615c0f0a204cd1085e2e7704827715e92c2b6058787fb567ac627f"
+      "gitBlob": "29ca435bdb80acc93ef079e066bd67e100969cf4",
+      "sizeBytes": 39021,
+      "sha256": "59d4645b70c79ab1d6349b1264708b6fd0d9b41704128fc60853169d15cac1b7"
+    },
+    {
+      "path": "packages/learning_core/lib/src/pcm_wave.dart",
+      "gitBlob": "231352ac0a2f7f4416068295d7cddd22fc3792b8",
+      "sizeBytes": 3232,
+      "sha256": "1d8025a9d621b63f0996681368fa71e3b6d0198fc1b8a0c595e9caddc3a533a5"
     },
     {
       "path": "packages/learning_core/pubspec.lock",
@@ -556,9 +580,9 @@
     },
     {
       "path": "packages/learning_core/test/candidate_independent.dart",
-      "gitBlob": "4bd24edb1fc43754dbd90e55309e4de18c5bc92a",
-      "sizeBytes": 20304,
-      "sha256": "7e59e1b0ba54e45fb149c8012daceca8a99374d436bde357779ffa44907adc20"
+      "gitBlob": "59437330ee86eba6024de4c9dfea6f28d57482b6",
+      "sizeBytes": 23456,
+      "sha256": "32bf9d63fe33a4a6f9afcdbcdc283062838b58e52a7ab899f965b3a94adee587"
     },
     {
       "path": "packages/learning_core/test/candidate_local_regression.dart",
@@ -577,6 +601,12 @@
       "gitBlob": "8118ec2b1024af00237fe2c7d31859c99e281bd2",
       "sizeBytes": 36180,
       "sha256": "e3eaf56822ba54aacdb71cbbda250e6f3ec969c5cc03bc69264c5abd3d15a5b1"
+    },
+    {
+      "path": "packages/learning_core/test/media_candidate_regression.dart",
+      "gitBlob": "e05c0f1e798bdbe4f1286392198ee5e78e36d6b9",
+      "sizeBytes": 32611,
+      "sha256": "27cd885fe159d86e47808fe60ab7bd4a1718e6bf55893a5a8d2eb70578263937"
     },
     {
       "path": "packages/learning_core/test/support.dart",

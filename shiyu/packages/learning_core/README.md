@@ -82,8 +82,8 @@ reject the presence of a media field with unsupportedMedia, even if null. It mus
 not silently drop supplied media. A confirmed candidate is partial/readable with
 audio_missing; external origin stores the provider's self-declaration separately
 from the actual transport record and the owner's correction/confirmation.
-Audio remains a later B2 slice after idempotent artifact import and rights/source
-review. There is no fake narration, timing, score or automatically public content.
+B2 media candidates use the separate capability below; the B1 input remains
+text-only. There is no fake narration, timing, score or automatically public content.
 
 `LearningCandidateLimits`: 128 bilingual sentences, combined text 100KiB,
 declaration 8KiB, 32 pending candidates, and 32MiB actual serialized UTF-8 candidate
@@ -151,6 +151,45 @@ The application's Playback Interface remains responsible for actual engine state
 focus, interruption, capture blocking and approved explicit user Play. Neither a
 checkpoint nor an opaque item is evidence that audio played or reached a frame.
 
+## B2 structure-only media candidates
+
+`FileLearningStore` additionally implements `LearningMediaCandidateStore` with
+`receiveMediaCandidate(sender:, input: LearningMediaCandidateInput(text:, media:))`.
+Existing candidate read/revise/confirm/reject methods are reused; existing Store
+interfaces gain no required methods. Candidate/version/media views add optional
+media review/details fields. This does not expose an upload or transport endpoint.
+
+V2 uses the same `(owner,integration,delivery)` namespace as B1. Changed content or
+switching B1/v2 under that key conflicts. Semantic payload hashing excludes random
+artifact IDs, transient grants and receipt times; equal actual bytes registered
+under another ref replay the original candidate without replacing its audit ref.
+The actual immutable source text and exact ordered English JSON array are hashed
+independently, and registered bytes are read through MaterialStore before trust.
+
+External PCM policy requires canonical RIFF/WAVE PCM16 mono 16kHz, one fmt/data,
+exact lengths, at most 2MiB and at most 960000 samples (60 seconds). Ordered unique
+sentence timings must be nonoverlapping and within actual sample duration.
+Legacy manual/synthetic PCM retains its prior broader policy. Declarations and
+8KiB combined audio/timing statements are unverified; no speech/quality/alignment
+inference follows from a WAV container or synthetic fixture. Ready is structural.
+
+Original media/ref/English binding/declarations/timings remain immutable audit.
+Translation-only edits retain matching media. Any exact English/ordering/count
+change records sticky invalidation at that revision. Reverting English does not
+reattach audio; a new media delivery/candidate is required. Matched confirmation
+rechecks actual source/media/format/timings and refuses missing/corrupt media.
+Invalidated confirmation may create an explicitly text-only partial edition even
+when the old blob is unavailable, retaining its ref and diagnostic audit; valid
+source/revision/audit and both Store recovery gates still apply. Text provenance
+and media.provenance.external share the complete text confirmation context,
+including its text declaration. Audio declaration is separately preserved in
+originalMedia and externalDetails and validated against those fields.
+
+A fixed candidate revision and its new immutable edition commit together, including
+media provenance/ref/timings when matched. Replays reuse the edition; a new media
+candidate never overwrites a prior partial edition, sentence IDs or checkpoint.
+No page selection, progress copying or Player is invoked.
+
 ## File/recovery contract for independent tests
 
 Within the private configured root, the partition is
@@ -158,18 +197,22 @@ Within the private configured root, the partition is
 `learning.json`, `learning.bak`, `learning.next`, `learning.bak.next`, possible
 `learning.recovery.next`, and `store.marker`. This namespace is separate from
 material_core even when both receive the same root.
-Current envelope is schema2, adding `candidates` and `candidateDeliveries` to the
-existing owner/sequence/versions/checkpoints payload. A current reader accepts a
-validated schema1 snapshot, retaining old manual/synthetic IDs and paused
-checkpoints. Migration first retains one byte-checked, validated legacy source
-as `learning.schema1.snapshot`, then writes backup2, primary2 and a v2 marker.
-No writable Store/candidate reception is returned until migration finishes.
-An interrupted backup2/primary1 upgrade can finish on reopen; a v2 marker is a
-one-way fence against silently restoring schema1. The legacy snapshot is for
-explicit diagnosis, never an automatic fallback after the fence.
+Current envelope is schema3. Readers accept schemas1/2 and retain the original
+manual/synthetic/external text records and paused checkpoints. V2 candidates carry
+inputVersion2, originalMedia and optional first-invalidation metadata. Old B1
+records default to inputVersion1 when absent and are not expanded during migration;
+explicit1 also remains text-only. Actual complete candidate records still count
+against the existing 32MiB/32-pending quota; no allowance or eviction is added.
+
+Migration archives the original validated schema1/2 snapshot, then writes backup3,
+primary3 and marker3. A genuine first initialization may lack a backup; a corrupt,
+unreadable or non-file backup is never treated as absent. Interrupted migration
+resumes only with a validated original archive and equivalent projected snapshots.
+The schema boundary is one-way and inconsistent/unknown marker states hold. Legacy
+archives are diagnostic evidence, never automatic fallback after the boundary.
 
 This is **new readers of old data**, not a downgrade compatibility claim. Old
-binaries reopening completed schema2 cannot read primary or backup. An old
+binaries reopening completed schema3 cannot read primary or backup. An old
 writer already running in memory may ignore new protocols, so upgrades require
 the old learning instance to end first. The owning App must enforce its root OS
 lock for cooperating new processes; this FileStore itself remains single-writer
@@ -180,9 +223,17 @@ relations and paused checkpoint intent are validated on reopen.
 
 Same-directory staged write → flush → re-read/check → rename; the previous
 validated snapshot is written as backup. Memory advances only after commit.
-Write failure blocks subsequent writes until reopen. A corrupt/missing primary
-can fall back to a validated backup with `recoveredFromBackup`; this may roll
-back the latest version or checkpoint and must remain visible to the caller.
+Write uncertainty persists a recovery hold. Before any older-backup restoration,
+a hold must be durably written; failure to fence means recovery fails without
+rewriting the damaged primary. Fallback may lose a recent delivery/confirmation,
+so it cannot silently return an absent operation as a new one. The independent
+learning.recovery.hold file (or incomplete .next) survives restart; no automatic
+release/rebuild/clear path exists. All snapshot writes, terminal/replay shortcuts,
+candidate queries and new playback admission reject recoveryHold. Verifiable
+historical version/checkpoint reads remain available and never dispatch Play.
+Both Material/Learning gates are rechecked immediately before a V2 persistent
+action; an already-entered commit may finish. This is not a cross-Store transaction
+or a claim that a later hold cancels an in-flight write.
 An existing corrupt store or only a staged candidate never becomes empty success.
 Staged files are not promoted as committed progress. Missing media/source is
 reported as degraded where detected and checked again on version reads.
@@ -207,6 +258,7 @@ dart analyze
 dart run test/learning_store_regression.dart
 dart run test/candidate_local_regression.dart
 dart run test/candidate_independent.dart
+dart run test/media_candidate_regression.dart
 ```
 
 Independent tests use temporary FileIO and a separate Dart process for paused

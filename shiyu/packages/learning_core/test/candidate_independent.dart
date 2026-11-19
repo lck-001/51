@@ -258,9 +258,12 @@ Future<void> main(List<String> args) async {
       final original = base64Decode(files[originalKey] as String);
       final partition = File('${root.path}/$originalKey').parent;
       expectThat((jsonDecode(await File('${partition.path}/learning.json').readAsString())
-          as Map<String, dynamic>)['schema'] == 2, 'primary must use schema2');
+          as Map<String, dynamic>)['schema'] == 3, 'primary must use schema3');
       expectThat((jsonDecode(await File('${partition.path}/learning.bak').readAsString())
-          as Map<String, dynamic>)['schema'] == 2, 'backup must also fence legacy writers');
+          as Map<String, dynamic>)['schema'] == 3, 'backup must also fence legacy writers');
+      expectThat(await File('${partition.path}/store.marker').readAsString() == 'learning_core:3' &&
+          !h.learning.recoveryReport.issues.any((i) => i.startsWith('recovery_hold:')),
+          'schema3 migration completes marker without hold');
       final archived = await File('${partition.path}/learning.schema1.snapshot').readAsBytes();
       expectThat(base64Encode(archived) == base64Encode(original), 'actual valid v1 bytes must be preserved');
       await h.close(); await h.open();
@@ -286,7 +289,7 @@ Future<void> main(List<String> args) async {
     expectThat((await h.candidates.listCandidates()).isEmpty &&
         (await h.learning.listVersions()).isEmpty, 'invalid input must not create content');
   }));
-  await cases.run('interrupted backup2 plus primary1 migration resumes from real validated snapshots',
+  await cases.run('actual backup3 plus primary1 and original archive resumes without loss',
       () => inSandbox((root) async {
     final migratedRoot = Directory('${root.path}/migrated');
     final interruptedRoot = Directory('${root.path}/interrupted');
@@ -298,14 +301,23 @@ Future<void> main(List<String> args) async {
     final primary = files.keys.singleWhere((path) => path.startsWith('learning/') &&
         path.endsWith('/learning.json'));
     final backup = '${primary.substring(0, primary.length - 'learning.json'.length)}learning.bak';
-    // Simulate the documented migration boundary using a schema2 snapshot
-    // actually emitted by the new Store and schema1 bytes emitted by the old
-    // Store. No schema/checksum/body is synthesized or "repaired" by this test.
+    // Simulate backup3 with an actual current snapshot and its actual
+    // schema1 archive, persisted before backup3. Keep primary1 and marker1.
+    // No schema/checksum/body is synthesized or repaired.
     await File('${interruptedRoot.path}/$backup').writeAsBytes(
         await File('${migratedRoot.path}/$primary').readAsBytes(), flush: true);
+    final archivePath = '${primary.substring(0, primary.length - 'learning.json'.length)}learning.schema1.snapshot';
+    await File('${interruptedRoot.path}/$archivePath').writeAsBytes(
+        await File('${migratedRoot.path}/$archivePath').readAsBytes(), flush: true);
     final resumed = Harness(interruptedRoot, ownerId: fixture['ownerId'] as String);
     await resumed.open();
     try {
+      final partition = File('${interruptedRoot.path}/$primary').parent;
+      expectThat((jsonDecode(await File('${partition.path}/learning.json').readAsString()) as Map)['schema'] == 3 &&
+          (jsonDecode(await File('${partition.path}/learning.bak').readAsString()) as Map)['schema'] == 3 &&
+          await File('${partition.path}/store.marker').readAsString() == 'learning_core:3' &&
+          !resumed.learning.recoveryReport.issues.any((i) => i.startsWith('recovery_hold:')),
+          'actual backup3 completes both snapshots and marker without hold');
       expectThat((await resumed.learning.listVersions()).length == 2 &&
           (await resumed.candidates.listCandidates()).isEmpty,
           'interrupted migration must not duplicate or invent records');
@@ -314,7 +326,7 @@ Future<void> main(List<String> args) async {
           'interrupted migration must retain the original exact checkpoint');
     } finally { await resumed.close(); }
   }));
-  await cases.run('completed schema2 fence rejects simulated old-writer bytes without rewriting backup',
+  await cases.run('completed schema3 fence holds old-writer bytes without rewriting authority',
       () => inSandbox((root) async {
     final fixture = await legacyFixture(root);
     final h = Harness(root, ownerId: fixture['ownerId'] as String);
@@ -330,9 +342,29 @@ Future<void> main(List<String> args) async {
     final backupBefore = await File('${root.path}/$backup').readAsBytes();
     final legacyPrimary = base64Decode(files[primary] as String);
     // Fault fixture only: an unsupported legacy writer overwrote the primary.
-    // This is not an attempt to make old clients support schema2.
+    // This is not an attempt to make old clients support schema3.
     await File('${root.path}/$primary').writeAsBytes(legacyPrimary, flush: true);
-    await denied(LearningErrorCode.corruptStore, h.open);
+    for (var reopen = 0; reopen < 2; reopen++) {
+      await h.open();
+      expectThat(h.learning.recoveryReport.issues.contains('recovery_hold:migration_uncertain') &&
+          h.learning.recoveryReport.issues.contains('schema_boundary_mismatch'), 'precise persistent downgrade hold');
+      final hold = File('${File('${root.path}/$primary').parent.path}/learning.recovery.hold');
+      expectThat((jsonDecode(await hold.readAsString()) as Map)['reason'] == 'migration_uncertain', 'independent persisted hold');
+      await denied(LearningErrorCode.recoveryHold, () => h.candidates.receiveCandidate(sender: sender, input: input(source)));
+      await denied(LearningErrorCode.recoveryHold, () => h.candidates.confirmCandidate(candidateId: receipt.candidateId, expectedRevision: 1));
+      await denied(LearningErrorCode.recoveryHold, () => h.candidates.rejectCandidate(candidateId: receipt.candidateId, expectedRevision: 1));
+      await denied(LearningErrorCode.recoveryHold, () => h.candidates.reviseCandidate(candidateId: receipt.candidateId, expectedRevision: 1, sentences: sentences));
+      await denied(LearningErrorCode.recoveryHold, () => h.candidates.readCandidate(receipt.candidateId));
+      await denied(LearningErrorCode.recoveryHold, h.candidates.listCandidates);
+      await denied(LearningErrorCode.recoveryHold, () => h.learning.createVersion(materialVersionId: source.versionId,
+          sentences: sentences, textProvenance: const ContentProvenance(origin: ContentOrigin.manual, reference: 'fixture:held')));
+      await denied(LearningErrorCode.recoveryHold, () => h.learning.openPlayback(fixture['syntheticVersionId'] as String));
+      await denied(LearningErrorCode.recoveryHold, () => h.learning.mediaArtifactFor(PlaybackItem(ownerId: h.ownerId,
+          itemId: fixture['syntheticVersionId'] as String, itemRevision: 'unknown', kind: MediaKind.audio)));
+      expectThat(base64Encode(await File('${root.path}/$backup').readAsBytes()) == base64Encode(backupBefore) &&
+          base64Encode(await File('${root.path}/$primary').readAsBytes()) == base64Encode(legacyPrimary), 'hold preserves both authorities');
+      await h.close();
+    }
     expectThat(base64Encode(await File('${root.path}/$backup').readAsBytes()) ==
         base64Encode(backupBefore), 'failed open must not reset or rewrite the valid backup');
     expectThat(base64Encode(await File('${root.path}/$primary').readAsBytes()) ==

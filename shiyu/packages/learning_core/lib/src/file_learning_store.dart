@@ -9,11 +9,17 @@ import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
 
 import '../learning_core.dart';
+import 'pcm_wave.dart';
 
 part 'file_learning_candidates.dart';
+part 'file_learning_media_candidates.dart';
 
 /// File-backed single-writer experiment; never opens a player or calls AI.
-final class FileLearningStore implements LearningStore, LearningCandidateStore {
+final class FileLearningStore
+    implements
+        LearningStore,
+        LearningCandidateStore,
+        LearningMediaCandidateStore {
   FileLearningStore._(this._root, this._materials);
   static Future<FileLearningStore> open({
     required Directory root,
@@ -37,6 +43,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
   late LearningRecoveryReport _report;
   Future<void> _tail = Future<void>.value();
   bool _closed = false, _writeBlocked = false;
+  String? _hold;
   LearningPlaybackSession? _active;
   final Random _random = Random.secure();
   final Map<String, int> _snapshotSchemas = {};
@@ -154,7 +161,11 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     learningVersionId: b['learningVersionId'] as String,
     mediaVersionId: b['mediaVersionId'] as String?,
   );
-  void _validate(Map<String, dynamic> p, {bool legacy = false}) {
+  void _validate(
+    Map<String, dynamic> p, {
+    bool legacy = false,
+    int schema = 3,
+  }) {
     bool id(Object? v) => v is String && _ids.hasMatch(v);
     bool time(Object? v) =>
         v is String && v.endsWith('Z') && DateTime.tryParse(v) != null;
@@ -163,6 +174,8 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
           !ContentOrigin.values.any((e) => e.name == v['origin']) ||
           v['reference'] is! String ||
           !_references.hasMatch(v['reference'] as String))
+        return false;
+      if (v.keys.any((k) => !{'origin', 'reference', 'external'}.contains(k)))
         return false;
       if (v['origin'] == 'external') {
         if (legacy || v['external'] == null) return false;
@@ -198,9 +211,24 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
           !time(v['createdAt']) ||
           v['sentences'] is! List)
         bad();
+      if (v.keys.any(
+        (k) => !{
+          'id',
+          'materialId',
+          'materialVersionId',
+          'materialTitle',
+          'unitId',
+          'textProvenance',
+          'sentences',
+          'media',
+          'createdAt',
+        }.contains(k),
+      ))
+        bad();
       final seen = <String>{};
       for (final s in v['sentences'] as List) {
         if (s is! Map<String, dynamic> ||
+            s.keys.any((k) => !{'id', 'english', 'translation'}.contains(k)) ||
             !id(s['id']) ||
             !seen.add(s['id'] as String) ||
             s['english'] is! String ||
@@ -215,11 +243,33 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
             m['artifact'] is! Map<String, dynamic> ||
             m['timings'] is! List)
           bad();
+        if ((m['provenance'] as Map<String, dynamic>)['origin'] == 'external' &&
+            (v['textProvenance'] as Map<String, dynamic>)['origin'] !=
+                'external')
+          bad();
         // B1 introduces external text only. No external-media record can be
         // manufactured through a schema2 snapshot to bypass that restriction.
-        if ((m['provenance'] as Map<String, dynamic>)['origin'] == 'external')
+        if ((m['provenance'] as Map<String, dynamic>)['origin'] == 'external' &&
+            schema < 3)
+          bad();
+        if ((m['provenance'] as Map<String, dynamic>)['origin'] != 'external' &&
+            m.containsKey('externalDetails'))
+          bad();
+        if (m.keys.any(
+          (k) => !{
+            'id',
+            'artifact',
+            'provenance',
+            'timings',
+            'externalDetails',
+          }.contains(k),
+        ))
           bad();
         final a = m['artifact'] as Map<String, dynamic>;
+        if (a.keys.any(
+          (k) => !{'ownerId', 'artifactId', 'byteLength', 'sha256'}.contains(k),
+        ))
+          bad();
         if (a['ownerId'] != trustedOwnerId ||
             !id(a['artifactId']) ||
             a['byteLength'] is! int ||
@@ -229,6 +279,9 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
           bad();
         for (final t in m['timings'] as List) {
           if (t is! Map<String, dynamic> ||
+              t.keys.any(
+                (k) => !{'sentenceIndex', 'startMs', 'endMs'}.contains(k),
+              ) ||
               t['sentenceIndex'] is! int ||
               t['startMs'] is! int ||
               t['endMs'] is! int)
@@ -250,6 +303,26 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
           c['resumeIntent'] != 'paused' ||
           !time(c['savedAt']))
         bad();
+      if (c.keys.any(
+            (k) => !{
+              'binding',
+              'revision',
+              'positionMs',
+              'sentenceId',
+              'resumeIntent',
+              'savedAt',
+            }.contains(k),
+          ) ||
+          (c['binding'] as Map).keys.any(
+            (k) => !{
+              'ownerId',
+              'materialId',
+              'materialVersionId',
+              'learningVersionId',
+              'mediaVersionId',
+            }.contains(k),
+          ))
+        bad();
       final v = versions[e.key] as Map<String, dynamic>;
       if (!_binding(v)
               .sameAs(_bindingView(c['binding'] as Map<String, dynamic>)) ||
@@ -260,7 +333,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
       if (p.containsKey('candidates') || p.containsKey('candidateDeliveries'))
         bad();
     } else {
-      this._validateCandidates(p);
+      this._validateCandidates(p, schema: schema);
     }
   }
 
@@ -268,7 +341,9 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     if (!await _regular(file)) return null;
     final envelope =
         jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    if ((envelope['schema'] != 1 && envelope['schema'] != 2) ||
+    if ((envelope['schema'] != 1 &&
+            envelope['schema'] != 2 &&
+            envelope['schema'] != 3) ||
         envelope['payload'] is! Map<String, dynamic>) {
       throw const FormatException('invalid_learning_manifest');
     }
@@ -276,7 +351,11 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     if (envelope['sha256'] != _hash(utf8.encode(jsonEncode(p)))) {
       throw const FormatException('invalid_learning_manifest');
     }
-    _validate(p, legacy: envelope['schema'] == 1);
+    _validate(
+      p,
+      legacy: envelope['schema'] == 1,
+      schema: envelope['schema'] as int,
+    );
     _snapshotSchemas[file.path] = envelope['schema'] as int;
     return p;
   }
@@ -291,7 +370,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     await _regular(next);
     await next.writeAsString(
       jsonEncode({
-        'schema': 2,
+        'schema': 3,
         'payload': p,
         'sha256': _hash(utf8.encode(jsonEncode(p))),
       }),
@@ -302,57 +381,147 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     await next.rename(destination.path);
   }
 
+  Map<String, dynamic> _upgradePayload(Map<String, dynamic> p, int schema) {
+    final next = jsonDecode(jsonEncode(p)) as Map<String, dynamic>;
+    if (schema == 1) {
+      next['candidates'] = <String, dynamic>{};
+      next['candidateDeliveries'] = <String, dynamic>{};
+    }
+    return next;
+  }
+
+  Future<void> _persistHold(String reason) async {
+    _hold ??= reason;
+    try {
+      final next = _file('learning.recovery.hold.next');
+      await _regular(next);
+      await _regular(_file('learning.recovery.hold'));
+      final encoded = jsonEncode({'schema': 1, 'reason': _hold});
+      await next.writeAsString(encoded, flush: true);
+      if (await next.readAsString() != encoded)
+        _fail(LearningErrorCode.corruptStore);
+      await next.rename(_file('learning.recovery.hold').path);
+    } catch (_) {
+      _fail(LearningErrorCode.corruptStore);
+    }
+  }
+
+  void _writable() {
+    if (_hold != null) _fail(LearningErrorCode.recoveryHold);
+    if (_writeBlocked) _fail(LearningErrorCode.writeFailed);
+  }
+
+  Future<void> _writeMarker3() async {
+    final next = _file('store.marker.next');
+    await _regular(next);
+    await _regular(_file('store.marker'));
+    await next.writeAsString('learning_core:3', flush: true);
+    if (await next.readAsString() != 'learning_core:3')
+      _fail(LearningErrorCode.writeFailed);
+    await next.rename(_file('store.marker').path);
+  }
+
+  Future<Map<String, dynamic>?> _upgradeArchive(int schema) async {
+    final file = _file('learning.schema$schema.snapshot');
+    if (!await _regular(file)) return null;
+    final archived = await _snapshot(file);
+    if (_snapshotSchemas[file.path] != schema)
+      _fail(LearningErrorCode.corruptStore);
+    return archived;
+  }
+
+  Future<void> _archiveForUpgrade(
+    File selected,
+    Map<String, dynamic> p,
+    int schema,
+  ) async {
+    final name = 'learning.schema$schema.snapshot';
+    final old = await _upgradeArchive(schema);
+    if (old != null) {
+      if (jsonEncode(old) != jsonEncode(p))
+        _fail(LearningErrorCode.corruptStore);
+      return;
+    }
+    final next = _file('$name.next');
+    await _regular(next);
+    final bytes = await selected.readAsBytes();
+    await next.writeAsBytes(bytes, flush: true);
+    final copied = await _snapshot(next);
+    if (_snapshotSchemas[next.path] != schema ||
+        jsonEncode(copied) != jsonEncode(p) ||
+        _hash(await next.readAsBytes()) != _hash(bytes))
+      _fail(LearningErrorCode.writeFailed);
+    await next.rename(_file(name).path);
+  }
+
   Future<void> _load() async {
     await _directory(_root);
     _partition = Directory(
       '${_root.path}/${_hash(utf8.encode('learning-owner:$trustedOwnerId'))}',
     );
     await _directory(_partition);
-    final marker = _file('store.marker');
-    String? markerValue;
-    if (await _regular(marker)) {
-      if (await marker.length() > 64) _fail(LearningErrorCode.corruptStore);
-      markerValue = await marker.readAsString();
-      if (markerValue != 'learning_core:1' &&
-          markerValue != 'learning_core:2') {
-        _fail(LearningErrorCode.corruptStore);
+    final fresh = await _partition.list(followLinks: false).isEmpty;
+    final issues = <String>[];
+    const reasons = {
+      'lossy_fallback',
+      'marker_invalid',
+      'migration_uncertain',
+      'authority_unavailable',
+    };
+    final hold = _file('learning.recovery.hold');
+    if (await FileSystemEntity.type(hold.path, followLinks: false) !=
+            FileSystemEntityType.notFound ||
+        await FileSystemEntity.type(
+              _file('learning.recovery.hold.next').path,
+              followLinks: false,
+            ) !=
+            FileSystemEntityType.notFound) {
+      _hold = 'authority_unavailable';
+      try {
+        if (!await _regular(hold) || await hold.length() > 256)
+          throw const FormatException();
+        final h = jsonDecode(await hold.readAsString()) as Map<String, dynamic>;
+        if (h.length != 2 || h['schema'] != 1 || !reasons.contains(h['reason']))
+          throw const FormatException();
+        _hold = h['reason'] as String;
+      } catch (_) {
+        /* Unreadable or incomplete fencing remains a hold. */
       }
     }
-    final issues = <String>[];
+    String? marker;
+    try {
+      final f = _file('store.marker');
+      if (await _regular(f) && await f.length() <= 64)
+        marker = await f.readAsString();
+    } catch (_) {
+      marker = null;
+    }
     Map<String, dynamic>? primary, backup;
     try {
       primary = await _snapshot(_file('learning.json'));
-    } on FormatException {
-      issues.add('manifest_corrupt');
-    } on TypeError {
+    } catch (_) {
       issues.add('manifest_corrupt');
     }
     try {
       backup = await _snapshot(_file('learning.bak'));
-    } on FormatException {
-      issues.add('backup_corrupt');
-    } on TypeError {
+    } catch (_) {
       issues.add('backup_corrupt');
     }
-    if (await _regular(_file('learning.next')) ||
-        await _regular(_file('learning.bak.next')) ||
-        await _regular(_file('learning.recovery.next')))
-      issues.add('pending_write');
+    for (final name in [
+      'learning.next',
+      'learning.bak.next',
+      'learning.recovery.next',
+      'store.marker.next',
+      'learning.schema1.snapshot.next',
+      'learning.schema2.snapshot.next',
+    ]) {
+      if (await FileSystemEntity.type(_file(name).path, followLinks: false) !=
+          FileSystemEntityType.notFound)
+        issues.add('pending_write');
+    }
     var status = LearningRecoveryStatus.clean;
-    File? selected;
-    if (primary != null) {
-      _data = primary;
-      selected = _file('learning.json');
-    } else if (backup != null) {
-      _data = backup;
-      selected = _file('learning.bak');
-      status = LearningRecoveryStatus.recoveredFromBackup;
-      issues.add('backup_used');
-    } else {
-      if (issues.isNotEmpty ||
-          await _partition.list(followLinks: false).isEmpty == false) {
-        _fail(LearningErrorCode.corruptStore);
-      }
+    if (primary == null && backup == null) {
+      if (!fresh) _fail(LearningErrorCode.corruptStore);
       _data = {
         'ownerId': trustedOwnerId,
         'sequence': 0,
@@ -361,70 +530,120 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
         'candidates': <String, dynamic>{},
         'candidateDeliveries': <String, dynamic>{},
       };
+      await _replace(
+        _file('learning.bak'),
+        _data,
+        temp: _file('learning.bak.next'),
+      );
       await _replace(_file('learning.json'), _data);
+      await _writeMarker3();
       status = LearningRecoveryStatus.initialized;
-    }
-    if (selected != null) {
-      final schema = _snapshotSchemas[selected.path];
-      if (schema == 1) {
-        // A completed v2 migration is a one-way fence: never silently restore
-        // a v1 snapshot written by an unsupported old in-memory writer.
-        if (markerValue == 'learning_core:2')
-          _fail(LearningErrorCode.corruptStore);
-        final upgraded = _copy();
-        upgraded['candidates'] = <String, dynamic>{};
-        upgraded['candidateDeliveries'] = <String, dynamic>{};
-        if (backup != null &&
-            _snapshotSchemas[_file('learning.bak').path] == 2 &&
-            jsonEncode(backup) != jsonEncode(upgraded)) {
-          _fail(LearningErrorCode.corruptStore);
-        }
-        await this._archiveLegacy(selected, _data);
-        // Backup first. After primary becomes v2, an old binary reopening the
-        // store cannot fall back to a schema1 backup and erase newer content.
-        await _replace(
-          _file('learning.bak'),
-          upgraded,
-          temp: _file('learning.bak.next'),
-        );
-        await _replace(_file('learning.json'), upgraded);
-        _data = upgraded;
-      } else {
-        if (backup != null &&
-            _snapshotSchemas[_file('learning.bak').path] == 1) {
-          _fail(LearningErrorCode.corruptStore);
-        }
-        if (primary == null) {
-          await _replace(
-            _file('learning.json'),
-            _data,
-            temp: _file('learning.recovery.next'),
-          );
+    } else if (primary == null) {
+      await _persistHold('lossy_fallback');
+      _data = _upgradePayload(
+        backup!,
+        _snapshotSchemas[_file('learning.bak').path]!,
+      );
+      await _replace(
+        _file('learning.json'),
+        _data,
+        temp: _file('learning.recovery.next'),
+      );
+      status = LearningRecoveryStatus.recoveredFromBackup;
+      issues.add('backup_used');
+    } else {
+      final ps = _snapshotSchemas[_file('learning.json').path]!;
+      final bs = _snapshotSchemas[_file('learning.bak').path];
+      _data = _upgradePayload(primary, ps);
+      if (_hold == null) {
+        if (marker == 'learning_core:3') {
+          if (ps != 3 || bs != 3) await _persistHold('migration_uncertain');
+        } else if (marker != 'learning_core:1' && marker != 'learning_core:2') {
+          await _persistHold('marker_invalid');
+        } else {
+          try {
+            final legacySchema = marker == 'learning_core:1' ? 1 : 2;
+            final backupAbsent =
+                await FileSystemEntity.type(
+                  _file('learning.bak').path,
+                  followLinks: false,
+                ) ==
+                FileSystemEntityType.notFound;
+            final pending = issues.contains('pending_write');
+            var allowed = false;
+            if (ps == legacySchema &&
+                !pending &&
+                ((backupAbsent && !issues.contains('backup_corrupt')) ||
+                    bs == legacySchema)) {
+              await _archiveForUpgrade(_file('learning.json'), primary, ps);
+              allowed = true;
+            } else if (bs == 3 &&
+                backup != null &&
+                !pending &&
+                jsonEncode(_upgradePayload(primary, ps)) ==
+                    jsonEncode(backup) &&
+                (ps == legacySchema || ps == 3)) {
+              final archived = await _upgradeArchive(legacySchema);
+              allowed =
+                  archived != null &&
+                  jsonEncode(_upgradePayload(archived, legacySchema)) ==
+                      jsonEncode(backup);
+            } else if (marker == 'learning_core:1' &&
+                !pending &&
+                (ps == 1 || ps == 2) &&
+                bs == 2 &&
+                backup != null &&
+                jsonEncode(_upgradePayload(primary, ps)) ==
+                    jsonEncode(backup) &&
+                (backup['candidates'] as Map).isEmpty &&
+                (backup['candidateDeliveries'] as Map).isEmpty) {
+              final archive = await _upgradeArchive(1);
+              allowed =
+                  archive != null &&
+                  jsonEncode(_upgradePayload(archive, 1)) == jsonEncode(backup);
+              if (allowed && ps == 2)
+                await _archiveForUpgrade(_file('learning.json'), primary, 2);
+            }
+            if (allowed) {
+              await _replace(
+                _file('learning.bak'),
+                _data,
+                temp: _file('learning.bak.next'),
+              );
+              await _replace(_file('learning.json'), _data);
+              await _writeMarker3();
+            } else {
+              await _persistHold('migration_uncertain');
+            }
+          } catch (_) {
+            await _persistHold('migration_uncertain');
+          }
         }
       }
     }
-    final markerNext = _file('store.marker.next');
-    await _regular(markerNext);
-    await markerNext.writeAsString('learning_core:2', flush: true);
-    await markerNext.rename(marker.path);
-    for (final v in _versions.values) {
-      final version = await _view(v as Map<String, dynamic>);
-      if (version.issues.contains('material_source_unavailable'))
-        issues.add('material_source_unavailable');
-      if (version.issues.contains('media_unavailable'))
-        issues.add('media_unavailable');
-      if (version.issues.contains('media_unverified'))
-        issues.add('media_unverified');
+    if (_hold != null) {
+      issues.add('recovery_hold:$_hold');
+      if (_hold == 'marker_invalid' || _hold == 'migration_uncertain')
+        issues.add('schema_boundary_mismatch');
+    }
+    for (final raw in _versions.values) {
+      final version = await _view(raw as Map<String, dynamic>);
+      for (final issue in [
+        'material_source_unavailable',
+        'media_unavailable',
+        'media_unverified',
+      ]) {
+        if (version.issues.contains(issue)) issues.add(issue);
+      }
     }
     if (issues.isNotEmpty &&
-        status != LearningRecoveryStatus.recoveredFromBackup) {
+        status != LearningRecoveryStatus.recoveredFromBackup)
       status = LearningRecoveryStatus.degraded;
-    }
     _report = LearningRecoveryReport(status, issues.toSet());
   }
 
   Future<void> _commit(Map<String, dynamic> next) async {
-    if (_writeBlocked) _fail(LearningErrorCode.writeFailed);
+    _writable();
     next['sequence'] = (_data['sequence'] as int) + 1;
     try {
       _validate(next);
@@ -437,9 +656,11 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
       _data = next;
     } catch (_) {
       _writeBlocked = true;
+      await _persistHold('authority_unavailable');
       _report = LearningRecoveryReport(LearningRecoveryStatus.degraded, [
         ..._report.issues,
         'pending_write',
+        'recovery_hold:$_hold',
       ]);
       _fail(LearningErrorCode.writeFailed);
     }
@@ -450,62 +671,6 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     final record = _versions[id] as Map<String, dynamic>?;
     if (record == null) _fail(LearningErrorCode.notFound);
     return record!;
-  }
-
-  int? _wavDuration(Uint8List bytes) {
-    try {
-      if (bytes.length < 12 ||
-          ascii.decode(bytes.sublist(0, 4), allowInvalid: true) != 'RIFF' ||
-          ascii.decode(bytes.sublist(8, 12), allowInvalid: true) != 'WAVE')
-        return null;
-      final data = ByteData.sublistView(bytes);
-      final limit = data.getUint32(4, Endian.little) + 8;
-      if (limit != bytes.length) return null;
-      int? blockAlign, byteRate;
-      var cursor = 12, samples = 0, formats = 0;
-      while (cursor + 8 <= limit) {
-        final name = ascii.decode(
-          bytes.sublist(cursor, cursor + 4),
-          allowInvalid: true,
-        );
-        final length = data.getUint32(cursor + 4, Endian.little),
-            begin = cursor + 8;
-        if (begin + length > limit) return null;
-        if (name == 'fmt ') {
-          if (length < 16 ||
-              ++formats != 1 ||
-              data.getUint16(begin, Endian.little) != 1)
-            return null;
-          final channels = data.getUint16(begin + 2, Endian.little);
-          final rate = data.getUint32(begin + 4, Endian.little);
-          byteRate = data.getUint32(begin + 8, Endian.little);
-          blockAlign = data.getUint16(begin + 12, Endian.little);
-          final bits = data.getUint16(begin + 14, Endian.little);
-          if (channels < 1 ||
-              channels > 8 ||
-              rate < 1 ||
-              rate > 384000 ||
-              ![8, 16, 24, 32].contains(bits) ||
-              blockAlign != channels * (bits ~/ 8) ||
-              byteRate != rate * blockAlign)
-            return null;
-        } else if (name == 'data') {
-          samples += length;
-        }
-        cursor = begin + length + (length.isOdd ? 1 : 0);
-      }
-      if (cursor != limit ||
-          formats != 1 ||
-          byteRate == null ||
-          blockAlign == null ||
-          samples < 1 ||
-          samples % blockAlign != 0)
-        return null;
-      final ms = (samples * 1000) ~/ byteRate;
-      return ms > 0 ? ms : null;
-    } catch (_) {
-      return null;
-    }
   }
 
   bool _timingsValid(List<dynamic> list, int count, int duration) {
@@ -574,7 +739,12 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
       var validation = 'unverified';
       try {
         final bytes = await _materials.readArtifact(artifact);
-        duration = _wavDuration(bytes);
+        duration = inspectPcmWave(
+          bytes,
+          strictExternal:
+              (raw['provenance'] as Map<String, dynamic>)['origin'] ==
+              'external',
+        )?.durationMs;
         if (duration == null) {
           issues.add('media_unverified');
         } else {
@@ -596,6 +766,17 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
         provenance: _provenanceView(raw['provenance'] as Map<String, dynamic>),
         validation: validation,
         durationMs: duration,
+        externalDetails: raw['externalDetails'] == null
+            ? null
+            : ExternalLearningMediaDetails(
+                englishSha256:
+                    raw['externalDetails']['englishSha256'] as String,
+                declaration: this._declarationView(
+                  raw['externalDetails']['declaration'],
+                ),
+                timingDeclaration:
+                    raw['externalDetails']['timingDeclaration'] as String,
+              ),
       );
     }
     final byIndex = <int, Map<String, dynamic>>{};
@@ -618,7 +799,28 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
         ),
       );
     }
+    LearningCandidateMediaReview? review;
+    final textOrigin = v['textProvenance'] as Map<String, dynamic>;
+    if (textOrigin['origin'] == 'external') {
+      final candidate =
+          (_data['candidates']
+                  as Map<
+                    String,
+                    dynamic
+                  >)[textOrigin['external']['candidateId']]
+              as Map<String, dynamic>?;
+      if (candidate != null && (candidate['inputVersion'] ?? 1) == 2) {
+        review = this._mediaReviewRecord(
+          candidate,
+          issues: await this._mediaIssues(candidate),
+        );
+        for (final issue in review!.issues) {
+          if (!issues.contains(issue)) issues.add(issue);
+        }
+      }
+    }
     return LearningVersion(
+      candidateMediaReview: review,
       binding: _binding(v),
       materialTitle: v['materialTitle'] as String,
       textProvenance: _provenanceView(
@@ -642,6 +844,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     required ContentProvenance textProvenance,
     LearningMediaInput? media,
     bool allowExternal = false,
+    bool allowExternalMedia = false,
     DateTime? createdAtUtc,
   }) {
     final provenance = _provenance(
@@ -660,7 +863,10 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
       audio = {
         'id': _id(),
         'artifact': _artifactRecord(media.artifact),
-        'provenance': _provenance(media.provenance),
+        'provenance': _provenance(
+          media.provenance,
+          allowExternal: allowExternalMedia,
+        ),
         'timings': media.timings
             .map(
               (t) => {
@@ -704,6 +910,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
   }) {
     final ownSentences = List<LearningSentenceInput>.of(sentences);
     return _run(() async {
+      _writable();
       _checkId(materialVersionId);
       MaterialVersion source;
       try {
@@ -745,8 +952,10 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
       });
   @override
   Future<LearningPlaybackSession> openPlayback(String id) => _run(() async {
+    _writable();
     _active = null;
     final version = await _view(_record(id));
+    if (version.candidateMediaReview != null) this._mediaGate();
     if (version.state != LearningState.ready) _fail(LearningErrorCode.notReady);
     final session = LearningPlaybackSession(
       sessionId: _id(),
@@ -765,8 +974,10 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
   });
   @override
   Future<ArtifactRef> mediaArtifactFor(PlaybackItem item) => _run(() async {
+    _writable();
     if (item.ownerId != trustedOwnerId) _fail(LearningErrorCode.ownerMismatch);
     final version = await _view(_record(item.itemId));
+    if (version.candidateMediaReview != null) this._mediaGate();
     if (item.itemRevision != version.binding.mediaVersionId ||
         item.kind != MediaKind.audio) {
       _fail(LearningErrorCode.bindingMismatch);
@@ -806,6 +1017,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     required String sentenceId,
     required Duration position,
   }) => _run(() async {
+    _writable();
     final active = _active;
     if (active == null || active.sessionId != session.sessionId)
       _fail(LearningErrorCode.staleSession);
@@ -839,6 +1051,7 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
     (next['checkpoints']
             as Map<String, dynamic>)[version.binding.learningVersionId] =
         record;
+    if (version.candidateMediaReview != null) this._mediaGate();
     await _commit(next);
     return _checkpoint(record);
   });
@@ -854,21 +1067,39 @@ final class FileLearningStore implements LearningStore, LearningCandidateStore {
   });
 
   @override
+  Future<CandidateDeliveryReceipt> receiveMediaCandidate({
+    required CandidateSender sender,
+    required LearningMediaCandidateInput input,
+  }) => _run(
+    () => this._receiveCandidate(sender, input.text, media: input.media),
+  );
+
+  @override
   Future<CandidateDeliveryReceipt> receiveCandidate({
     required CandidateSender sender,
     required LearningCandidateInput input,
   }) => _run(() => this._receiveCandidate(sender, input));
   @override
-  Future<LearningCandidate> readCandidate(String candidateId) =>
-      _run(() async => this._candidateView(this._candidateRecord(candidateId)));
+  Future<LearningCandidate> readCandidate(String candidateId) => _run(() async {
+    _writable();
+    final c = this._candidateRecord(candidateId);
+    return this._candidateView(c, mediaIssues: await this._mediaIssues(c));
+  });
   @override
-  Future<List<LearningCandidate>> listCandidates() => _run(
-    () async => List.unmodifiable(
-      (_data['candidates'] as Map<String, dynamic>).values.map(
-        (v) => this._candidateView(v as Map<String, dynamic>),
-      ),
-    ),
-  );
+  Future<List<LearningCandidate>> listCandidates() => _run(() async {
+    _writable();
+    final results = <LearningCandidate>[];
+    for (final c in (_data['candidates'] as Map<String, dynamic>).values) {
+      results.add(
+        this._candidateView(
+          c as Map<String, dynamic>,
+          mediaIssues: await this._mediaIssues(c),
+        ),
+      );
+    }
+    return List.unmodifiable(results);
+  });
+
   @override
   Future<LearningCandidate> reviseCandidate({
     required String candidateId,

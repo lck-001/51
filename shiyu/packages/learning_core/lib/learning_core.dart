@@ -26,6 +26,7 @@ enum LearningErrorCode {
   candidateLimitExceeded,
   invalidState,
   unsupportedMedia,
+  recoveryHold,
 }
 
 enum LearningRecoveryStatus {
@@ -167,6 +168,7 @@ final class LearningCandidate {
     required this.userEdited,
     this.confirmedLearningVersionId,
     this.confirmedRevision,
+    this.mediaReview,
   }) : originalSentences = List.unmodifiable(originalSentences),
        sentences = List.unmodifiable(sentences);
   final String candidateId,
@@ -184,6 +186,7 @@ final class LearningCandidate {
   final bool userEdited;
   final String? confirmedLearningVersionId;
   final int? confirmedRevision;
+  final LearningCandidateMediaReview? mediaReview;
 }
 
 final class ExternalContentSource {
@@ -292,11 +295,13 @@ final class LearningMedia {
     required this.provenance,
     required this.validation,
     this.durationMs,
+    this.externalDetails,
   });
   final String mediaVersionId, validation;
   final ArtifactRef artifact;
   final ContentProvenance provenance;
   final int? durationMs;
+  final ExternalLearningMediaDetails? externalDetails;
 }
 
 final class LearningVersion {
@@ -309,6 +314,7 @@ final class LearningVersion {
     required Iterable<String> issues,
     required this.createdAtUtc,
     this.media,
+    this.candidateMediaReview,
   }) : sentences = List.unmodifiable(sentences),
        issues = List.unmodifiable(issues);
   final LearningBinding binding;
@@ -318,6 +324,7 @@ final class LearningVersion {
   final List<SentenceAnchor> sentences;
   final List<String> issues;
   final LearningMedia? media;
+  final LearningCandidateMediaReview? candidateMediaReview;
   final DateTime createdAtUtc;
 }
 
@@ -381,4 +388,70 @@ abstract interface class LearningStore {
   });
   Future<ProgressCheckpoint?> restoreProgress(String learningVersionId);
   Future<void> close();
+}
+
+/// Structure-only media delivery capability; the App supplies trusted identity.
+abstract interface class LearningMediaCandidateStore {
+  Future<CandidateDeliveryReceipt> receiveMediaCandidate({
+    required CandidateSender sender,
+    required LearningMediaCandidateInput input,
+  });
+}
+
+final class LearningMediaCandidateInput {
+  const LearningMediaCandidateInput({required this.text, required this.media});
+  final LearningCandidateInput text;
+  final LearningCandidateMediaInput media;
+}
+
+final class LearningCandidateMediaInput {
+  LearningCandidateMediaInput({
+    required this.artifact,
+    required this.englishSha256,
+    required this.declaration,
+    required this.timingDeclaration,
+    required List<SentenceTiming> timings,
+  }) : timings = _boundedMediaTimings(timings);
+  final ArtifactRef artifact;
+  final String englishSha256, timingDeclaration;
+  final SourceDeclaration declaration;
+  final List<SentenceTiming> timings;
+}
+
+List<SentenceTiming> _boundedMediaTimings(List<SentenceTiming> timings) {
+  if (timings.length > LearningCandidateLimits.maxSentences) {
+    throw const LearningStoreException(
+      LearningErrorCode.candidateLimitExceeded,
+    );
+  }
+  return List.unmodifiable(timings);
+}
+
+enum CandidateMediaBinding { matched, invalidated }
+
+final class LearningCandidateMediaReview {
+  LearningCandidateMediaReview({
+    required this.original,
+    required this.currentEnglishSha256,
+    required this.binding,
+    this.invalidatedAtRevision,
+    this.firstInvalidatedEnglishSha256,
+    Iterable<String> issues = const [],
+  }) : issues = List.unmodifiable(issues);
+  final LearningCandidateMediaInput original;
+  final String currentEnglishSha256;
+  final CandidateMediaBinding binding;
+  final int? invalidatedAtRevision;
+  final String? firstInvalidatedEnglishSha256;
+  final List<String> issues;
+}
+
+final class ExternalLearningMediaDetails {
+  const ExternalLearningMediaDetails({
+    required this.englishSha256,
+    required this.declaration,
+    required this.timingDeclaration,
+  });
+  final String englishSha256, timingDeclaration;
+  final SourceDeclaration declaration;
 }
