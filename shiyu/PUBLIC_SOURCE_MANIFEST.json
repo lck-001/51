@@ -45,6 +45,18 @@
       "sha256": "3ca2c83a1dd7a5d3c0a241e6471515d77be32603a6ae14ec0b5f7d2ecc946223"
     },
     {
+      "path": "docs/adr/0002-material-registration-recovery.md",
+      "gitBlob": "ec24bfdcc65e86078d10b67e82a7a721bf020e80",
+      "sizeBytes": 2082,
+      "sha256": "f6b1193a1036e16c0844bd7efc712009fa982b38c736780476cf50063a0963c0"
+    },
+    {
+      "path": "docs/reviews/B2A-material-registration-results.md",
+      "gitBlob": "d0c956181d451418950ff11d12668d26a96936c8",
+      "sizeBytes": 4075,
+      "sha256": "43d44f8534ce4397b5253fc04a4125b7ba803b51df792d9ff4845b9b02b9b48b"
+    },
+    {
       "path": "docs/reviews/M13-android-adapter-gate.md",
       "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
       "sizeBytes": 14127,
@@ -640,21 +652,21 @@
     },
     {
       "path": "packages/material_core/README.md",
-      "gitBlob": "53104766854ccba283c42d1fefb2c62f80b5c05c",
-      "sizeBytes": 5375,
-      "sha256": "16422c61f87b390f5978bd2dbd1a1d5d7300fea95dd50734f5b9d1ae2a29b188"
+      "gitBlob": "b947532651080a6c328c38fe6011624cbf74535e",
+      "sizeBytes": 8054,
+      "sha256": "421ef448a8810f12cd8ce6ce370c3659600a7ea1e58df60e26dca53747178a33"
     },
     {
       "path": "packages/material_core/lib/material_core.dart",
-      "gitBlob": "9302bc11d440c45964fb204eed1067281a4b5a8a",
-      "sizeBytes": 3547,
-      "sha256": "e159405a53f3a37b6e290e23320bf008f0159d7231473fd528bda20e365966ab"
+      "gitBlob": "c0d1d634a1b1fac5e046177fd73e60e501ad99a3",
+      "sizeBytes": 4555,
+      "sha256": "cb0789bcf0d515ae9f69e47e9c83358862887fc59f9b88cdba32ea78028eccf4"
     },
     {
       "path": "packages/material_core/lib/src/file_material_store.dart",
-      "gitBlob": "67c1ee475b776d01489cb021c1cd9dbb09ea23b3",
-      "sizeBytes": 19740,
-      "sha256": "d14c22bfa7fbd0c9f863e24a4db67f19b1397ac304085852866bb3e077b5eb96"
+      "gitBlob": "fbe2b7b4cdf74accbaca15453d6489e569448f7b",
+      "sizeBytes": 32114,
+      "sha256": "0fdfdc6e000447c910756b51f65ca4b28bdb2e1710a66ef402787d7b1df4e538"
     },
     {
       "path": "packages/material_core/pubspec.lock",
@@ -673,6 +685,12 @@
       "gitBlob": "4239833d8d8cbed0cf882643f841589ec99f9dec",
       "sizeBytes": 28726,
       "sha256": "5f12d4dc0f8c918790575fad8be25f504f61ede60a78f5d5f9514b7244359b65"
+    },
+    {
+      "path": "packages/material_core/test/registration_regression.dart",
+      "gitBlob": "519ea7893602526a11fd5f90070f6e81468beba3",
+      "sizeBytes": 19472,
+      "sha256": "9bc8b92edd98c858aae1f53375c59b579eadb56068194a5ed8d878729e1af2f6"
     },
     {
       "path": "packages/material_core/test/support.dart",

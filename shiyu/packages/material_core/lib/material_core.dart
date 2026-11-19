@@ -15,6 +15,11 @@ enum MaterialErrorCode {
   artifactCorrupt,
   writeFailed,
   closed,
+  invalidOperationKey,
+  invalidArtifactDigest,
+  artifactConflict,
+  capacityExceeded,
+  recoveryHold,
 }
 
 enum RecoveryStatus {
@@ -33,14 +38,24 @@ enum RecoveryIssueKind {
   artifactMissing,
   artifactCorrupt,
   orphanArtifact,
+  registrationHold,
+  schemaBoundaryMismatch,
+}
+
+enum RecoveryHoldReason {
+  lossyFallback,
+  markerInvalid,
+  migrationUncertain,
+  authorityUnavailable,
 }
 
 final class RecoveryIssue {
-  const RecoveryIssue(this.kind, {this.resourceId});
+  const RecoveryIssue(this.kind, {this.resourceId, this.holdReason});
   final RecoveryIssueKind kind;
 
   /// Opaque resource ID only, never an OS path.
   final String? resourceId;
+  final RecoveryHoldReason? holdReason;
 }
 
 final class RecoveryReport {
@@ -136,4 +151,22 @@ abstract interface class MaterialStore {
   Future<ArtifactRef> importArtifact(Uint8List bytes);
   Future<Uint8List> readArtifact(ArtifactRef ref);
   Future<void> close();
+}
+
+/// Capability for a trusted application to register one immutable artifact per
+/// business operation. Keys are lowercase 64-hex application-derived digests,
+/// never a caller-selected path or an authentication credential.
+abstract interface class IdempotentArtifactStore {
+  Future<ArtifactRef> registerArtifactOnce({
+    required String operationKey,
+    required String expectedSha256,
+    required Uint8List bytes,
+  });
+  Future<ArtifactRef?> findArtifactRegistration(String operationKey);
+}
+
+abstract final class ArtifactRegistrationLimits {
+  static const maxArtifactBytes = 2 * 1024 * 1024;
+  static const maxOperations = 128;
+  static const maxRetainedBytes = 64 * 1024 * 1024;
 }
