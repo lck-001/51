@@ -97,3 +97,18 @@ safe retry from exception text. Trusted caller context can preserve an actual
 business-byte digest, but its factory performs no proof/cap authentication.
 That authentication must occur before later Controller assembly; wire bodies
 cannot supply this context. See [C2-A evidence](../../docs/reviews/B2C2A-media-wire-results.md).
+
+## C2-B local socket access
+
+Controller can borrow a bound media module and explicitly grant media receipt;
+the scope defaults off. Client exposes the five bounded actions through the
+existing authenticated loopback transport. A separate authenticated abort slot
+does not raise the ordinary operation, connection or call limits. Revocation
+and cleanup errors still drain accepted work before returning.
+
+Media-submit ACKs are bound to the actual stable semantic payload hash. Sent
+mutations with bad or missing acknowledgements remain outcome-unknown; no new
+delivery key or grant is silently created. The Controller owns transport/lease
+lifecycle only, not the borrowed module or Stores. See [C2-B evidence](../../docs/reviews/B2C2B-media-socket-results.md).
+MCP stdio still exposes the original three tools; same-stdin media control and
+the streaming SDK remain the next slice, not a claim of this package.

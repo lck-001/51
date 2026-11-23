@@ -87,6 +87,12 @@
       "sha256": "3db2fef6305816a2f46e65a63204a2a75250567942a47f4b0181e3193d3c02b0"
     },
     {
+      "path": "docs/reviews/B2C2B-media-socket-results.md",
+      "gitBlob": "190b58abc104ba63c1fb91f612a893cdad4117b1",
+      "sizeBytes": 5333,
+      "sha256": "d29d81cde8084bfcfc31f1a653dac50dc22326f099c4aad7ad1a220788938105"
+    },
+    {
       "path": "docs/reviews/M13-android-adapter-gate.md",
       "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
       "sizeBytes": 14127,
@@ -274,9 +280,9 @@
     },
     {
       "path": "packages/agent_bridge/README.md",
-      "gitBlob": "8b3516891c2348b75d8f4961b4922173bf1f62c5",
-      "sizeBytes": 6216,
-      "sha256": "709a7b140e702484e2e306bc07f582c44e0f23fad80fc03216c8a9f1738647e9"
+      "gitBlob": "632adfd7c8127dd5a5f0d2523780bbe0392fcf04",
+      "sizeBytes": 7126,
+      "sha256": "83b61825475f832b8e22f79d26a4d6dc8ebafdf63a754e700a83ef48761b70e8"
     },
     {
       "path": "packages/agent_bridge/bin/shiyu_agent_proxy.dart",
@@ -298,27 +304,27 @@
     },
     {
       "path": "packages/agent_bridge/lib/src/client.dart",
-      "gitBlob": "72ee8a4c9f03d5a026e8742cf672e2a03ec4159b",
-      "sizeBytes": 7112,
-      "sha256": "8f1d4d1d70e4912cb7d4b6c70f46b8b66c10f09320d3d30117eec54f66196cbd"
+      "gitBlob": "1638c2ef8feb0af8478da39bd4ee14a3942d3822",
+      "sizeBytes": 12876,
+      "sha256": "b904eb239648cb713c3728aedf6fb9d1ed93c7db337ac4928a31c7a30ac78d7a"
     },
     {
       "path": "packages/agent_bridge/lib/src/contracts.dart",
-      "gitBlob": "db2a0e94822ffa5eb5b1246f17f69866f6993410",
-      "sizeBytes": 2175,
-      "sha256": "acdec9750f3faee0f524e93fe5144e30b8fb1df3f6e52bef93fd54d91f1fd569"
+      "gitBlob": "51f8b9fdd4d0186f659fa2b58cf604698da05ade",
+      "sizeBytes": 2311,
+      "sha256": "4d389f0e523bd0d21d89fa5b5dc1bf8345523222a81c6011661bea626acd7c28"
     },
     {
       "path": "packages/agent_bridge/lib/src/controller.dart",
-      "gitBlob": "51fe0b998368a119250e3874cea607dc4f8d2735",
-      "sizeBytes": 18264,
-      "sha256": "944c7603bec2567874d7f58b4543559909e17c2fa6fc8f1c257602de857494a1"
+      "gitBlob": "f99819f22ff957d8c8f9256cca37470a702a98b1",
+      "sizeBytes": 25569,
+      "sha256": "3c41dbdcd3ce07169c971cb9fb7462ffef3f1b4627d324abc31a5f523dd2c399"
     },
     {
       "path": "packages/agent_bridge/lib/src/framing.dart",
-      "gitBlob": "7e3732885c9a53fbb838182e31fd38480664e0ba",
-      "sizeBytes": 3674,
-      "sha256": "bf68d54778585776aef114008fedbc05cd539dfa5fffa14b60e1cba1a7aa7cd3"
+      "gitBlob": "17708ddba322c45d4c6815bdff696655c57f7452",
+      "sizeBytes": 4517,
+      "sha256": "450c4dcdf865b07b685413da012e18db70da704d8734ad9f0879ea9d4f22471b"
     },
     {
       "path": "packages/agent_bridge/lib/src/mcp_proxy.dart",
@@ -415,6 +421,12 @@
       "gitBlob": "3676c1b54f1aaf9f1515192c41274c19cf88d81d",
       "sizeBytes": 21785,
       "sha256": "b8af8dd886b3c1c1660b81f19e0635fa6d2265c0cec2ceb948db191d50354b87"
+    },
+    {
+      "path": "packages/agent_bridge/test/media_socket_local.dart",
+      "gitBlob": "9db1e4308f92270cebc31e1d2444680d8253e14e",
+      "sizeBytes": 41208,
+      "sha256": "98e0a3b8dc0a34594c9176343fa2dbff5017dc708b2bc34222f8500f3c6f8ce0"
     },
     {
       "path": "packages/agent_bridge/test/media_wire_local.dart",

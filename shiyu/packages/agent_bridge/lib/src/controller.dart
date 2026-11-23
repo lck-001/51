@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:learning_core/learning_core.dart';
@@ -9,6 +10,8 @@ import 'package:material_core/material_core.dart';
 
 import 'contracts.dart';
 import 'framing.dart';
+import 'media_ingest.dart';
+import 'media_wire.dart';
 import 'private_descriptor.dart';
 import 'root_lock.dart';
 import 'strict_json.dart';
@@ -21,6 +24,8 @@ final class _Grant {
   final int epoch;
   bool valid = true;
   int calls = 0;
+  late final MediaIngestGrant? mediaLease;
+  Future<void>? mediaRetirement;
 }
 
 final class _DigestResult implements Sink<Digest> {
@@ -80,6 +85,8 @@ final class AgentBridgeController {
     required this.rootLock,
     required List<String> proxyCommand,
     this.integrationId = 'local-assistant',
+    this.mediaIngest,
+    this.onMediaAbortInvoked,
     DateTime Function()? clock,
   }) : proxyCommand = List.unmodifiable(proxyCommand),
        _clock = clock ?? DateTime.now,
@@ -87,6 +94,14 @@ final class AgentBridgeController {
          rootLock: rootLock,
          directory: privateDirectory,
        ) {
+    if (mediaIngest != null &&
+        !mediaIngest!.isBoundTo(
+          materials: materials,
+          learning: candidates,
+          rootLock: rootLock,
+        )) {
+      throw const AgentBridgeException(AgentBridgeErrorCode.ownerMismatch);
+    }
     if (materials.trustedOwnerId != candidates.trustedOwnerId) {
       throw const AgentBridgeException(AgentBridgeErrorCode.ownerMismatch);
     }
@@ -96,6 +111,10 @@ final class AgentBridgeController {
     }
   }
   final MaterialStore materials;
+  final MediaIngest? mediaIngest;
+
+  /// Trusted test barrier only; never changes or authorizes an operation.
+  final void Function()? onMediaAbortInvoked;
   final LearningCandidateStore candidates;
   final LearningRootLock rootLock;
   final List<String> proxyCommand;
@@ -109,6 +128,8 @@ final class AgentBridgeController {
   final _retiringSessions = <String>{};
   Future<void> _control = Future<void>.value();
   Future<void>? _operation;
+  Future<MediaIngestReceipt>? _controlOperation;
+  final _mediaRetirements = <Future<void>>{};
   ServerSocket? _server;
   _Grant? _grant;
   Timer? _expiry;
@@ -125,7 +146,11 @@ final class AgentBridgeController {
     allowSourceRead:
         _phase == AgentBridgePhase.enabled &&
         (_grant?.descriptor.allowSourceRead ?? false),
-    inFlight: _operation == null ? 0 : 1,
+    allowMediaReceive:
+        _phase == AgentBridgePhase.enabled &&
+        (_grant?.descriptor.allowMediaReceive ?? false),
+    inFlight:
+        (_operation == null ? 0 : 1) + (_controlOperation == null ? 0 : 1),
     lastCandidateId: _lastCandidateId,
     errorCode: _error,
   );
@@ -158,43 +183,89 @@ final class AgentBridgeController {
     final grant = _grant;
     if (grant != null) {
       grant.valid = false;
+      final lease = grant.mediaLease;
+      if (lease != null && grant.mediaRetirement == null) {
+        final retirement = Future<void>.sync(
+          () => mediaIngest!.retireGrant(lease),
+        );
+        grant.mediaRetirement = retirement;
+        retirement.ignore();
+        _mediaRetirements.add(retirement);
+      }
       _retiringSessions.add(grant.descriptor.session);
     }
     final server = _server;
     _server = null;
     if (server != null) {
-      final closed = server.close().then<void>((_) {});
+      final closed = Future<void>.sync(() async {
+        await server.close();
+      });
       closed.ignore();
       _serverClosures.add(closed);
     }
     for (final channel in _channels.toList()) {
       channel.destroy();
     }
-    if (grant != null || _operation != null || _serverClosures.isNotEmpty)
+    if (grant != null ||
+        _operation != null ||
+        _controlOperation != null ||
+        _serverClosures.isNotEmpty)
       _phase = AgentBridgePhase.draining;
     _emit();
   }
 
   Future<void> _drain() async {
-    // Never let an old queued revoke delete a newer descriptor.
+    AgentBridgeErrorCode? first;
+    Future<void> settled(
+      FutureOr<void> Function() body,
+      AgentBridgeErrorCode fallback,
+    ) => Future<void>.sync(body).catchError((Object error) {
+      first ??= error is MediaIngestFailure
+          ? mediaIngestBridgeError(error)
+          : fallback;
+    });
+    // Snapshot after synchronous invalidation; no new request can be admitted.
+    // Every branch runs even if an earlier branch throws synchronously.
+    final tasks = <Future<void>>[];
     for (final session in _retiringSessions.toList()) {
-      try {
-        await _private.deleteIfSession(session);
-      } catch (_) {
-        throw const AgentBridgeException(
-          AgentBridgeErrorCode.privateStorageUnavailable,
-        );
-      }
-      _retiringSessions.remove(session);
+      tasks.add(
+        settled(() async {
+          await _private.deleteIfSession(session);
+          _retiringSessions.remove(session);
+        }, AgentBridgeErrorCode.privateStorageUnavailable),
+      );
     }
     for (final closure in _serverClosures.toList()) {
-      await closure;
-      _serverClosures.remove(closure);
+      tasks.add(
+        settled(() async {
+          await closure;
+          _serverClosures.remove(closure);
+        }, AgentBridgeErrorCode.unavailable),
+      );
     }
-    final pending = _operation;
-    if (pending != null)
-      await pending; // Real Store completion, no fake timeout cancellation.
+    final operation = _operation, control = _controlOperation;
+    if (operation != null)
+      tasks.add(settled(() => operation, AgentBridgeErrorCode.outcomeUnknown));
+    if (control != null)
+      tasks.add(
+        settled(() async {
+          await control;
+        }, AgentBridgeErrorCode.outcomeUnknown),
+      );
+    for (final retirement in _mediaRetirements.toList()) {
+      tasks.add(
+        settled(() async {
+          try {
+            await retirement;
+          } finally {
+            _mediaRetirements.remove(retirement);
+          }
+        }, AgentBridgeErrorCode.outcomeUnknown),
+      );
+    }
+    await Future.wait(tasks);
     if (_grant?.valid == false) _grant = null;
+    if (first != null) throw AgentBridgeException(first!);
   }
 
   void _ticket(int ticket) {
@@ -221,6 +292,15 @@ final class AgentBridgeController {
       try {
         await _drain();
         _ticket(ticket);
+        if (request.allowMediaReceive &&
+            (mediaIngest == null ||
+                !mediaIngest!.isBoundTo(
+                  materials: materials,
+                  learning: candidates,
+                  rootLock: rootLock,
+                ))) {
+          throw const AgentBridgeException(AgentBridgeErrorCode.forbidden);
+        }
         final version = await materials.readVersion(request.materialVersionId);
         _ticket(ticket);
         if (version.ownerId != materials.trustedOwnerId) {
@@ -252,8 +332,23 @@ final class AgentBridgeController {
           sourceTextSha256: digest.$1,
           expiresAtUtc: _now.add(const Duration(minutes: 15)),
           allowSourceRead: request.allowSourceRead,
+          schemaVersion: 2,
+          allowMediaReceive: request.allowMediaReceive,
         );
         final grant = _Grant(descriptor, ticket);
+        grant.mediaLease = request.allowMediaReceive
+            ? MediaIngestGrant(
+                ownerId: materials.trustedOwnerId,
+                integrationId: integrationId,
+                binding: MediaIngestSourceBinding(
+                  materialId: descriptor.materialId,
+                  materialVersionId: descriptor.materialVersionId,
+                  sourceTextSha256: descriptor.sourceTextSha256,
+                ),
+                allowMedia: true,
+                isValid: () => _valid(grant),
+              )
+            : null;
         _grant = grant;
         _server = server;
         await _private.write(descriptor);
@@ -351,6 +446,7 @@ final class AgentBridgeController {
     final channel = BridgeFrameChannel(socket, initialMaximum: 512);
     _channels.add(channel);
     final deadline = Timer(const Duration(seconds: 5), channel.destroy);
+    var mediaEntered = false;
     try {
       final hello = bridgeObject(
         await channel.read(maximum: 512).timeout(const Duration(seconds: 2)),
@@ -391,42 +487,100 @@ final class AgentBridgeController {
           request['payload'] is! String) {
         throw const AgentBridgeException(AgentBridgeErrorCode.forbidden);
       }
-      if (_operation != null)
+      final operation = request['operation'] as String;
+      final mediaKind = MediaWireOperation.values
+          .where((k) => k.wireName == operation)
+          .firstOrNull;
+      final abort = mediaKind == MediaWireOperation.abort;
+      if (abort ? _controlOperation != null : _operation != null)
         throw const AgentBridgeException(AgentBridgeErrorCode.busy);
-      if (++grant.calls > 64)
+      if (grant.calls >= 64)
         throw const AgentBridgeException(AgentBridgeErrorCode.busy);
-      final raw = base64.decode(request['payload'] as String);
-      if (raw.length > bridgePayloadMaximum)
-        throw const AgentBridgeException(AgentBridgeErrorCode.tooLarge);
+      grant.calls++; // Quota is admission only; _valid never depends on calls.
+      final raw = decodeCanonicalBridgeBase64(
+        request['payload'] as String,
+        maximumBytes: bridgePayloadMaximum,
+      );
       final payload = decodeAgentBridgeJson(
         raw,
         maxBytes: bridgePayloadMaximum,
       );
       if (payload is! Map<String, dynamic>)
         throw const AgentBridgeException(AgentBridgeErrorCode.invalidRequest);
-      final operation = request['operation'] as String;
-      final done = Completer<void>();
-      _operation = done.future;
-      _emit();
       late Map<String, Object?> response;
-      try {
-        response = await _execute(
-          grant,
-          operation,
+      if (mediaKind != null) {
+        _require(grant);
+        if (!grant.descriptor.allowMediaReceive ||
+            grant.mediaLease == null ||
+            mediaIngest == null)
+          throw const AgentBridgeException(AgentBridgeErrorCode.forbidden);
+        requireSourceBinding(
           Map<String, Object?>.from(payload),
-          raw,
+          grant.descriptor,
         );
-      } finally {
-        done.complete();
-        _operation = null;
+        final decoded = decodeMediaBridgePayload(operation, raw);
+        _require(grant);
+        if (decoded is MediaWireAbort) {
+          mediaEntered = true;
+          // C1 checks the upload's trusted binding before synchronous stop.
+          final pending = mediaIngest!.abort(
+            grant.mediaLease!,
+            decoded.binding,
+            decoded.uploadId,
+          );
+          _controlOperation = pending;
+          pending.ignore(); // Track before notifying even a throwing observer.
+          try {
+            onMediaAbortInvoked?.call();
+          } catch (_) {}
+          _emit();
+          try {
+            final receipt = await pending;
+            response = {'upload_id': receipt.uploadId, 'status': 'terminal'};
+          } finally {
+            if (identical(_controlOperation, pending)) _controlOperation = null;
+            _emit();
+          }
+        } else {
+          final done = Completer<void>();
+          _operation = done.future;
+          _emit();
+          try {
+            mediaEntered = true;
+            response = await _executeMedia(grant, decoded, raw);
+          } finally {
+            done.complete();
+            _operation = null;
+            _emit();
+          }
+        }
+      } else {
+        final done = Completer<void>();
+        _operation = done.future;
         _emit();
+        try {
+          response = await _execute(
+            grant,
+            operation,
+            Map<String, Object?>.from(payload),
+            raw,
+          );
+        } finally {
+          done.complete();
+          _operation = null;
+          _emit();
+        }
       }
       await channel.send({
         'ok': true,
         'result': response,
-      }, maximum: bridgeFrameMaximum);
+      }, maximum: mediaKind != null ? 512 : bridgeFrameMaximum);
     } catch (error) {
-      final code = error is AgentBridgeException
+      final code = error is MediaIngestFailure
+          ? mediaIngestBridgeError(error)
+          : mediaEntered
+          ? AgentBridgeErrorCode.outcomeUnknown
+          : error is AgentBridgeException
           ? error.code
           : error is LearningStoreException
           ? _coreCode(error.code)
@@ -441,6 +595,70 @@ final class AgentBridgeController {
       _channels.remove(channel);
       await channel.close();
     }
+  }
+
+  Future<Map<String, Object?>> _executeMedia(
+    _Grant grant,
+    MediaWireRequest request,
+    Uint8List raw,
+  ) async {
+    _require(grant);
+    final module = mediaIngest!, lease = grant.mediaLease!;
+    if (request is MediaWireBegin) {
+      final r = await module.begin(lease, request.manifest);
+      return {
+        'upload_id': r.uploadId,
+        'raw_chunk_bytes': 65536,
+        'next_index': (r.acceptedBytes + 65535) ~/ 65536,
+        'status': r.status,
+        'replayed': r.replayed,
+      };
+    }
+    if (request is MediaWireChunk) {
+      final r = await module.chunk(
+        lease,
+        request.binding,
+        request.uploadId,
+        request.index,
+        request.bytes,
+        request.chunkSha256,
+      );
+      return {
+        'upload_id': r.uploadId,
+        'index': request.index,
+        'accepted_bytes': r.acceptedBytes,
+        'replayed': r.replayed,
+        'status': 'receiving',
+      };
+    }
+    if (request is MediaWireSeal) {
+      final r = await module.seal(lease, request.binding, request.uploadId);
+      return {
+        'upload_id': r.uploadId,
+        'sealed_receipt': r.sealedReceipt,
+        'status': 'sealed',
+        'replayed': r.replayed,
+      };
+    }
+    if (request is MediaWireSubmit) {
+      final r = await module.submit(
+        lease,
+        request.binding,
+        request.sealedReceipt,
+        request.submission,
+        trustedCallerContext:
+            MediaIngestCallerContext.authenticatedBusinessBytes(raw),
+      );
+      _lastCandidateId = r.candidateId;
+      _emit();
+      return {
+        'candidate_id': r.candidateId,
+        'payload_sha256': r.payloadSha256,
+        'replayed': r.replayed,
+        'status': 'delivered',
+      };
+    }
+    throw const AgentBridgeException(AgentBridgeErrorCode.invalidRequest);
   }
 
   AgentBridgeErrorCode _coreCode(LearningErrorCode code) => switch (code) {

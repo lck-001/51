@@ -41,9 +41,11 @@ final class AgentBridgeGrantRequest {
   const AgentBridgeGrantRequest({
     required this.materialVersionId,
     this.allowSourceRead = false,
+    this.allowMediaReceive = false,
   });
   final String materialVersionId;
   final bool allowSourceRead;
+  final bool allowMediaReceive;
 }
 
 /// Generic UI state contains no endpoint, source text, token or private path.
@@ -55,6 +57,7 @@ final class AgentBridgeStatus {
     this.integrationId,
     this.expiresAtUtc,
     this.allowSourceRead = false,
+    this.allowMediaReceive = false,
     this.inFlight = 0,
     this.lastCandidateId,
     this.errorCode,
@@ -63,6 +66,7 @@ final class AgentBridgeStatus {
   final String? materialId, materialVersionId, integrationId;
   final DateTime? expiresAtUtc;
   final bool allowSourceRead;
+  final bool allowMediaReceive;
   final int inFlight;
   final String? lastCandidateId;
   final String? errorCode;

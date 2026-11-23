@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'contracts.dart';
 import 'framing.dart';
+import 'media_wire.dart';
 import 'private_descriptor.dart';
 import 'strict_json.dart';
 import 'wire.dart';
@@ -41,6 +43,28 @@ final class AgentBridgeClient {
     return _call('candidate_receive', payload);
   }
 
+  Future<Map<String, Object?>> beginMedia(Map<String, Object?> payload) =>
+      _mediaCall(MediaWireOperation.begin, payload);
+  Future<Map<String, Object?>> putMediaChunk(Map<String, Object?> payload) =>
+      _mediaCall(MediaWireOperation.chunk, payload);
+  Future<Map<String, Object?>> sealMedia(Map<String, Object?> payload) =>
+      _mediaCall(MediaWireOperation.seal, payload);
+  Future<Map<String, Object?>> submitMediaCandidate(
+    Map<String, Object?> payload,
+  ) => _mediaCall(MediaWireOperation.submit, payload);
+  Future<Map<String, Object?>> abortMedia(Map<String, Object?> payload) =>
+      _mediaCall(MediaWireOperation.abort, payload);
+  Future<Map<String, Object?>> _mediaCall(
+    MediaWireOperation operation,
+    Map<String, Object?> payload,
+  ) {
+    decodeMediaBridgePayload(
+      operation.wireName,
+      encodeAgentBridgeJson(payload, maxBytes: bridgePayloadMaximum),
+    );
+    return _call(operation.wireName, payload);
+  }
+
   Future<Map<String, Object?>> _call(
     String operation,
     Map<String, Object?> payload,
@@ -50,19 +74,41 @@ final class AgentBridgeClient {
       payload,
       maxBytes: bridgePayloadMaximum,
     );
+    // Stable owned snapshot; callers may mutate their original Map while we await proof.
+    final snapshot = Map<String, Object?>.from(
+      decodeAgentBridgeJson(bytes, maxBytes: bridgePayloadMaximum) as Map,
+    );
+    final mediaKind = MediaWireOperation.values
+        .where((k) => k.wireName == operation)
+        .firstOrNull;
+    final expectedMediaPayloadSha256 = mediaKind == MediaWireOperation.submit
+        ? (decodeMediaBridgePayload(
+            operation,
+            bytes,
+          ) as MediaWireSubmit).submission.media.submissionSha256
+        : null;
+    final mutation = operation == 'candidate_receive' || mediaKind != null;
     late BridgeDescriptor descriptor;
-    try { descriptor = await readPrivateDescriptor(descriptorPath); }
-    on AgentBridgeException { rethrow; }
-    catch (_) { throw const AgentBridgeException(AgentBridgeErrorCode.privateStorageUnavailable); }
+    try {
+      descriptor = await readPrivateDescriptor(descriptorPath);
+    } on AgentBridgeException {
+      rethrow;
+    } catch (_) {
+      throw const AgentBridgeException(
+        AgentBridgeErrorCode.privateStorageUnavailable,
+      );
+    }
     if (_closed) throw const AgentBridgeException(AgentBridgeErrorCode.closed);
     if (!DateTime.now().toUtc().isBefore(descriptor.expiresAtUtc)) {
       throw const AgentBridgeException(AgentBridgeErrorCode.expired);
     }
     if (operation != 'source_reference')
-      requireSourceBinding(payload, descriptor);
+      requireSourceBinding(snapshot, descriptor);
     if (operation == 'source_read' && !descriptor.allowSourceRead) {
       throw const AgentBridgeException(AgentBridgeErrorCode.forbidden);
     }
+    if (mediaKind != null && !descriptor.allowMediaReceive)
+      throw const AgentBridgeException(AgentBridgeErrorCode.forbidden);
     BridgeFrameChannel? channel;
     ConnectionTask<Socket>? connecting;
     Timer? deadline;
@@ -117,17 +163,37 @@ final class AgentBridgeClient {
       proven = true;
       if (_closed)
         throw const AgentBridgeException(AgentBridgeErrorCode.closed);
+      // Encode the complete request before marking business transmission started.
+      final Uint8List frame;
+      if (mediaKind != null) {
+        frame = encodeMediaBridgeRequest(
+          operation: mediaKind,
+          payload: snapshot,
+          session: descriptor.session,
+          challenge: challenge,
+          capability: descriptor.capability,
+        ).frame;
+      } else {
+        final body = encodeAgentBridgeJson({
+          'kind': 'request',
+          'session': descriptor.session,
+          'challenge': challenge,
+          'capability': descriptor.capability,
+          'operation': operation,
+          'payload': base64.encode(bytes),
+        }, maxBytes: bridgeFrameMaximum);
+        frame = Uint8List(body.length + 12)
+          ..setRange(0, 8, const [0x53, 0x59, 0x42, 0x31, 0, 13, 10, 0]);
+        ByteData.sublistView(frame).setUint32(8, body.length, Endian.big);
+        frame.setRange(12, frame.length, body);
+      }
       channel.expectMaximum(bridgeFrameMaximum);
       // No fresh socket, redirect or retry is possible after this proof.
-      businessStarted = true;
-      await channel.send({
-        'kind': 'request',
-        'session': descriptor.session,
-        'challenge': challenge,
-        'capability': descriptor.capability,
-        'operation': operation,
-        'payload': base64.encode(bytes),
-      }, maximum: bridgeFrameMaximum);
+      await channel.sendPreencodedFrame(
+        frame,
+        maximum: bridgeFrameMaximum,
+        beforeWrite: () => businessStarted = true,
+      );
       final response = await channel.read(maximum: bridgeFrameMaximum);
       if (response is! Map<String, dynamic> || response['ok'] is! bool) {
         throw const AgentBridgeException(AgentBridgeErrorCode.unavailable);
@@ -140,21 +206,25 @@ final class AgentBridgeClient {
         if (codes.length != 1)
           throw const AgentBridgeException(AgentBridgeErrorCode.unavailable);
         knownReply = true;
-        throw AgentBridgeException(codes.single);
+        throw AgentBridgeException(
+          mutation && codes.single == AgentBridgeErrorCode.unavailable
+              ? AgentBridgeErrorCode.outcomeUnknown
+              : codes.single,
+        );
       }
       final result = bridgeObject(response, {'ok', 'result'})['result'];
       if (result is! Map<String, dynamic>)
         throw const AgentBridgeException(AgentBridgeErrorCode.unavailable);
+      _validateResult(
+        operation,
+        Map<String, Object?>.from(result),
+        snapshot,
+        expectedMediaPayloadSha256: expectedMediaPayloadSha256,
+      );
       knownReply = true;
       return Map<String, Object?>.from(result);
     } on AgentBridgeException catch (error) {
-      if (operation == 'candidate_receive' &&
-          businessStarted &&
-          !knownReply &&
-          !{
-            AgentBridgeErrorCode.tooLarge,
-            AgentBridgeErrorCode.invalidJson,
-          }.contains(error.code)) {
+      if (mutation && businessStarted && !knownReply) {
         throw const AgentBridgeException(AgentBridgeErrorCode.outcomeUnknown);
       }
       if (!proven &&
@@ -166,7 +236,7 @@ final class AgentBridgeClient {
       }
       rethrow;
     } catch (_) {
-      if (operation == 'candidate_receive' && businessStarted && !knownReply) {
+      if (mutation && businessStarted && !knownReply) {
         throw const AgentBridgeException(AgentBridgeErrorCode.outcomeUnknown);
       }
       throw AgentBridgeException(
@@ -179,9 +249,115 @@ final class AgentBridgeClient {
       if (connecting != null) _connecting.remove(connecting);
       if (channel != null) {
         _channels.remove(channel);
-        try { await channel.close(); } catch (_) {}
+        try {
+          await channel.close();
+        } catch (_) {}
       }
     }
+  }
+
+  void _validateResult(
+    String operation,
+    Map<String, Object?> result,
+    Map<String, Object?> input, {
+    String? expectedMediaPayloadSha256,
+  }) {
+    void invalid() =>
+        throw const AgentBridgeException(AgentBridgeErrorCode.unavailable);
+    void id(Object? value, {bool hash = false}) {
+      if (value is! String ||
+          !RegExp(hash ? r'^[0-9a-f]{64}$' : r'^[0-9a-f]{32}$').hasMatch(value))
+        invalid();
+    }
+
+    void integer(Object? value, int minimum, int maximum) {
+      if (value is! int || value < minimum || value > maximum) invalid();
+    }
+
+    void replay() {
+      if (result['replayed'] is! bool) invalid();
+    }
+
+    void upload() {
+      id(result['upload_id']);
+      if (result['upload_id'] != input['upload_id']) invalid();
+    }
+
+    if (operation == 'candidate_receive' || operation == 'media_submit') {
+      bridgeObject(result, {
+        'candidate_id',
+        'payload_sha256',
+        'replayed',
+        'status',
+      });
+      id(result['candidate_id']);
+      id(result['payload_sha256'], hash: true);
+      replay();
+      if (result['status'] != 'delivered') invalid();
+      if (operation == 'media_submit' &&
+          result['payload_sha256'] != expectedMediaPayloadSha256)
+        invalid();
+      return;
+    }
+    if (operation == 'media_begin') {
+      bridgeObject(result, {
+        'upload_id',
+        'raw_chunk_bytes',
+        'next_index',
+        'status',
+        'replayed',
+      });
+      id(result['upload_id']);
+      integer(result['raw_chunk_bytes'], 65536, 65536);
+      integer(result['next_index'], 0, 32);
+      replay();
+      if (!{'receiving', 'sealed', 'terminal'}.contains(result['status']))
+        invalid();
+      return;
+    }
+    if (operation == 'media_chunk') {
+      bridgeObject(result, {
+        'upload_id',
+        'index',
+        'accepted_bytes',
+        'replayed',
+        'status',
+      });
+      upload();
+      integer(result['index'], 0, 31);
+      integer(result['accepted_bytes'], 1, 1920044);
+      replay();
+      if (result['index'] != input['index'] || result['status'] != 'receiving')
+        invalid();
+      final bytes = decodeCanonicalBridgeBase64(
+        input['bytes_base64'] as String,
+        maximumBytes: 65536,
+      );
+      if ((result['accepted_bytes'] as int) <
+          (input['index'] as int) * 65536 + bytes.length)
+        invalid();
+      return;
+    }
+    if (operation == 'media_seal') {
+      bridgeObject(result, {
+        'upload_id',
+        'sealed_receipt',
+        'status',
+        'replayed',
+      });
+      upload();
+      id(result['sealed_receipt'], hash: true);
+      replay();
+      if (result['status'] != 'sealed') invalid();
+      return;
+    }
+    if (operation == 'media_abort') {
+      bridgeObject(result, {'upload_id', 'status'});
+      upload();
+      if (result['status'] != 'terminal') invalid();
+      return;
+    }
+    // Legacy source result validation remains in its existing consumer/proxy.
   }
 
   Future<void> close() async {
@@ -190,7 +366,9 @@ final class AgentBridgeClient {
       task.cancel();
     }
     for (final channel in _channels.toList()) {
-      try { await channel.close(); } catch (_) {}
+      try {
+        await channel.close();
+      } catch (_) {}
     }
     _channels.clear();
     _connecting.clear();

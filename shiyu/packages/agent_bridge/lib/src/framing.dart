@@ -102,6 +102,28 @@ final class BridgeFrameChannel {
     await socket.flush();
   }
 
+  /// Trusted pre-encoded frame, fully checked before the write-start marker.
+  Future<void> sendPreencodedFrame(
+    Uint8List frame, {
+    required int maximum,
+    required void Function() beforeWrite,
+  }) async {
+    if (_closed)
+      throw const AgentBridgeException(AgentBridgeErrorCode.unavailable);
+    if (frame.length < 12 || frame.length > maximum + 12)
+      throw const AgentBridgeException(AgentBridgeErrorCode.tooLarge);
+    for (var i = 0; i < _magic.length; i++) {
+      if (frame[i] != _magic[i])
+        throw const AgentBridgeException(AgentBridgeErrorCode.invalidRequest);
+    }
+    if (ByteData.sublistView(frame).getUint32(8, Endian.big) !=
+        frame.length - 12)
+      throw const AgentBridgeException(AgentBridgeErrorCode.invalidRequest);
+    beforeWrite();
+    socket.add(frame);
+    await socket.flush();
+  }
+
   void destroy() {
     if (_closed) return;
     _closed = true;
