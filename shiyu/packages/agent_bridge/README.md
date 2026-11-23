@@ -1,6 +1,6 @@
 # agent_bridge
 
-App-owned Windows local text-candidate authorization, a small private framed
+App-owned Windows local text/media-candidate authorization, a small private framed
 connection, and a separately compiled stdio MCP proxy. Defaults to disabled.
 This is neither a model runner, a public HTTP service nor brand authentication.
 
@@ -8,11 +8,12 @@ This is neither a model runner, a public HTTP service nor brand authentication.
 rootLock:, proxyCommand:)` accepts the App's already opened matching-owner
 instances. It never opens another Store. Acquire `LearningRootLock` before both
 Store opens, including migration. Stop bridge admission and drain real pending
-commits, close both Stores, then release the Root lock; never unlink its sentinel.
+commits, close any borrowed media module, close both Stores, then release the
+Root lock; never unlink its sentinel.
 
 The public UI contracts are in `agent_bridge_contracts.dart`:
 
-- `authorize(AgentBridgeGrantRequest(materialVersionId:, allowSourceRead:false))`
+- `authorize(AgentBridgeGrantRequest(materialVersionId:, allowSourceRead:false, allowMediaReceive:false))`
   explicitly grants one confirmed source for 15 minutes; no account/CLI/model/TTS
   is invoked. Source text reading needs its separate checkbox/scope.
 - `current`/`snapshots` expose authorization and real pending-operation metadata,
@@ -30,10 +31,14 @@ manifest. The proxy accepts no argv; the environment contains only the locator
 `SHIYU_BRIDGE_DESCRIPTOR`. The generated file contains short-lived secrets and
 must never be printed, shared, placed in Git, or supplied as a tool argument.
 
-Tools are limited to `shiyu_get_source_reference`, `shiyu_read_fixed_source` and
+The original tools are `shiyu_get_source_reference`, `shiyu_read_fixed_source` and
 `shiyu_submit_learning_candidate`. The latter requires exact source IDs/hash,
 delivery ID, nonempty English+Chinese sentence pairs and an unverified source
-declaration. Media presence, even null, is unsupported in B1. No tool confirms,
+declaration. Media presence, even null, remains unsupported in that v1 tool.
+The additional five media tools are `shiyu_begin_media`,
+`shiyu_put_media_chunk`, `shiyu_seal_media`, `shiyu_submit_media_candidate`
+and `shiyu_abort_media`; they require a separately granted media scope.
+No tool confirms,
 lists other candidates, generates, executes instructions, downloads a URL or
 publishes. Receipt `status=delivered` says only persistent delivery; a replay may
 refer to an already confirmed/rejected candidate, whose current owner state is
@@ -88,8 +93,9 @@ private ACL fixtures; no user directory permissions should be weakened.
 ## C2-A protocol building blocks
 
 Strict v2 media DTO/decoders, bounded canonical encoders and descriptor v1/v2
-readers are available independently of dispatch. Descriptor output still
-defaults to v1; existing Controller and stdio dispatch are unchanged.
+readers are available independently of dispatch. The descriptor type retains
+its v1 default for compatibility; current Controller grants explicitly emit v2.
+C2-A itself did not change Controller or stdio dispatch.
 
 C1 failures now carry typed execution certainty. A persistent-write attempt
 makes later failure unknown, including lifecycle sub-operations; do not infer
@@ -110,5 +116,19 @@ Media-submit ACKs are bound to the actual stable semantic payload hash. Sent
 mutations with bad or missing acknowledgements remain outcome-unknown; no new
 delivery key or grant is silently created. The Controller owns transport/lease
 lifecycle only, not the borrowed module or Stores. See [C2-B evidence](../../docs/reviews/B2C2B-media-socket-results.md).
-MCP stdio still exposes the original three tools; same-stdin media control and
-the streaming SDK remain the next slice, not a claim of this package.
+C2-B itself covered local socket access; the following C-stdio section describes
+the separate extension. The streaming SDK remains a later slice.
+
+## C-stdio bounded MCP dispatch
+
+The proxy now lists eight tools; discovery grants no media permission. Ordinary
+and abort requests have separate bounded slots, held through response flush.
+Metadata and rejection responses share the same capacity-three writer, including
+the active response. An admitted same-stdin abort need not wait for a submit.
+
+Raw malformed frames terminate the session after accepted Client requests
+settle; valid RPC tool-argument errors remain nonfatal. On Windows, real Stdout
+uses its nonblocking sink so the output watchdog can run. A broken flush is not
+awaited again during final cleanup. Proxy exit does not assert remote Store
+completion. See [C-stdio evidence](../../docs/reviews/B2C2C-stdio-results.md).
+The streaming code SDK is still a separate, unimplemented slice at this point.

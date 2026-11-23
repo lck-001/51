@@ -322,7 +322,7 @@ Future<void> main(List<String> args) async {
       expectThat((init['result'] as Map)['protocolVersion'] == '2025-11-25', 'actual lifecycle negotiation');
       process.stdin.writeln(jsonEncode({'jsonrpc': '2.0', 'method': 'notifications/initialized'}));
       final listed = await call(2, 'tools/list', {});
-      expectThat(((listed['result'] as Map)['tools'] as List).length == 3, 'only the three reviewed tools exist');
+      expectThat(((listed['result'] as Map)['tools'] as List).length == 8, 'exactly eight reviewed tools are discoverable without granting scope');
       final referenceReply = await call(3, 'tools/call', {'name': 'shiyu_get_source_reference', 'arguments': <String, Object?>{}});
       final ref = Map<String, Object?>.from((referenceReply['result'] as Map)['structuredContent'] as Map);
       final forbidden = await call(4, 'tools/call', {'name': 'shiyu_read_fixed_source', 'arguments': ref});

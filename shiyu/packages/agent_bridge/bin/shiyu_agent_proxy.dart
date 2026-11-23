@@ -20,7 +20,15 @@ Future<void> main(List<String> args) async {
     final proxy = AgentBridgeMcpProxy(
       client: AgentBridgeClient(descriptorPath: descriptor),
     );
-    exitCode = await proxy.run(input: stdin, output: stdout);
+    // Default Stdout writes synchronously and can block the isolate on a full
+    // pipe, preventing the writer watchdog from running at all.
+    final output = stdout.nonBlocking;
+    output.done.ignore();
+    final result = await proxy.run(input: stdin, output: output);
+    // run has drained accepted Client Futures. Do not wait forever on a native
+    // stdout flush after its watchdog has logically failed the writer.
+    if (result != 0) exit(result);
+    exitCode = result;
   } catch (_) {
     // No descriptor/path, credential, raw response or stack trace is echoed.
     stderr.writeln('shiyu_proxy_unavailable');

@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as hashes;
 
 import 'client.dart';
+import 'bounded_stdio_writer.dart';
+import 'media_wire.dart';
 import 'contracts.dart';
 import 'strict_json.dart';
 
@@ -48,64 +50,100 @@ final class AgentBridgeMcpProxy {
   final AgentBridgeClient _client;
   final Set<String> _ids = {};
   bool _initialized = false, _ready = false, _stop = false, _ran = false;
+  Future<void>? _ordinary, _abort;
+  final _accepted = <Future<void>>{};
+  _StdioLineReader? _reader;
+  void _stopAdmission() {
+    _stop = true;
+    _reader?.stop();
+  }
 
-  /// Exactly one serialized request at a time. StreamIterator/yield backpressure
-  /// prevents an unlimited queue of fully parsed requests during a tool call.
-  /// Cancellation cannot undo an already admitted private delivery: it is not
-  /// advertised as a successful cancellation or used to retry unknown outcomes.
+  /// Bounded ordinary + abort actions; metadata/rejections share one writer.
   Future<int> run({
     required Stream<List<int>> input,
     required IOSink output,
   }) async {
     if (_ran) return 2;
     _ran = true;
-    var frames = 0;
+    final reader = _StdioLineReader(input);
+    _reader = reader;
+    final writer = BoundedStdioWriter(output, onFailure: _stopAdmission);
+    var frames = 0, code = 0;
     try {
-      await for (final bytes in _readLines(input)) {
+      while (!_stop) {
+        final bytes = await reader.next();
+        if (bytes == null) break;
         if (++frames > _maxFrames) {
-          await _send(output, _rpcError(null, -32000, 'session_limit'));
-          return 1;
+          _stopAdmission();
+          code = 1;
+          await _send(writer, _rpcError(null, -32000, 'session_limit'));
+          break;
         }
         Object? message;
         try {
           message = decodeAgentBridgeJson(bytes, maxBytes: _requestBytes);
         } on AgentBridgeException catch (error) {
-          final tooLarge = error.code == AgentBridgeErrorCode.tooLarge;
+          _stopAdmission();
+          code = 1;
           await _send(
-            output,
+            writer,
             _rpcError(
               null,
-              tooLarge ? -32000 : -32700,
-              tooLarge ? 'tooLarge' : 'parse_error',
+              error.code == AgentBridgeErrorCode.tooLarge ? -32000 : -32700,
+              error.code == AgentBridgeErrorCode.tooLarge
+                  ? 'tooLarge'
+                  : 'parse_error',
             ),
           );
-          if (tooLarge) return 1;
-          continue;
+          break;
         } catch (_) {
-          await _send(output, _rpcError(null, -32700, 'parse_error'));
-          continue;
+          _stopAdmission();
+          code = 1;
+          await _send(writer, _rpcError(null, -32700, 'parse_error'));
+          break;
         }
-        final response = await _handle(message);
-        if (response != null) await _send(output, response);
-        if (_stop) return 1;
+        final response = await _handle(message, writer);
+        if (response != null) await _send(writer, response);
+        if (_stop) code = 1;
       }
-      return 0;
     } on _StdioFault catch (error) {
-      try {
-        await _send(output, _rpcError(null, -32000, error.code));
-      } catch (_) {}
-      return 1;
+      _stopAdmission();
+      code = 1;
+      if (!writer.failed) {
+        try {
+          await _send(writer, _rpcError(null, -32000, error.code));
+        } catch (_) {}
+      }
     } catch (_) {
-      // No raw exception/stack/path is written to stdout or stderr.
-      return 1;
+      _stopAdmission();
+      code = 1;
     } finally {
+      reader.stop();
+      // Never close Client first and call that a drain. Every admitted action
+      // retains its slot through its logical writer completion, even on failure.
+      final pending = List<Future<void>>.of(_accepted);
+      await Future.wait(
+        pending.map(
+          (f) => Future<void>.sync(() => f).catchError((Object _) {
+            code = 1;
+          }),
+        ),
+      );
       try {
         await _client.close();
-      } catch (_) {}
+      } catch (_) {
+        code = 1;
+      }
+      // Borrowed output.close/done and a timed-out native flush are not awaited.
+      if (writer.failed || _stop) code = 1;
     }
+    return code;
   }
 
-  Future<Map<String, Object?>?> _handle(Object? raw) async {
+  Future<Map<String, Object?>?> _handle(
+    Object? raw,
+    BoundedStdioWriter writer,
+  ) async {
     if (raw is! Map<String, Object?>)
       return _rpcError(null, -32600, 'invalid_request');
     final hasId = raw.containsKey('id');
@@ -180,7 +218,37 @@ final class AgentBridgeMcpProxy {
       final arguments = params.containsKey('arguments')
           ? _object(params['arguments'])
           : <String, Object?>{};
-      return _rpcResult(id, await _callTool(name, arguments));
+      try {
+        _validateToolArguments(name, arguments);
+      } on AgentBridgeException catch (error) {
+        return _rpcResult(id, _toolError(error.code.name));
+      }
+      final abort = name == 'shiyu_abort_media';
+      if (abort ? _abort != null : _ordinary != null)
+        return _rpcResult(id, _toolError('busy'));
+      final done = Completer<void>();
+      if (abort) {
+        _abort = done.future;
+      } else {
+        _ordinary = done.future;
+      }
+      _accepted.add(done.future);
+      () async {
+        try {
+          await _send(writer, _rpcResult(id, await _callTool(name, arguments)));
+        } catch (_) {
+          _stopAdmission();
+        } finally {
+          if (abort) {
+            _abort = null;
+          } else {
+            _ordinary = null;
+          }
+          done.complete();
+          _accepted.remove(done.future);
+        }
+      }().ignore();
+      return null;
     } on _RpcFault catch (error) {
       return _rpcError(id, error.code, error.message);
     } catch (_) {
@@ -256,10 +324,26 @@ final class AgentBridgeMcpProxy {
   ) async {
     var submitResponseObserved = false;
     try {
-      if (_hasMedia(args))
+      final media = MediaWireOperation.values
+          .where((op) => op.toolName == name)
+          .firstOrNull;
+      if (media == null && _hasMedia(args))
         throw const AgentBridgeException(AgentBridgeErrorCode.unsupportedMedia);
       Map<String, Object?> result;
-      if (name == 'shiyu_get_source_reference') {
+      if (media != null) {
+        decodeMediaBridgePayload(
+          media.wireName,
+          encodeAgentBridgeJson(args, maxBytes: 192 * 1024),
+        );
+        result = await switch (media) {
+          MediaWireOperation.begin => _client.beginMedia(args),
+          MediaWireOperation.chunk => _client.putMediaChunk(args),
+          MediaWireOperation.seal => _client.sealMedia(args),
+          MediaWireOperation.submit => _client.submitMediaCandidate(args),
+          MediaWireOperation.abort => _client.abortMedia(args),
+        };
+        submitResponseObserved = true;
+      } else if (name == 'shiyu_get_source_reference') {
         _argumentKeys(args, const {});
         result = await _client.getSourceReference();
         _resultBinding(result, withText: false);
@@ -323,7 +407,33 @@ final class AgentBridgeMcpProxy {
     }
   }
 
-  Future<void> _send(IOSink output, Map<String, Object?> response) async {
+  void _validateToolArguments(String name, Map<String, Object?> args) {
+    final media = MediaWireOperation.values
+        .where((op) => op.toolName == name)
+        .firstOrNull;
+    if (media != null) {
+      decodeMediaBridgePayload(
+        media.wireName,
+        encodeAgentBridgeJson(args, maxBytes: 192 * 1024),
+      );
+      return;
+    }
+    if (_hasMedia(args))
+      throw const AgentBridgeException(AgentBridgeErrorCode.unsupportedMedia);
+    if (name == 'shiyu_get_source_reference') {
+      _argumentKeys(args, const {});
+    } else if (name == 'shiyu_read_fixed_source') {
+      _argumentKeys(args, _bindingNames, required: _bindingNames);
+      _binding(args);
+    } else {
+      _candidate(args);
+    }
+  }
+
+  Future<void> _send(
+    BoundedStdioWriter output,
+    Map<String, Object?> response,
+  ) async {
     Uint8List bytes;
     try {
       bytes = encodeAgentBridgeJson(response, maxBytes: _responseBytes);
@@ -335,9 +445,7 @@ final class AgentBridgeMcpProxy {
           : _rpcError(response['id'], -32603, 'response_too_large');
       bytes = encodeAgentBridgeJson(fallback, maxBytes: _responseBytes);
     }
-    output.add(bytes);
-    output.add(const [10]);
-    await output.flush();
+    await output.sendLine(bytes);
   }
 }
 
@@ -345,8 +453,13 @@ const _toolNames = {
   'shiyu_get_source_reference',
   'shiyu_read_fixed_source',
   'shiyu_submit_learning_candidate',
+  'shiyu_begin_media',
+  'shiyu_put_media_chunk',
+  'shiyu_seal_media',
+  'shiyu_submit_media_candidate',
+  'shiyu_abort_media',
 };
-const _tools = <Map<String, Object?>>[
+final _tools = <Map<String, Object?>>[
   {
     'name': 'shiyu_get_source_reference',
     'title': 'Get selected source reference',
@@ -437,6 +550,7 @@ const _tools = <Map<String, Object?>>[
       'openWorldHint': false,
     },
   },
+  ..._mediaTools,
 ];
 
 Map<String, Object?> _rpcResult(Object? id, Map<String, Object?> result) => {
@@ -632,44 +746,216 @@ final class _StdioFault implements Exception {
   final String code;
 }
 
-Stream<Uint8List> _readLines(Stream<List<int>> input) async* {
-  final iterator = StreamIterator(input);
-  final bytes = BytesBuilder(copy: false);
-  DateTime? started;
-  try {
-    while (true) {
-      bool next;
-      if (started == null) {
-        next = await iterator
-            .moveNext(); // Idle stdio is not a partial-line timeout.
-      } else {
-        final left =
-            const Duration(seconds: 15) - DateTime.now().difference(started);
-        if (left <= Duration.zero) throw const _StdioFault('timeout');
-        try {
-          next = await iterator.moveNext().timeout(left);
-        } on TimeoutException {
-          throw const _StdioFault('timeout');
+final class _StdioLineReader {
+  _StdioLineReader(Stream<List<int>> input) : _iterator = StreamIterator(input);
+  final StreamIterator<List<int>> _iterator;
+  final _stopped = Completer<bool>();
+  final _bytes = BytesBuilder(copy: false);
+  List<int> _piece = const [];
+  int _offset = 0;
+  DateTime? _started;
+  void stop() {
+    if (!_stopped.isCompleted) _stopped.complete(false);
+    Future<void>.sync(_iterator.cancel).ignore();
+  }
+
+  Future<Uint8List?> next() async {
+    while (!_stopped.isCompleted) {
+      if (_offset == _piece.length) {
+        var moving = _iterator.moveNext();
+        moving.ignore();
+        if (_started != null) {
+          final left =
+              const Duration(seconds: 15) -
+              DateTime.now().difference(_started!);
+          if (left <= Duration.zero) throw const _StdioFault('timeout');
+          moving = moving.timeout(
+            left,
+            onTimeout: () => throw const _StdioFault('timeout'),
+          );
+          moving.ignore();
         }
+        final hasNext = await Future.any<bool>([moving, _stopped.future]);
+        if (_stopped.isCompleted) return null;
+        if (!hasNext) {
+          if (_bytes.length != 0) throw const _StdioFault('incomplete_frame');
+          return null;
+        }
+        _piece = _iterator.current;
+        _offset = 0;
       }
-      if (!next) {
-        if (bytes.length != 0) throw const _StdioFault('incomplete_frame');
-        return;
-      }
-      for (final byte in iterator.current) {
+      while (_offset < _piece.length) {
+        final byte = _piece[_offset++];
+        if (byte < 0 || byte > 255) throw const _StdioFault('parse_error');
         if (byte == 10) {
-          final line = bytes.takeBytes();
-          started = null;
-          yield line;
-        } else {
-          started ??= DateTime.now();
-          if (bytes.length >= _requestBytes)
-            throw const _StdioFault('tooLarge');
-          bytes.addByte(byte);
+          _started = null;
+          return _bytes.takeBytes();
         }
+        _started ??= DateTime.now();
+        if (_bytes.length >= _requestBytes) throw const _StdioFault('tooLarge');
+        _bytes.addByte(byte);
       }
     }
-  } finally {
-    await iterator.cancel();
+    return null;
   }
 }
+
+Map<String, Object?> _mediaContainerSchema({required bool complete}) => {
+  'type': 'object',
+  'additionalProperties': false,
+  'required': [
+    'sha256',
+    'byte_length',
+    'pcm',
+    'timings',
+    'declaration',
+    'timing_declaration',
+    if (complete) 'english_sha256',
+  ],
+  'properties': {
+    'sha256': {'type': 'string', 'pattern': r'^[0-9a-f]{64}$'},
+    'byte_length': {'type': 'integer', 'minimum': 46, 'maximum': 1920044},
+    if (complete)
+      'english_sha256': {'type': 'string', 'pattern': r'^[0-9a-f]{64}$'},
+    'pcm': {
+      'type': 'object',
+      'additionalProperties': false,
+      'required': ['format', 'channels', 'sample_rate', 'bits_per_sample'],
+      'properties': {
+        'format': {'type': 'integer', 'const': 1},
+        'channels': {'type': 'integer', 'const': 1},
+        'sample_rate': {'type': 'integer', 'const': 16000},
+        'bits_per_sample': {'type': 'integer', 'const': 16},
+      },
+    },
+    'timings': {
+      'type': 'array',
+      'minItems': 1,
+      'maxItems': 128,
+      'items': {
+        'type': 'object',
+        'additionalProperties': false,
+        'required': ['sentence_index', 'start_ms', 'end_ms'],
+        'properties': {
+          'sentence_index': {'type': 'integer', 'minimum': 0, 'maximum': 127},
+          'start_ms': {'type': 'integer', 'minimum': 0, 'maximum': 60000},
+          'end_ms': {'type': 'integer', 'minimum': 1, 'maximum': 60000},
+        },
+      },
+    },
+    'declaration': _mediaDeclarationSchema,
+    'timing_declaration': {'type': 'string', 'minLength': 1, 'maxLength': 8192},
+  },
+};
+const _mediaDeclarationSchema = {
+  'type': 'object',
+  'additionalProperties': false,
+  'required': ['preparation'],
+  'properties': {
+    'preparation': {'type': 'string', 'minLength': 1, 'maxLength': 8192},
+    'provider': _optionalDeclarationText,
+    'model': _optionalDeclarationText,
+    'model_version': _optionalDeclarationText,
+    'notes': _optionalDeclarationText,
+  },
+};
+final _mediaTools = <Map<String, Object?>>[
+  for (final operation in MediaWireOperation.values)
+    {
+      'name': operation.toolName,
+      'description': operation == MediaWireOperation.chunk
+          ? 'Code/SDK data plane only: transfers one bounded PCM chunk. Do not compose or copy audio base64 in model context. Requires explicit media scope.'
+          : 'Explicitly scoped private media ${operation.name}; does not confirm, publish, play or withdraw committed content. Declarations remain unverified.',
+      'inputSchema': {
+        'type': 'object',
+        'additionalProperties': false,
+        'required': [
+          'schema_version',
+          ..._bindingNames,
+          if (operation == MediaWireOperation.begin) ...[
+            'delivery_id',
+            'submission_sha256',
+            'english_sha256',
+            'media',
+          ],
+          if (operation == MediaWireOperation.chunk) ...[
+            'upload_id',
+            'index',
+            'bytes_base64',
+            'chunk_sha256',
+          ],
+          if (operation == MediaWireOperation.seal ||
+              operation == MediaWireOperation.abort)
+            'upload_id',
+          if (operation == MediaWireOperation.submit) ...[
+            'delivery_id',
+            'sentences',
+            'declaration',
+            'media',
+            'sealed_receipt',
+          ],
+        ],
+        'properties': {
+          ..._bindingProperties,
+          'schema_version': {'type': 'integer', 'const': 2},
+          if (operation == MediaWireOperation.begin ||
+              operation == MediaWireOperation.submit)
+            'delivery_id': {'type': 'string', 'minLength': 1, 'maxLength': 256},
+          if (operation == MediaWireOperation.begin) ...{
+            'submission_sha256': {
+              'type': 'string',
+              'pattern': r'^[0-9a-f]{64}$',
+            },
+            'english_sha256': {'type': 'string', 'pattern': r'^[0-9a-f]{64}$'},
+            'media': _mediaContainerSchema(complete: false),
+          },
+          if (operation == MediaWireOperation.chunk) ...{
+            'index': {'type': 'integer', 'minimum': 0, 'maximum': 31},
+            'bytes_base64': {
+              'type': 'string',
+              'minLength': 4,
+              'maxLength': 87384,
+            },
+            'chunk_sha256': {'type': 'string', 'pattern': r'^[0-9a-f]{64}$'},
+          },
+          if (operation == MediaWireOperation.chunk ||
+              operation == MediaWireOperation.seal ||
+              operation == MediaWireOperation.abort)
+            'upload_id': {'type': 'string', 'pattern': r'^[0-9a-f]{32}$'},
+          if (operation == MediaWireOperation.submit) ...{
+            'sealed_receipt': {'type': 'string', 'pattern': r'^[0-9a-f]{64}$'},
+            'sentences': {
+              'type': 'array',
+              'minItems': 1,
+              'maxItems': 128,
+              'items': {
+                'type': 'object',
+                'additionalProperties': false,
+                'required': ['english', 'translation'],
+                'properties': {
+                  'english': {
+                    'type': 'string',
+                    'minLength': 1,
+                    'maxLength': 102400,
+                  },
+                  'translation': {
+                    'type': 'string',
+                    'minLength': 1,
+                    'maxLength': 102400,
+                  },
+                },
+              },
+            },
+            'declaration': _mediaDeclarationSchema,
+            'media': _mediaContainerSchema(complete: true),
+          },
+        },
+      },
+      'annotations': {
+        'readOnlyHint': false,
+        'destructiveHint': false,
+        'idempotentHint': true,
+        'openWorldHint': false,
+      },
+    },
+];

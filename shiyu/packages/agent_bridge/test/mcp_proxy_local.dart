@@ -125,13 +125,21 @@ Future<void> main() async {
         'integer ID cannot repeat in session',
       );
       final tools = (r.replies.last['result'] as Map)['tools'] as List;
-      check(tools.length == 3, 'exactly three narrow tools');
+      check(
+        tools.length == 8,
+        'exactly eight reviewed tools; discovery grants no permission',
+      );
       final names = tools.map((x) => (x as Map)['name']).toSet();
       check(
         names.containsAll({
           'shiyu_get_source_reference',
           'shiyu_read_fixed_source',
           'shiyu_submit_learning_candidate',
+          'shiyu_begin_media',
+          'shiyu_put_media_chunk',
+          'shiyu_seal_media',
+          'shiyu_submit_media_candidate',
+          'shiyu_abort_media',
         }),
         'no confirm, publish, arbitrary read or generation tool',
       );
@@ -152,29 +160,35 @@ Future<void> main() async {
     );
   });
 
-  await test('Duplicate keys invalid UTF8 and surrogate JSON are rejected without raw echo', () async {
-    final input = <int>[
-      ...utf8.encode('{"jsonrpc":"2.0","id":1,"id":2,"method":"ping"}\n'),
-      0xc3,
-      0x28,
-      10,
-      ...utf8.encode(
-        r'{"jsonrpc":"2.0","id":3,"method":"ping","params":{"_meta":{"bad":"\ud800"}}}',
-      ),
-      10,
-      ...lines([request(4, 'ping')]),
-    ];
-    final r = await runBytes(input);
-    check(
-      r.replies.length == 4 &&
-          r.replies.take(3).every((r) => (r['error'] as Map)['code'] == -32700),
-      'strict codec rejects rather than normalizes',
-    );
-    check(
-      r.replies.last['id'] == 4 && r.replies.last.containsKey('result'),
-      'valid later frame still works',
-    );
-  });
+  await test(
+    'Duplicate keys invalid UTF8 and surrogate JSON are fatal without raw echo',
+    () async {
+      final malformed = <List<int>>[
+        utf8.encode('{"jsonrpc":"2.0","id":1,"id":2,"method":"ping"}\n'),
+        [0xc3, 0x28, 10],
+        utf8.encode(
+          r'{"jsonrpc":"2.0","id":3,"method":"ping","params":{"_meta":{"bad":"\ud800"}}}'
+          '\n',
+        ),
+      ];
+      for (final input in malformed) {
+        final r = await runBytes([
+          ...input,
+          ...lines([request(4, 'ping')]),
+        ]);
+        check(
+          r.code == 1 &&
+              r.replies.length == 1 &&
+              (r.replies.single['error'] as Map)['code'] == -32700,
+          'each strict parse failure stops session',
+        );
+        check(
+          r.replies.every((reply) => reply['id'] != 4),
+          'subsequent frame not admitted after fatal parse',
+        );
+      }
+    },
+  );
 
   await test(
     'Tool argument authority and media fail before a descriptor is opened',
