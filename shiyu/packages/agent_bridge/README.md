@@ -84,3 +84,16 @@ identity. See [the scoped result](../../docs/reviews/B2C1-media-ingest-results.m
 and execute `test/media_ingest_local.dart` with the existing Dart SDK/package
 configuration. Windows tests require the actual owner context for their own
 private ACL fixtures; no user directory permissions should be weakened.
+
+## C2-A protocol building blocks
+
+Strict v2 media DTO/decoders, bounded canonical encoders and descriptor v1/v2
+readers are available independently of dispatch. Descriptor output still
+defaults to v1; existing Controller and stdio dispatch are unchanged.
+
+C1 failures now carry typed execution certainty. A persistent-write attempt
+makes later failure unknown, including lifecycle sub-operations; do not infer
+safe retry from exception text. Trusted caller context can preserve an actual
+business-byte digest, but its factory performs no proof/cap authentication.
+That authentication must occur before later Controller assembly; wire bodies
+cannot supply this context. See [C2-A evidence](../../docs/reviews/B2C2A-media-wire-results.md).

@@ -20,14 +20,25 @@ final class BridgeDescriptor {
     required this.sourceTextSha256,
     required this.expiresAtUtc,
     required this.allowSourceRead,
-  });
+    this.schemaVersion = 1,
+    this.allowMediaReceive = false,
+  }) {
+    if ((schemaVersion != 1 && schemaVersion != 2) ||
+        (schemaVersion == 1 && allowMediaReceive)) {
+      throw const AgentBridgeException(
+        AgentBridgeErrorCode.privateStorageUnavailable,
+      );
+    }
+  }
+  final int schemaVersion;
   final int port;
   final String session, capability, proofKey, integrationId;
   final String materialId, materialVersionId, sourceTextSha256;
   final DateTime expiresAtUtc;
   final bool allowSourceRead;
+  final bool allowMediaReceive;
   Map<String, Object?> toJson() => {
-    'schema_version': 1,
+    'schema_version': schemaVersion,
     'host': '127.0.0.1',
     'port': port,
     'session': session,
@@ -39,6 +50,7 @@ final class BridgeDescriptor {
     'source_text_sha256': sourceTextSha256,
     'expires_at': expiresAtUtc.toUtc().toIso8601String(),
     'allow_source_read': allowSourceRead,
+    if (schemaVersion == 2) 'allow_media_receive': allowMediaReceive,
   };
   static BridgeDescriptor parse(Object? decoded) {
     Never bad() => throw const AgentBridgeException(
@@ -46,7 +58,9 @@ final class BridgeDescriptor {
     );
     if (decoded is! Map<String, dynamic>) bad();
     final m = decoded;
-    const keys = {
+    final version = m['schema_version'];
+    if (version is! int || (version != 1 && version != 2)) bad();
+    final keys = {
       'schema_version',
       'host',
       'port',
@@ -59,15 +73,16 @@ final class BridgeDescriptor {
       'source_text_sha256',
       'expires_at',
       'allow_source_read',
+      if (version == 2) 'allow_media_receive',
     };
     if (m.keys.toSet().difference(keys).isNotEmpty ||
         m.length != keys.length ||
-        m['schema_version'] != 1 ||
         m['host'] != '127.0.0.1' ||
         m['port'] is! int ||
         (m['port'] as int) < 1 ||
         (m['port'] as int) > 65535 ||
-        m['allow_source_read'] is! bool)
+        m['allow_source_read'] is! bool ||
+        (version == 2 && m['allow_media_receive'] is! bool))
       bad();
     for (final key in ['session', 'material_id', 'material_version_id']) {
       if (m[key] is! String ||
@@ -98,6 +113,10 @@ final class BridgeDescriptor {
       sourceTextSha256: m['source_text_sha256'] as String,
       expiresAtUtc: expiry,
       allowSourceRead: m['allow_source_read'] as bool,
+      schemaVersion: version,
+      allowMediaReceive: version == 2
+          ? m['allow_media_receive'] as bool
+          : false,
     );
   }
 }

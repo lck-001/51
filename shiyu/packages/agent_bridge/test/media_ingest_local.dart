@@ -48,13 +48,19 @@ final class MaterialProbe implements MaterialStore, IdempotentArtifactStore {
   final FileMaterialStore real;
   int registrations = 0;
   bool failLookup = false;
+  Object? readVersionFailure;
   Completer<void>? registrationEntered, registrationRelease;
   @override
   String get trustedOwnerId => real.trustedOwnerId;
   @override
   RecoveryReport get recoveryReport => real.recoveryReport;
   @override
-  Future<MaterialVersion> readVersion(String id) => real.readVersion(id);
+  Future<MaterialVersion> readVersion(String id) {
+    final failure = readVersionFailure;
+    if (failure != null) return Future.error(failure);
+    return real.readVersion(id);
+  }
+
   @override
   Future<Uint8List> readArtifact(ArtifactRef ref) => real.readArtifact(ref);
   @override
@@ -530,8 +536,11 @@ Future<void> drainCases() async {
         '$mode immediate stop admission',
       );
       f.probe.registrationRelease!.complete();
+      final failure = await observed;
       expect(
-        await observed is StateError,
+        failure is MediaIngestFailure &&
+            failure.code == MediaIngestErrorCode.revoked &&
+            failure.execution == MediaIngestExecution.unknown,
         '$mode prevents continuation after Material',
       );
       await completion;

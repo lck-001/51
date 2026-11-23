@@ -24,6 +24,8 @@ enum AgentBridgeErrorCode {
   outcomeUnknown,
   deliveryConflict,
   candidateLimitExceeded,
+  capacityExceeded,
+  recoveryHold,
   unavailable,
   closed,
 }
