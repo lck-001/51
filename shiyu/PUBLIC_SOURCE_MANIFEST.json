@@ -75,6 +75,12 @@
       "sha256": "f2e89e074c8b85f69825ae01257269077934a236760d13132e9256ec84520fa9"
     },
     {
+      "path": "docs/reviews/B2C1-media-ingest-results.md",
+      "gitBlob": "a0a66679ac55ab02fbd5f35eff1e4545a332e326",
+      "sizeBytes": 5662,
+      "sha256": "9ce7bd29af59e07970303243b84e6ec1eebefb7a76edf10e03bf17e506029d50"
+    },
+    {
       "path": "docs/reviews/M13-android-adapter-gate.md",
       "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
       "sizeBytes": 14127,
@@ -262,9 +268,9 @@
     },
     {
       "path": "packages/agent_bridge/README.md",
-      "gitBlob": "999c9df9cd3fa8bfe391239285c5b3ee49945c1e",
-      "sizeBytes": 4524,
-      "sha256": "1b3c792a407aae80e81720a3bff45f70af5693f6a016f4831c9d394538f72e03"
+      "gitBlob": "8c16962725efa9f25d80e17636c04a6e96ff5755",
+      "sizeBytes": 5477,
+      "sha256": "6fa46ff78e8ac1aaa8b5a20936a60cebb3d79cf1556f77baa545d33cc0aa427e"
     },
     {
       "path": "packages/agent_bridge/bin/shiyu_agent_proxy.dart",
@@ -274,9 +280,9 @@
     },
     {
       "path": "packages/agent_bridge/lib/agent_bridge.dart",
-      "gitBlob": "cbc70c5e0ac74a74996459ee854847f9b6a0c573",
-      "sizeBytes": 205,
-      "sha256": "fd427ad8f067378a068ebc4714326da4917305674f1037fd25d3022f19ed4f96"
+      "gitBlob": "22d24469b444a7b6f0bb9ea3e6bb17f0b0d2ec48",
+      "sizeBytes": 237,
+      "sha256": "1f30446e6bd3f193690d6ba3490408643699d2ff7e7a7bbcad3c0f83af198046"
     },
     {
       "path": "packages/agent_bridge/lib/agent_bridge_contracts.dart",
@@ -313,6 +319,12 @@
       "gitBlob": "5921b3eefce0f26c19f5cbe01d0243830fef5fbc",
       "sizeBytes": 22961,
       "sha256": "20d824c8647bc2a9364ec81520cd6cda5a5f288a796ec62e3ee69fe5afcd2c91"
+    },
+    {
+      "path": "packages/agent_bridge/lib/src/media_ingest.dart",
+      "gitBlob": "87672ccf2fd53b08a3d759ee974cc7d86e281981",
+      "sizeBytes": 36620,
+      "sha256": "48b435b269c9476424a525e8d6a0e49795ab4ab5668ea8e1a8e93cd12c5b8209"
     },
     {
       "path": "packages/agent_bridge/lib/src/private_descriptor.dart",
@@ -385,6 +397,12 @@
       "gitBlob": "68245dbb1709ca8edc1630afa79eb10efdf904c4",
       "sizeBytes": 11163,
       "sha256": "59a6940c5a3db0dd6ca211f867045099fb7f9d88ac51307b573677db5c9c2123"
+    },
+    {
+      "path": "packages/agent_bridge/test/media_ingest_local.dart",
+      "gitBlob": "82d62944bc0ee1da46faaf1eea7344782e67db8f",
+      "sizeBytes": 21481,
+      "sha256": "2149349b0017db12fa9dd1b209ccc7c7712851374e35cf19da90f9f36ee18404"
     },
     {
       "path": "packages/agent_bridge/test/root_lock_independent.dart",

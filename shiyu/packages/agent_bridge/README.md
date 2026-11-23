@@ -68,3 +68,19 @@ frames, controlled process senders and real same-instance Stores. They do not
 prove Codex/WorkBuddy/Baidu brand connection, model invocation, language quality,
 audio, scoring, four-platform acceptance or publication. See the result record
 for exact evidence and failed-fixture corrections.
+
+## C1 private media ingestion
+
+`MediaIngest` is a separate, local structure-only capability. It accepts a
+manifest, ordered bounded chunks, a sealed receipt and a complete structured
+submission. It owns its staging/journal lifecycle, not the two caller-owned
+Stores. Cancellation closes admission synchronously and drains real work;
+recovery reconciles the original operation/delivery keys against the Stores.
+Uncertain state is held rather than silently discarded or treated as absent.
+
+C1 has no socket/stdio exposure or App permission UI. Its evidence is explicitly
+`controlledTest`, not an invented raw transport digest or assistant brand
+identity. See [the scoped result](../../docs/reviews/B2C1-media-ingest-results.md)
+and execute `test/media_ingest_local.dart` with the existing Dart SDK/package
+configuration. Windows tests require the actual owner context for their own
+private ACL fixtures; no user directory permissions should be weakened.
