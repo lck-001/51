@@ -131,4 +131,23 @@ settle; valid RPC tool-argument errors remain nonfatal. On Windows, real Stdout
 uses its nonblocking sink so the output watchdog can run. A broken flush is not
 awaited again during final cleanup. Proxy exit does not assert remote Store
 completion. See [C-stdio evidence](../../docs/reviews/B2C2C-stdio-results.md).
-The streaming code SDK is still a separate, unimplemented slice at this point.
+C-stdio itself did not add the streaming SDK; that separate slice follows.
+
+## Code streaming SDK
+
+`MediaStdioChannel` negotiates the MCP session and verifies tool contracts;
+`MediaTransfer` sends a caller-provided cooperative `StreamSourceFactory` in two
+passes through the real stdio tools. It keeps a bounded block assembler/hash
+list, not the complete audio, and never passes binary through model context.
+
+The transfer borrows its channel; the channel borrows its pipes/Process. Neither
+implicitly kills a borrowed process or closes its sink. Response/source
+deadlines end logical waits, not remote Store work or synchronous blocking code.
+Cancellation stays sticky across explicit resume; unknown stages reuse their
+original identifiers rather than generating a new delivery or grant.
+
+Known validated ACKs survive later channel failure, while the terminal channel
+cannot send another data stage. Source cancellation uses a single active ticket,
+not per-event listeners on a shared pending Future. See [SDK evidence](../../docs/reviews/B2C2C-sdk-results.md)
+and the two public SDK regression scripts. This does not assemble the App UI or
+constitute pronunciation, native-device or human acceptance.

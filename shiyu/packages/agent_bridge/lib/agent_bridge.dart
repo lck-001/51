@@ -7,3 +7,5 @@ export 'src/client.dart';
 export 'src/controller.dart';
 export 'src/media_ingest.dart';
 export 'src/media_wire.dart';
+export 'src/media_stdio_channel.dart';
+export 'src/media_transfer.dart';
