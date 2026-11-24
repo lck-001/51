@@ -111,4 +111,4 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 
 受限媒体通道与 SDK 已完成各自验收；[Windows 私有存储工厂](docs/reviews/C3-G1B-storage-factory-results.md)接入同一组材料、学习、缓存和关闭链。[双许可授权与媒体候选界面](docs/reviews/C3-G2-assistant-media-ui-results.md)通过固定源码的独立 50 项 Widget/FileStore 检查：原文读取与音频接收分别授权，确认后不自动选中或播放，保留底部词卡及大字小屏可访问性。
 
-下一门是 G3：新八工具代理与 App 的实际组合打包、隐藏静音原生验证及具体人工体验包。界面通过不等于该包已完成，更不等于四端交付、真实生成或专业发音评测已开通；未合并主分支或发布。
+[G3 Windows组合记录](docs/reviews/C3-G3-windows-integration-results.md)补充实际代理/SDK/同Store媒体链、同A重开、静音播放和窗口关闭：专用v4的空资料与完整合成链路均自然exit0，四组运行证据及实物已通过独立有限验收。下一步准备普通Windows人工体验包；专用探针不等于普通界面验收，不外推四端、真实生成或专业发音评测。未合并主分支或发布。

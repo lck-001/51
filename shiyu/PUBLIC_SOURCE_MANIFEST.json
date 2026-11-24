@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "17d82e3a5c0abb2474862c427870177edcad7896",
-      "sizeBytes": 8523,
-      "sha256": "c45a14d00254cd6cbac4f19c7399306a96e63c5149156e31d47aeacec8d12ed4"
+      "gitBlob": "60bd19e37f037ede828b1cd7bbd3a3831092e927",
+      "sizeBytes": 8711,
+      "sha256": "748cc7052b7de9d83353583dc5b64fa0d0fad8da0d68102d4f98e9c82869f4e9"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -121,6 +121,12 @@
       "gitBlob": "810ad82a70b970102b1940cfa2084aa1ec85368b",
       "sizeBytes": 6046,
       "sha256": "bfc02dd9e92685f23d8557ee3506ac57f48f5d1d5b2d3e647d5decaf7785c026"
+    },
+    {
+      "path": "docs/reviews/C3-G3-windows-integration-results.md",
+      "gitBlob": "d03313a15248abf3048ce3684d1b500a67eac0f5",
+      "sizeBytes": 6528,
+      "sha256": "0bdceed5a636500a708ad7188471d83b516b9918bb88c22cd43978d2f5301721"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
