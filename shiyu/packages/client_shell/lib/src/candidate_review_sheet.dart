@@ -98,6 +98,19 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
       ),
   ];
 
+  void _updateDirty() {
+    final saved = _candidate;
+    if (saved == null) return;
+    setState(
+      () => _dirty = List.generate(
+        _english.length,
+        (i) =>
+            _english[i].text != saved.sentences[i].english ||
+            _chinese[i].text != saved.sentences[i].translation,
+      ).any((v) => v),
+    );
+  }
+
   Future<void> _persistEdits() async {
     if (!_dirty) return;
     if (!_active) throw const LearningStoreException(LearningErrorCode.closed);
@@ -146,7 +159,10 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
             LearningErrorCode.notFound => '原文版本或来源不一致，请返回核对后重新送入。',
             LearningErrorCode.candidateLimitExceeded => '内容超过本次候选容量，请拆分后重新送入。',
             LearningErrorCode.invalidInput => '请检查每句英文和中文对照，不能留空。',
-            _ => '操作尚未确认，当前输入已保留，请稍后重试。',
+            LearningErrorCode.recoveryHold => '本机资料正在核验，暂不能保存或接收。请保留现有资料，稍后重试。',
+            LearningErrorCode.mediaUnavailable =>
+              '音频暂不可用，操作尚未确认；当前输入已保留，请稍后重试。',
+            _ => '操作结果尚未确认，请先等待并查看候选列表，避免重复提交。',
           };
         });
     } catch (_) {
@@ -212,7 +228,7 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
 
   void _showSource() {
     final source = _source;
-    if (source == null) return;
+    if (source == null || !_active) return;
     showDialog<void>(
       context: context,
       builder: (ctx) => _privateSurface(
@@ -234,9 +250,30 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
     );
   }
 
+  String _mediaSummary() {
+    final candidate = _candidate!;
+    final review = candidate.mediaReview;
+    if (review == null) return '只有文字，音频尚未提供。';
+    final changed = List.generate(
+      _english.length,
+      (i) => _english[i].text != candidate.sentences[i].english,
+    ).any((v) => v);
+    final binding = review.binding == CandidateMediaBinding.invalidated
+        ? '英文曾在保存时发生变化，原配音与时间轴已失配；改回原文也不会恢复。'
+        : changed
+        ? '英文有未保存修改。保存后原配音与时间轴将失配；可在保存前恢复原文。'
+        : '配音与已保存英文绑定一致；这不代表文件可读或专业音质已核验。';
+    final issue = review.issues.contains('media_unavailable')
+        ? '\n配套音频当前不可用，暂时无法读取；文字仍可校对，请稍后重试。'
+        : review.issues.any((issue) => issue != 'media_english_changed')
+        ? '\n音频尚未验证，暂未通过可用性检查，当前不开放播放。'
+        : '';
+    return '$binding$issue';
+  }
+
   void _showDeclaration() {
     final candidate = _candidate;
-    if (candidate == null) return;
+    if (candidate == null || !_active) return;
     final d = candidate.declaration;
     showDialog<void>(
       context: context,
@@ -256,10 +293,25 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
                 ),
                 const SizedBox(height: 12),
                 const Text('以下是提供方自述，模型、版权和语言质量尚未独立核实。'),
+                const Text(
+                  '文字来源声明',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 12),
                 SelectableText(
                   '整理方式：${d.preparation}\n提供方：${d.provider ?? '未声明'}\n模型：${d.model ?? '未声明'}\n模型版本：${d.modelVersion ?? '未声明'}\n说明：${d.notes ?? '无'}',
                 ),
+                if (candidate.mediaReview case final review?) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    '音频来源声明',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const Text('音频和时间轴由提供方声明，未独立核验其版权、声音权利或专业效果。'),
+                  SelectableText(
+                    '整理方式：${review.original.declaration.preparation}\n提供方：${review.original.declaration.provider ?? '未声明'}\n模型：${review.original.declaration.model ?? '未声明'}\n模型版本：${review.original.declaration.modelVersion ?? '未声明'}\n说明：${review.original.declaration.notes ?? '无'}\n时间轴说明：${review.original.timingDeclaration}',
+                  ),
+                ],
               ],
             ),
           ),
@@ -275,7 +327,7 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
   }
 
   Future<void> _close() async {
-    if (_busy) return;
+    if (_busy || !_active) return;
     if (_dirty) {
       final discard = await showDialog<bool>(
         context: context,
@@ -343,7 +395,10 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
               if (_message != null)
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(_message!, key: const Key('candidate-message')),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(_message!, key: const Key('candidate-message')),
+                  ),
                 ),
               Expanded(
                 child: _loading
@@ -359,7 +414,11 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text('外部助手提供 · 请对照原文校对。此阶段只有文字，音频尚未提供。'),
+                            const Text('外部助手提供 · 请对照原文校对。'),
+                            Text(
+                              _mediaSummary(),
+                              key: const Key('candidate-media-summary'),
+                            ),
                             Wrap(
                               spacing: 8,
                               children: [
@@ -396,7 +455,7 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
                               enabled: _editable,
                               minLines: 1,
                               maxLines: null,
-                              onChanged: (_) => setState(() => _dirty = true),
+                              onChanged: (_) => _updateDirty(),
                               decoration: const InputDecoration(
                                 labelText: '英文',
                                 border: OutlineInputBorder(),
@@ -409,7 +468,7 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
                               enabled: _editable,
                               minLines: 1,
                               maxLines: null,
-                              onChanged: (_) => setState(() => _dirty = true),
+                              onChanged: (_) => _updateDirty(),
                               decoration: const InputDecoration(
                                 labelText: '中文对照',
                                 border: OutlineInputBorder(),
@@ -417,47 +476,50 @@ class _CandidateReviewSheetState extends State<CandidateReviewSheet> {
                             ),
                             const SizedBox(height: 18),
                           ],
+                          if (_candidate?.state ==
+                              LearningCandidateState.pendingReview)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          key: const Key('candidate-save'),
+                                          onPressed: _editable && _dirty
+                                              ? () => unawaited(_save())
+                                              : null,
+                                          child: const Text('保存校对'),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: FilledButton(
+                                          key: const Key('candidate-confirm'),
+                                          onPressed: _editable
+                                              ? () => unawaited(_confirm())
+                                              : null,
+                                          child: Text(
+                                            _busy ? '正在保存…' : '确认加入学习',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  TextButton(
+                                    key: const Key('candidate-reject'),
+                                    onPressed: _editable
+                                        ? () => unawaited(_reject())
+                                        : null,
+                                    child: const Text('拒绝候选'),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
               ),
-              if (_candidate?.state == LearningCandidateState.pendingReview)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              key: const Key('candidate-save'),
-                              onPressed: _editable && _dirty
-                                  ? () => unawaited(_save())
-                                  : null,
-                              child: const Text('保存校对'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton(
-                              key: const Key('candidate-confirm'),
-                              onPressed: _editable
-                                  ? () => unawaited(_confirm())
-                                  : null,
-                              child: Text(_busy ? '正在保存…' : '确认加入学习'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextButton(
-                        key: const Key('candidate-reject'),
-                        onPressed: _editable
-                            ? () => unawaited(_reject())
-                            : null,
-                        child: const Text('拒绝候选'),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),

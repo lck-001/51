@@ -65,7 +65,11 @@ final class _RealIoMaterialStore implements MaterialStore {
   Future<void> close() => zone.run(store.close);
 }
 
-final class _RealIoLearningStore implements LearningStore, LearningCandidateStore {
+final class _RealIoLearningStore
+    implements
+        LearningStore,
+        LearningCandidateStore,
+        LearningMediaCandidateStore {
   _RealIoLearningStore(this.store, this.zone);
   final LearningStore store;
   final Zone zone;
@@ -117,30 +121,77 @@ final class _RealIoLearningStore implements LearningStore, LearningCandidateStor
   Future<ProgressCheckpoint?> restoreProgress(String id) =>
       zone.run(() => store.restoreProgress(id));
   @override
-  Future<CandidateDeliveryReceipt> receiveCandidate({required CandidateSender sender,
-      required LearningCandidateInput input}) => zone.run(() =>
-      (store as LearningCandidateStore).receiveCandidate(sender: sender, input: input));
+  Future<CandidateDeliveryReceipt> receiveCandidate({
+    required CandidateSender sender,
+    required LearningCandidateInput input,
+  }) => zone.run(
+    () => (store as LearningCandidateStore).receiveCandidate(
+      sender: sender,
+      input: input,
+    ),
+  );
   @override
-  Future<LearningCandidate> readCandidate(String id) => zone.run(() =>
-      (store as LearningCandidateStore).readCandidate(id));
+  Future<CandidateDeliveryReceipt> receiveMediaCandidate({
+    required CandidateSender sender,
+    required LearningMediaCandidateInput input,
+  }) => zone.run(
+    () => (store as LearningMediaCandidateStore).receiveMediaCandidate(
+      sender: sender,
+      input: input,
+    ),
+  );
   @override
-  Future<List<LearningCandidate>> listCandidates() => zone.run(() =>
-      (store as LearningCandidateStore).listCandidates());
+  Future<CandidateDeliveryReceipt?> findDeliveryReceipt({
+    required CandidateSender sender,
+    required String deliveryId,
+    required int inputVersion,
+    required String expectedPayloadSha256,
+  }) => zone.run(
+    () => (store as LearningMediaCandidateStore).findDeliveryReceipt(
+      sender: sender,
+      deliveryId: deliveryId,
+      inputVersion: inputVersion,
+      expectedPayloadSha256: expectedPayloadSha256,
+    ),
+  );
   @override
-  Future<LearningCandidate> reviseCandidate({required String candidateId,
-      required int expectedRevision, required List<LearningSentenceInput> sentences}) =>
-      zone.run(() => (store as LearningCandidateStore).reviseCandidate(
-          candidateId: candidateId, expectedRevision: expectedRevision, sentences: sentences));
+  Future<LearningCandidate> readCandidate(String id) =>
+      zone.run(() => (store as LearningCandidateStore).readCandidate(id));
   @override
-  Future<LearningVersion> confirmCandidate({required String candidateId,
-      required int expectedRevision}) => zone.run(() =>
-      (store as LearningCandidateStore).confirmCandidate(candidateId: candidateId,
-                                                       expectedRevision: expectedRevision));
+  Future<List<LearningCandidate>> listCandidates() =>
+      zone.run(() => (store as LearningCandidateStore).listCandidates());
   @override
-  Future<LearningCandidate> rejectCandidate({required String candidateId,
-      required int expectedRevision}) => zone.run(() =>
-      (store as LearningCandidateStore).rejectCandidate(candidateId: candidateId,
-                                                      expectedRevision: expectedRevision));
+  Future<LearningCandidate> reviseCandidate({
+    required String candidateId,
+    required int expectedRevision,
+    required List<LearningSentenceInput> sentences,
+  }) => zone.run(
+    () => (store as LearningCandidateStore).reviseCandidate(
+      candidateId: candidateId,
+      expectedRevision: expectedRevision,
+      sentences: sentences,
+    ),
+  );
+  @override
+  Future<LearningVersion> confirmCandidate({
+    required String candidateId,
+    required int expectedRevision,
+  }) => zone.run(
+    () => (store as LearningCandidateStore).confirmCandidate(
+      candidateId: candidateId,
+      expectedRevision: expectedRevision,
+    ),
+  );
+  @override
+  Future<LearningCandidate> rejectCandidate({
+    required String candidateId,
+    required int expectedRevision,
+  }) => zone.run(
+    () => (store as LearningCandidateStore).rejectCandidate(
+      candidateId: candidateId,
+      expectedRevision: expectedRevision,
+    ),
+  );
   @override
   Future<void> close() => zone.run(store.close);
 }

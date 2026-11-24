@@ -12,13 +12,24 @@ Widget _privateSurface(
   return child;
 }
 
-Future<bool?> showAssistantGrantDialog(
+/// Local UI choice. The two permissions never imply one another.
+final class AssistantGrantChoice {
+  const AssistantGrantChoice({
+    required this.allowSourceRead,
+    required this.allowMediaReceive,
+  });
+  final bool allowSourceRead, allowMediaReceive;
+}
+
+Future<AssistantGrantChoice?> showAssistantGrantDialog(
   BuildContext context,
   MaterialVersion source, {
   void Function(BuildContext)? onPrivateRoute,
 }) {
   var allowRead = false;
-  return showDialog<bool>(
+  var allowMedia = false;
+  var submitted = false;
+  return showDialog<AssistantGrantChoice>(
     context: context,
     builder: (ctx) => _privateSurface(
       ctx,
@@ -35,7 +46,7 @@ Future<bool?> showAssistantGrantDialog(
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                const Text('只开放这一版的本机接收通道。请在你连接的助手里让它整理并送入英文；本 App 不会代调模型。'),
+                const Text('只开放这一版的本机接收通道。请在你连接的助手里让它整理并送入英文；拾语不会代调翻译或配音服务。'),
                 const SizedBox(height: 8),
                 CheckboxListTile(
                   key: const Key('assistant-allow-source-read'),
@@ -43,11 +54,20 @@ Future<bool?> showAssistantGrantDialog(
                   value: allowRead,
                   onChanged: (value) =>
                       update(() => allowRead = value ?? false),
-                  title: const Text('同时允许助手读取这一版原文'),
+                  title: const Text('允许助手读取这一版原文'),
                 ),
                 const Text(
                   '默认只提供材料引用。若已把原文交给助手，可不勾选；否则需要开启正文读取。原文将交给该助手按其服务规则处理。',
                   style: TextStyle(fontSize: 12, height: 1.7),
+                ),
+                CheckboxListTile(
+                  key: const Key('assistant-allow-media-receive'),
+                  contentPadding: EdgeInsets.zero,
+                  value: allowMedia,
+                  onChanged: (value) =>
+                      update(() => allowMedia = value ?? false),
+                  title: const Text('允许接收配套音频'),
+                  subtitle: const Text('音频接收与原文读取分别授权。收到后仍需本人校对确认，不会自动播放。'),
                 ),
                 const SizedBox(height: 12),
                 const Text('临时授权只针对这一版，15 分钟后或关闭应用时结束；不能自动确认学习或公开，随时可撤销。'),
@@ -61,7 +81,16 @@ Future<bool?> showAssistantGrantDialog(
             ),
             FilledButton(
               key: const Key('assistant-authorize-confirm'),
-              onPressed: () => Navigator.of(ctx).pop(allowRead),
+              onPressed: () {
+                if (submitted) return;
+                submitted = true;
+                Navigator.of(ctx).pop(
+                  AssistantGrantChoice(
+                    allowSourceRead: allowRead,
+                    allowMediaReceive: allowMedia,
+                  ),
+                );
+              },
               child: const Text('开启本机授权'),
             ),
           ],
@@ -187,6 +216,9 @@ class AssistantConnectionCard extends StatelessWidget {
                     ? '允许读取此版本原文，并送入待校对内容。'
                     : '只允许送入候选，未开放原文正文读取。',
               ),
+              Text(
+                state.allowMediaReceive ? '允许接收配套音频，收到后仍需校对确认。' : '未开放配套音频接收。',
+              ),
               if (state.expiresAtUtc != null)
                 Text('${_time(state.expiresAtUtc!)} 到期'),
               const SizedBox(height: 6),
@@ -203,7 +235,7 @@ class AssistantConnectionCard extends StatelessWidget {
             if (state?.lastCandidateId != null)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('已收到助手送入的内容，可在学习页查看处理结果。'),
+                child: Text('已收到候选，请到学习页校对。'),
               ),
             Wrap(
               spacing: 8,
@@ -217,7 +249,7 @@ class AssistantConnectionCard extends StatelessWidget {
                 if (onSetup != null)
                   TextButton(
                     key: const Key('assistant-setup'),
-                    onPressed: busy ? null : onSetup,
+                    onPressed: busy || draining ? null : onSetup,
                     child: const Text('高级连接说明'),
                   ),
               ],

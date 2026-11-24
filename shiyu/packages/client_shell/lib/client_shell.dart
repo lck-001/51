@@ -19,7 +19,7 @@ abstract final class ShiyuClientTokens {
   static const paper = Color(0xFFFFFFFF);
   static const ink = Color(0xFF172641);
   static const action = Color(0xFF5557D7);
-  static const muted = Color(0xFF8590A7);
+  static const muted = Color(0xFF616F89);
   static const hint = Color(0xFFF5F5FF);
   static const warning = Color(0xFFFFF8ED);
   static const line = Color(0xFFE3E6F0);
@@ -146,6 +146,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
   List<LearningVersion> _learning = [];
   List<LearningCandidate> _candidates = [];
   String? _lastAssistantCandidate;
+  String? _arrivalAnnouncement;
   bool _reviewingCandidate = false;
   bool _assistantBusy = false;
   final _privateRoutes = <ModalRoute<dynamic>>{};
@@ -202,6 +203,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       oldWidget.assistantStatus?.removeListener(_assistantChanged);
       widget.assistantStatus?.addListener(_assistantChanged);
       _lastAssistantCandidate = null;
+      _arrivalAnnouncement = null;
     }
     if (!identical(oldWidget.materials, widget.materials) ||
         !identical(oldWidget.learning, widget.learning)) {
@@ -290,7 +292,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _lastAssistantCandidate = id;
       // Arrival refreshes the inbox only. It never navigates, confirms, plays
       // or overwrites the user's current editor/reading selection.
-      unawaited(_reload());
+      unawaited(_reload(announceCandidate: true));
     }
   }
 
@@ -452,7 +454,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     }
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload({bool announceCandidate = false}) async {
     final scope = _scopeEpoch, load = ++_loadEpoch;
     final materials = widget.materials, learning = widget.learning;
     if (!_sameOwner) {
@@ -485,6 +487,10 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         _versions = versions;
         _learning = items;
         _candidates = candidates;
+        if (announceCandidate) {
+          _arrivalAnnouncement =
+              '收到一份待校对候选，共 ${candidates.where((c) => c.state == LearningCandidateState.pendingReview).length} 份';
+        }
         _loading = false;
         if (_selected != null) {
           final current = items.where(
@@ -940,7 +946,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    '${candidate.sentences.length} 句 · ${candidate.submission.transport == CandidateTransport.controlledTest ? '受控测试内容' : '外部助手提供'}',
+                    '${candidate.sentences.length} 句 · ${_candidateMediaLabel(candidate.mediaReview)} · ${candidate.submission.transport == CandidateTransport.controlledTest ? '受控测试内容' : '外部助手提供'}',
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => unawaited(_openCandidateReview(candidate)),
@@ -971,11 +977,15 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     _ => '本机连接尚未确认，请在“我的”中查看高级连接说明。',
   };
 
+  bool get _assistantDraining =>
+      widget.assistantStatus?.value.phase == AgentBridgePhase.draining;
+
   Future<void> _authorizeAssistant(MaterialVersion version) async {
     final authorize = widget.onAuthorizeAssistant;
     if (authorize == null ||
         !_scope(_scopeEpoch) ||
         _assistantBusy ||
+        _assistantDraining ||
         _saving ||
         _confirming ||
         version.ownerId != widget.materials.trustedOwnerId)
@@ -983,16 +993,17 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     final scope = _scopeEpoch;
     setState(() => _assistantBusy = true);
     try {
-      final allowRead = await showAssistantGrantDialog(
+      final choice = await showAssistantGrantDialog(
         context,
         version,
         onPrivateRoute: _trackPrivateRoute,
       );
-      if (!_scope(scope) || allowRead == null) return;
+      if (!_scope(scope) || choice == null || _assistantDraining) return;
       await authorize(
         AgentBridgeGrantRequest(
           materialVersionId: version.versionId,
-          allowSourceRead: allowRead,
+          allowSourceRead: choice.allowSourceRead,
+          allowMediaReceive: choice.allowMediaReceive,
         ),
       );
       if (!_scope(scope)) return;
@@ -1000,9 +1011,11 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       setState(
         () => _message =
             state?.phase == AgentBridgePhase.enabled &&
-                state?.materialVersionId == version.versionId
+                state?.materialVersionId == version.versionId &&
+                state?.allowSourceRead == choice.allowSourceRead &&
+                state?.allowMediaReceive == choice.allowMediaReceive
             ? '这一版的临时授权已开启。请在已连接的助手中整理并送入英文候选。'
-            : '授权状态正在更新，请查看本机连接状态。',
+            : '授权状态尚未确认，请查看本机连接状态。',
       );
     } catch (error) {
       if (_scope(scope)) setState(() => _message = _assistantFailure(error));
@@ -1028,12 +1041,16 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   Future<void> _assistantSetup() async {
     final setup = widget.onAssistantSetup;
-    if (setup == null || _assistantBusy || !_scope(_scopeEpoch)) return;
+    if (setup == null ||
+        _assistantBusy ||
+        _assistantDraining ||
+        !_scope(_scopeEpoch))
+      return;
     final scope = _scopeEpoch;
     setState(() => _assistantBusy = true);
     try {
       final instructions = await setup();
-      if (!_scope(scope)) return;
+      if (!_scope(scope) || _assistantDraining) return;
       await showAssistantSetupDialog(
         context,
         instructions,
@@ -1218,6 +1235,17 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
             top: false,
             child: Column(
               children: [
+                if (_arrivalAnnouncement != null)
+                  Semantics(
+                    liveRegion: true,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 4,
+                      ),
+                      child: Text(_arrivalAnnouncement!),
+                    ),
+                  ),
                 if (_message != null)
                   Container(
                     key: const Key('status-message'),
@@ -1455,13 +1483,14 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
                           OutlinedButton(
                             onPressed: () => _edit(draft),
                             child: const Text('校对草稿'),
                           ),
-                          const SizedBox(width: 12),
                           TextButton(
                             onPressed:
                                 (_versions[draft.materialId] ?? []).isEmpty
@@ -1485,71 +1514,66 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       isScrollControlled: true,
       builder: (context) => _privateSurface(
         context,
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              height: 360,
-              child: ListView(
-                children: [
-                  if (widget.onAuthorizeAssistant != null) _assistantCard(),
-                  Text(
-                    draft.title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  for (final version
-                      in _versions[draft.materialId] ?? <MaterialVersion>[])
-                    Padding(
-                      padding: const EdgeInsets.only(top: 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '已确认第 ${version.versionNumber} 版',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            version.text,
-                            style: const TextStyle(height: 1.8),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '固定原文版本，不表示已生成学习内容。',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: ShiyuClientTokens.muted,
-                            ),
-                          ),
-                          if (widget.onAuthorizeAssistant != null)
-                            OutlinedButton.icon(
-                              key: Key(
-                                'assistant-authorize-${version.versionId}',
-                              ),
-                              onPressed: _assistantBusy
-                                  ? null
-                                  : () =>
-                                        unawaited(_authorizeAssistant(version)),
-                              icon: const Icon(
-                                Icons.auto_awesome_outlined,
-                                size: 18,
-                              ),
-                              label: const Text('允许外部助手送入学习候选'),
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
+        widget.assistantStatus == null
+            ? _fixedVersionsPanel(draft)
+            : ValueListenableBuilder<AgentBridgeStatus>(
+                valueListenable: widget.assistantStatus!,
+                builder: (_, __, ___) => _fixedVersionsPanel(draft),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
+
+  Widget _fixedVersionsPanel(MaterialDraft draft) => SafeArea(
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: SizedBox(
+        height: 360,
+        child: ListView(
+          children: [
+            if (widget.onAuthorizeAssistant != null) _assistantCard(),
+            Text(
+              draft.title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            for (final version
+                in _versions[draft.materialId] ?? <MaterialVersion>[])
+              Padding(
+                padding: const EdgeInsets.only(top: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '已确认第 ${version.versionNumber} 版',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(version.text, style: const TextStyle(height: 1.8)),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '固定原文版本，不表示已生成学习内容。',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: ShiyuClientTokens.muted,
+                      ),
+                    ),
+                    if (widget.onAuthorizeAssistant != null)
+                      OutlinedButton.icon(
+                        key: Key('assistant-authorize-${version.versionId}'),
+                        onPressed: _assistantBusy || _assistantDraining
+                            ? null
+                            : () => unawaited(_authorizeAssistant(version)),
+                        icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                        label: const Text('允许外部助手送入学习候选'),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   Widget _addPage() => ListView(
     padding: const EdgeInsets.all(20),
@@ -1762,6 +1786,26 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     );
   }
 
+  String _candidateMediaLabel(LearningCandidateMediaReview? review) {
+    if (review == null) return '文字待校对';
+    if (review.binding == CandidateMediaBinding.invalidated) return '音频与英文失配';
+    if (review.issues.contains('media_unavailable')) return '音频暂不可用';
+    if (review.issues.isNotEmpty) return '音频尚未验证';
+    return '含音频待校对';
+  }
+
+  String _learningMediaReason(LearningVersion version) {
+    if (version.candidateMediaReview?.binding ==
+        CandidateMediaBinding.invalidated) {
+      return '英文已修改，原音频与英文失配。改回文字不会自动恢复。';
+    }
+    if (version.issues.contains('media_unavailable')) return '音频暂时无法读取。';
+    if (version.issues.contains('media_unverified')) return '音频尚未通过可用性检查。';
+    if (version.issues.contains('timing_invalid')) return '音频时间轴尚未通过检查。';
+    if (version.media == null) return '此版本未提供音频，可阅读文字。';
+    return '此版本音频尚未打开';
+  }
+
   String _stateLabel(LearningState state) => switch (state) {
     LearningState.ready => '结构已就绪',
     LearningState.partial => '部分内容',
@@ -1845,7 +1889,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
           64.0,
           math.min(190.0, constraints.maxHeight - 280),
         );
-        return Column(
+        final content = Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 7, 20, 8),
@@ -1984,7 +2028,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                             : snapshot?.pendingSeek != null
                             ? '定位中 · 等待实际到位'
                             : snapshot == null
-                            ? '此版本音频尚未打开'
+                            ? _learningMediaReason(version)
                             : snapshot.engineAvailable
                             ? '${_actualLabel(actual!)} · ${duration == null ? '--:--' : _time(duration)}'
                             : '播放资源未确认',
@@ -2101,6 +2145,16 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
             _dictionary(maxCard),
           ],
         );
+        final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+        if (constraints.maxHeight < 520 || scale > 1.4) {
+          return SingleChildScrollView(
+            child: SizedBox(
+              height: math.max(constraints.maxHeight, 720 * scale),
+              child: content,
+            ),
+          );
+        }
+        return content;
       },
     );
   }
@@ -2136,6 +2190,40 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     ];
   }
 
+  final _dictionaryVisibilityAnchor = GlobalKey();
+
+  void _toggleDictionary() {
+    final scope = _scopeEpoch;
+    final learningId = _selected?.binding.learningVersionId;
+    setState(() => _wordExpanded = !_wordExpanded);
+    final expanded = _wordExpanded;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scope(scope) ||
+          _wordExpanded != expanded ||
+          _selected?.binding.learningVersionId != learningId)
+        return;
+      final anchor = _dictionaryVisibilityAnchor.currentContext;
+      final target = anchor?.findRenderObject();
+      final viewport = anchor == null
+          ? null
+          : Scrollable.maybeOf(anchor)?.context.findRenderObject();
+      if (anchor != null && target is RenderBox && viewport is RenderBox) {
+        final topLeft = target.localToGlobal(Offset.zero, ancestor: viewport);
+        final bottom = topLeft.dy + target.size.height;
+        if (topLeft.dy >= 0 && bottom <= viewport.size.height) return;
+        // Reveal the actual 48px control, including when a tall compact card
+        // puts its header above the viewport. Never align the whole card's tail.
+        unawaited(
+          Scrollable.ensureVisible(
+            anchor,
+            duration: Duration.zero,
+            alignment: topLeft.dy < 0 ? 0 : 1,
+          ),
+        );
+      }
+    });
+  }
+
   Widget _dictionary(double maxHeight) {
     final result = _wordResult;
     final subtitle = _wordLoading
@@ -2143,17 +2231,33 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
         : _wordMessage ??
               result?.meaning ??
               (_word == null ? '点正文单词查词，词卡可在这里展开。' : '本次结果未提供释义。');
+    final largeText = MediaQuery.textScalerOf(context).scale(16) > 22.4;
+    Widget meaning({bool compact = false}) => Text(
+      subtitle,
+      key: const Key('dictionary-meaning'),
+      maxLines: compact && !largeText ? 1 : null,
+      overflow: compact && !largeText
+          ? TextOverflow.ellipsis
+          : TextOverflow.clip,
+      style: const TextStyle(fontSize: 12, color: ShiyuClientTokens.muted),
+    );
     return Container(
       key: const Key('dictionary-card'),
       width: double.infinity,
-      height: _wordExpanded ? maxHeight : 72,
-      padding: const EdgeInsets.fromLTRB(18, 4, 12, 8),
+      height: _wordExpanded
+          ? math.max(maxHeight, 120)
+          : largeText
+          ? null
+          : 72,
+      constraints: const BoxConstraints(minHeight: 72),
+      padding: const EdgeInsets.fromLTRB(18, 0, 12, 4),
       decoration: BoxDecoration(
         color: ShiyuClientTokens.hint,
         border: Border.all(color: const Color(0xFFDCDCF7)),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -2183,43 +2287,46 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                   ),
                 ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.volume_up_outlined,
-                color: ShiyuClientTokens.muted,
-                size: 20,
-              ),
-              IconButton(
-                key: const Key('dictionary-expand'),
-                tooltip: _wordExpanded ? '收起词卡' : '展开词卡',
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () => setState(() {
-                  _wordExpanded = !_wordExpanded;
-                }),
-                icon: Icon(
-                  _wordExpanded ? Icons.expand_more : Icons.expand_less,
-                  color: ShiyuClientTokens.action,
+              const ExcludeSemantics(
+                child: Icon(
+                  Icons.volume_up_outlined,
+                  color: ShiyuClientTokens.muted,
                   size: 20,
+                ),
+              ),
+              Semantics(
+                key: const Key('dictionary-expansion-state'),
+                expanded: _wordExpanded,
+                child: KeyedSubtree(
+                  key: _dictionaryVisibilityAnchor,
+                  child: IconButton(
+                    key: const Key('dictionary-expand'),
+                    tooltip: _wordExpanded ? '收起词卡' : '展开词卡',
+                    visualDensity: VisualDensity.standard,
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    onPressed: _toggleDictionary,
+                    icon: Icon(
+                      _wordExpanded ? Icons.expand_more : Icons.expand_less,
+                      color: ShiyuClientTokens.action,
+                      size: 20,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          Text(
-            subtitle,
-            key: const Key('dictionary-meaning'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: ShiyuClientTokens.muted,
-            ),
-          ),
+          if (!_wordExpanded) meaning(compact: true),
           if (_wordExpanded)
             Expanded(
               child: SingleChildScrollView(
+                key: const Key('dictionary-details-scroll'),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    meaning(),
                     if (result?.example != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
@@ -2232,8 +2339,9 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                       padding: const EdgeInsets.only(top: 10),
                       child: Text(
                         result == null
-                            ? '词典、示范发音和词句本尚未接入时，不补造内容或收藏成功。'
-                            : '词条来源：${result.sourceLabel}；示范发音和收藏另行接入。',
+                            ? '查词服务暂不可用，你可以继续阅读和练习。'
+                            : '词条来源：${result.sourceLabel}',
+                        key: const Key('dictionary-source'),
                         style: const TextStyle(
                           fontSize: 11,
                           height: 1.6,

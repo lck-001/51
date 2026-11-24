@@ -106,3 +106,9 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 用户暂不开通云账号，[M20 TXT/DOCX 导入](docs/reviews/M20-material-import-results.md) 已完成限定工程验收：原文预览/校对、私有来源与草稿、确认与重启，Android真实SAF验证及Windows构建；未宣称所有格式或四端人验完成。
 
 下一优先项为 [外部助手到学习内容](docs/reviews/M19B-external-assistant-learning-workpack.md)：先评审持久候选、真实来源与确认幂等，再实施受限桥接；[PPTX](docs/reviews/M21-pptx-import-workpack.md) 与 PDF 保留队列。未经核验的来源声明、无音频的文本或测试静音不冒充听力/发音效果。
+
+## C3 本机助手与媒体界面（当前阶段）
+
+受限媒体通道与 SDK 已完成各自验收；[Windows 私有存储工厂](docs/reviews/C3-G1B-storage-factory-results.md)接入同一组材料、学习、缓存和关闭链。[双许可授权与媒体候选界面](docs/reviews/C3-G2-assistant-media-ui-results.md)通过固定源码的独立 50 项 Widget/FileStore 检查：原文读取与音频接收分别授权，确认后不自动选中或播放，保留底部词卡及大字小屏可访问性。
+
+下一门是 G3：新八工具代理与 App 的实际组合打包、隐藏静音原生验证及具体人工体验包。界面通过不等于该包已完成，更不等于四端交付、真实生成或专业发音评测已开通；未合并主分支或发布。

@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "71e7657f940211d138b968ec38e1dbf563e69650",
-      "sizeBytes": 7751,
-      "sha256": "32b2420cfe83e20feae5b987d58e58dc678c61c012789e3ed9353079de048b7f"
+      "gitBlob": "17d82e3a5c0abb2474862c427870177edcad7896",
+      "sizeBytes": 8523,
+      "sha256": "c45a14d00254cd6cbac4f19c7399306a96e63c5149156e31d47aeacec8d12ed4"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -115,6 +115,12 @@
       "gitBlob": "c4fddca0b1b6cc0fe77cd53369a6f642438261e8",
       "sizeBytes": 5083,
       "sha256": "69286356f94c7ee22a384aa42b567e7dee91c3fd50d516d4f22fb26aa390338a"
+    },
+    {
+      "path": "docs/reviews/C3-G2-assistant-media-ui-results.md",
+      "gitBlob": "810ad82a70b970102b1940cfa2084aa1ec85368b",
+      "sizeBytes": 6046,
+      "sha256": "bfc02dd9e92685f23d8557ee3506ac57f48f5d1d5b2d3e647d5decaf7785c026"
     },
     {
       "path": "docs/reviews/M13-android-adapter-gate.md",
@@ -574,21 +580,21 @@
     },
     {
       "path": "packages/client_shell/lib/client_shell.dart",
-      "gitBlob": "2c2e68b035119047b2cc0b1a8f561194b2ca9fad",
-      "sizeBytes": 82567,
-      "sha256": "6378d7dcdbd8e57fa269195342d8bc3315ceb5982849643f9533e48f8abfa126"
+      "gitBlob": "38ddc0fc920b0542830749a566ca4b505d1652d4",
+      "sizeBytes": 87121,
+      "sha256": "fdca8486cc899d86b01b6ba15bb1c9e93e192fc83e257c210b7420ffd135da24"
     },
     {
       "path": "packages/client_shell/lib/src/assistant_connection_widgets.dart",
-      "gitBlob": "769cfd8b1f310c113de049871d4a7cb8fbaaea69",
-      "sizeBytes": 8377,
-      "sha256": "bb300fb5e7f2afe352b6eb8b2d6f11e1b0739f8ba8a3629ac816a489b7f08ceb"
+      "gitBlob": "6140067d4a446137a2493492b00cf2258750fa68",
+      "sizeBytes": 9683,
+      "sha256": "d4f67c91c7ae57bc56453e5d9fda296dec92638b9c97f3dddeaf6351c315ccb5"
     },
     {
       "path": "packages/client_shell/lib/src/candidate_review_sheet.dart",
-      "gitBlob": "025a121fc1074035c36ede4505b9bbd6d68e0ad0",
-      "sizeBytes": 17166,
-      "sha256": "af0d8e32452d689b82867bb7a883a2cc5783564502b2e68e63d79b705132bc9d"
+      "gitBlob": "7f199b715d2db716b2d15806bc5ed4280690cb4d",
+      "sizeBytes": 20778,
+      "sha256": "34bd2aaf5fec34dd500a2be447b1d5cbe5d9493d73bb8457d70d1066d99e759b"
     },
     {
       "path": "packages/client_shell/pubspec.lock",
@@ -603,6 +609,12 @@
       "sha256": "628e091b045e750e49ec5bbe7c17f65deeb23166163e4b5dc4d302d0a61e3066"
     },
     {
+      "path": "packages/client_shell/test/candidate_media_flow_test.dart",
+      "gitBlob": "9aecd581e2ba994b4577da5e2da6f0318546f35c",
+      "sizeBytes": 12120,
+      "sha256": "4ebb7b60e77d3bc8bffbe36a94be1173ab20076c262e0b5222200ef51b32cdc4"
+    },
+    {
       "path": "packages/client_shell/test/candidate_retirement_test.dart",
       "gitBlob": "f7bc2171745222855c8fd23d8310f8ae2974a9f5",
       "sizeBytes": 4077,
@@ -610,9 +622,9 @@
     },
     {
       "path": "packages/client_shell/test/candidate_review_flow_test.dart",
-      "gitBlob": "15b5d10385abab60ce8ffdd08a1ae73eb083cd53",
-      "sizeBytes": 10164,
-      "sha256": "8a5318d5bf1dfd47b8e421115d5d90fe5491bad53a559fc9f20191b529f68745"
+      "gitBlob": "a7031e130dbab68a7c9647168d255942d983fbe0",
+      "sizeBytes": 16570,
+      "sha256": "e24c06ba1dfaffc54e60330f35b4f09d20d5c944319a28ddab8e41f770cb2ddb"
     },
     {
       "path": "packages/client_shell/test/candidate_scope_test.dart",
@@ -625,6 +637,12 @@
       "gitBlob": "7c77a4f0937ea7b769b921df196ccea2833dcc6e",
       "sizeBytes": 19066,
       "sha256": "2a1d71c9c32ccb807c83ecf5799286e819dca02d6103c126c6d67287fa2686f4"
+    },
+    {
+      "path": "packages/client_shell/test/g2_render_test.dart",
+      "gitBlob": "50907384f342cec6b37074b5a8c7e35dbf0cbab2",
+      "sizeBytes": 16825,
+      "sha256": "96c872fc76ea166c0a02e357f5cfc301d0e11b9e13a5e3bebcb3f19b12b141b7"
     },
     {
       "path": "packages/client_shell/test/material_import_test.dart",
@@ -646,9 +664,9 @@
     },
     {
       "path": "packages/client_shell/test/real_io_stores.dart",
-      "gitBlob": "4ed7bc03d3f77e86f42b9253ba3a5d838b5c4a51",
-      "sizeBytes": 5408,
-      "sha256": "9e8dc1d8222895235c77cca8d07fc58ccdb7e8bdde290caa4f95e14227e63b28"
+      "gitBlob": "dfc4133b4d08d707714df32e9e61f0b753a9a208",
+      "sizeBytes": 6222,
+      "sha256": "8bb2ec5d4eded28f079033d73c3739f764c8cbc86cdae13b74cb99c031e0c0a2"
     },
     {
       "path": "packages/client_shell/test/system_back_test.dart",
@@ -2911,6 +2929,12 @@
       "gitBlob": "7e9a625bf75ba739254dd1d5416429909c0a0032",
       "sizeBytes": 11458,
       "sha256": "5f859e7bc620edde76749c50ac59823d36f146cff417a7aa8ae2e0ee6a8febdf"
+    },
+    {
+      "path": "validation/playback-01/test/g2_modal_retirement_test.dart",
+      "gitBlob": "8e2e21d182c314f00a2fc5a884c76b24e0e74e92",
+      "sizeBytes": 6396,
+      "sha256": "284447eb0f0e549fda008864c436183231d71abbc10cdb8f8c0e1bf0fd82f5ab"
     },
     {
       "path": "validation/playback-01/test/long_provenance_fixture.dart",
