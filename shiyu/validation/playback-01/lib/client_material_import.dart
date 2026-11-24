@@ -15,6 +15,10 @@ import 'package:material_import/material_import.dart';
 /// Inject only in background tests; the normal route is a user-clicked picker.
 typedef MaterialFileSelection = Future<File?> Function(String sessionId);
 typedef MaterialStageRemoval = Future<void> Function(File ownedStage);
+typedef MaterialImportPathGuard = FutureOr<void> Function(
+  FileSystemEntity existingOwnedPath,
+);
+typedef MaterialNativeIdleProbe = Future<bool> Function(String sessionId);
 
 const _maxProvenanceBytes = 2 * 1024 * 1024;
 
@@ -117,6 +121,8 @@ final class ClientMaterialImportController {
     required this.stagingRoot,
     this.selection,
     this.removeStage,
+    this.pathGuard,
+    this.nativeIdleProbe,
     this.limits = const MaterialImportLimits(),
     this.parseTimeout = const Duration(seconds: 20),
   });
@@ -126,6 +132,10 @@ final class ClientMaterialImportController {
 
   /// Failure-injectable private IO seam. Called only for this session's files.
   final MaterialStageRemoval? removeStage;
+  final MaterialImportPathGuard? pathGuard;
+
+  /// Trusted synthetic readiness probe only; default uses the real platform path.
+  final MaterialNativeIdleProbe? nativeIdleProbe;
   final MaterialImportLimits limits;
   final Duration parseTimeout;
   static const _native = MethodChannel('shiyu/material_import');
@@ -162,8 +172,21 @@ final class ClientMaterialImportController {
   }
 
   Future<void> close() async {
-    retire();
-    await _active?.cancel();
+    MaterialImportErrorCode? first;
+    try {
+      retire();
+    } catch (_) {
+      first = MaterialImportErrorCode.readFailed;
+    }
+    final active = _active;
+    try {
+      if (active != null) await Future<void>.sync(active.cancel);
+    } catch (error) {
+      first ??= error is MaterialImportException
+          ? error.code
+          : MaterialImportErrorCode.readFailed;
+    }
+    if (first != null) throw MaterialImportException(first);
   }
 
   bool _owns(_ClientImportSession session) =>
@@ -172,16 +195,28 @@ final class ClientMaterialImportController {
       !session.cancelled &&
       session.ownerId == materials.trustedOwnerId;
 
+  Future<void> _guard(FileSystemEntity entry) async {
+    try {
+      await pathGuard?.call(entry);
+    } catch (_) {
+      throw const MaterialImportException(MaterialImportErrorCode.readFailed);
+    }
+  }
+
   Future<void> _directory() async {
     final kind = await FileSystemEntity.type(
       stagingRoot.path,
       followLinks: false,
     );
     if (kind == FileSystemEntityType.notFound) {
+      if (pathGuard != null) {
+        throw const MaterialImportException(MaterialImportErrorCode.readFailed);
+      }
       await stagingRoot.create(recursive: true);
     } else if (kind != FileSystemEntityType.directory) {
       throw const MaterialImportException(MaterialImportErrorCode.readFailed);
     }
+    await _guard(stagingRoot);
   }
 
   File _file(String id, String suffix) =>
@@ -195,7 +230,8 @@ final class ClientMaterialImportController {
         final reply = await _native.invokeMapMethod<String, dynamic>('pick', {
           'requestId': session.sessionId,
         });
-        if (reply == null || reply['cancelled'] == true) return null;
+        if (!_owns(session) || reply == null || reply['cancelled'] == true)
+          return null;
         if (reply['requestId'] != session.sessionId ||
             reply['handle'] != session.sessionId ||
             reply['name'] is! String) {
@@ -229,26 +265,38 @@ final class ClientMaterialImportController {
       );
     }
     if (selected == null || !_owns(session)) return null;
-    if (await selected.length() > limits.sourceBytes) {
+    final length = await selected.length();
+    if (!_owns(session)) return null;
+    if (length > limits.sourceBytes) {
       throw const MaterialImportException(
         MaterialImportErrorCode.sourceTooLarge,
       );
     }
     final next = _file(session.sessionId, 'next');
     final ready = _file(session.sessionId, 'source');
-    if (await FileSystemEntity.type(next.path, followLinks: false) !=
-            FileSystemEntityType.notFound ||
-        await FileSystemEntity.type(ready.path, followLinks: false) !=
-            FileSystemEntityType.notFound) {
+    final nextType = await FileSystemEntity.type(next.path, followLinks: false);
+    if (!_owns(session)) return null;
+    final readyType = await FileSystemEntity.type(
+      ready.path,
+      followLinks: false,
+    );
+    if (!_owns(session)) return null;
+    if (nextType != FileSystemEntityType.notFound ||
+        readyType != FileSystemEntityType.notFound) {
       throw const MaterialImportException(MaterialImportErrorCode.readFailed);
     }
     await next.create(exclusive: true);
     session._ownedStages.add('next');
+    if (!_owns(session)) return null;
+    await _guard(next);
+    if (!_owns(session)) return null;
     RandomAccessFile? input, output;
     var total = 0;
     try {
       input = await selected.open();
+      if (!_owns(session)) return null;
       output = await next.open(mode: FileMode.writeOnly);
+      if (!_owns(session)) return null;
       while (true) {
         if (!_owns(session)) return null;
         final piece = await input.read(
@@ -261,7 +309,12 @@ final class ClientMaterialImportController {
             MaterialImportErrorCode.sourceTooLarge,
           );
         }
+        await _guard(stagingRoot);
+        if (!_owns(session)) return null;
+        await _guard(next);
+        if (!_owns(session)) return null;
         await output.writeFrom(piece);
+        if (!_owns(session)) return null;
         total += piece.length;
       }
       await output.flush();
@@ -274,12 +327,21 @@ final class ClientMaterialImportController {
     // placeholder, never an already existing foreign session's source.
     await ready.create(exclusive: true);
     session._ownedStages.add('source');
+    if (!_owns(session)) return null;
+    await _guard(ready);
+    if (!_owns(session)) return null;
+    await _guard(next);
+    if (!_owns(session)) return null;
     await next.rename(ready.path);
+    if (!_owns(session)) return null;
+    await _guard(ready);
+    if (!_owns(session)) return null;
     session._ownedStages.remove('next');
     return selected.uri.pathSegments.last;
   }
 
   Future<bool> _cancelNative(String id) async {
+    if (nativeIdleProbe != null) return nativeIdleProbe!(id);
     if (!Platform.isAndroid || selection != null) return true;
     try {
       var state = await _native.invokeMapMethod<String, dynamic>('cancel', {
@@ -297,7 +359,35 @@ final class ClientMaterialImportController {
     }
   }
 
-  Future<void> _cleanup(_ClientImportSession session) async {
+  Future<void> _cleanup(_ClientImportSession session) {
+    final active = session._cleaning;
+    if (active != null) return active;
+    final done = Completer<void>();
+    session._cleaning = done.future;
+    done.future.ignore();
+    Future<void>.sync(() => _cleanupOwned(session))
+        .then(
+          done.complete,
+          onError: (Object error, StackTrace stack) {
+            final code =
+                error is MaterialImportException &&
+                    error.code != MaterialImportErrorCode.sessionClosed &&
+                    error.code != MaterialImportErrorCode.cancelled
+                ? error.code
+                : MaterialImportErrorCode.readFailed;
+            done.completeError(MaterialImportException(code), stack);
+          },
+        )
+        .whenComplete(() {
+          if (identical(session._cleaning, done.future)) {
+            session._cleaning = null;
+          }
+        })
+        .ignore();
+    return done.future;
+  }
+
+  Future<void> _cleanupOwned(_ClientImportSession session) async {
     final id = session.sessionId;
     if (Platform.isAndroid && selection == null) {
       final state = await _native.invokeMapMethod<String, dynamic>('discard', {
@@ -308,6 +398,7 @@ final class ClientMaterialImportController {
       }
       return;
     }
+    await _guard(stagingRoot);
     for (final suffix in List<String>.of(session._ownedStages)) {
       final file = _file(id, suffix);
       final kind = await FileSystemEntity.type(file.path, followLinks: false);
@@ -317,6 +408,7 @@ final class ClientMaterialImportController {
             MaterialImportErrorCode.readFailed,
           );
         }
+        await _guard(file);
         if (removeStage != null) {
           await removeStage!(file);
         } else {
@@ -348,6 +440,8 @@ final class _ClientImportSession implements MaterialImportSession {
   ExtractedMaterial? _extracted;
   List<ArtifactRef>? _refs;
   Future<List<ArtifactRef>>? _preparing;
+  Future<void>? _finishing, _cleaning, _cancelling;
+  String? _finishingMaterial;
   String? _name;
 
   void begin() {
@@ -355,12 +449,13 @@ final class _ClientImportSession implements MaterialImportSession {
     preview.ignore();
   }
 
+  // A private per-session identity distinguishes our retirement signal from
+  // a public error with the same code raised by IO/native/cleanup.
+  final _retirementSignal = MaterialImportException(
+    MaterialImportErrorCode.sessionClosed,
+  );
   void _check() {
-    if (!controller._owns(this) || _finished) {
-      throw const MaterialImportException(
-        MaterialImportErrorCode.sessionClosed,
-      );
-    }
+    if (!controller._owns(this) || _finished) throw _retirementSignal;
   }
 
   void markCancelled() {
@@ -463,18 +558,21 @@ final class _ClientImportSession implements MaterialImportSession {
   }
 
   @override
-  Future<List<ArtifactRef>> prepareArtifacts() async {
+  Future<List<ArtifactRef>> prepareArtifacts() {
     _check();
-    if (_refs != null) return _refs!;
-    final inFlight = _preparing;
-    if (inFlight != null) return inFlight;
-    final work = _prepare();
-    _preparing = work;
-    try {
-      return await work;
-    } finally {
-      _preparing = null;
-    }
+    if (_refs != null) return Future.value(_refs!);
+    final active = _preparing;
+    if (active != null) return active;
+    final done = Completer<List<ArtifactRef>>();
+    _preparing = done.future;
+    done.future.ignore();
+    Future<List<ArtifactRef>>.sync(_prepare)
+        .then(done.complete, onError: done.completeError)
+        .whenComplete(() {
+          if (identical(_preparing, done.future)) _preparing = null;
+        })
+        .ignore();
+    return done.future;
   }
 
   Future<List<ArtifactRef>> _prepare() async {
@@ -485,6 +583,9 @@ final class _ClientImportSession implements MaterialImportSession {
         MaterialImportErrorCode.sessionClosed,
       );
     }
+    await controller._guard(controller.stagingRoot);
+    await controller._guard(controller._file(sessionId, 'source'));
+    _check();
     final bytes = await _boundedBytes(
       controller._file(sessionId, 'source'),
       controller.limits.sourceBytes,
@@ -525,7 +626,34 @@ final class _ClientImportSession implements MaterialImportSession {
   }
 
   @override
-  Future<void> finish({required String savedMaterialId}) async {
+  Future<void> finish({required String savedMaterialId}) {
+    _check();
+    final active = _finishing;
+    if (active != null) {
+      if (_finishingMaterial != savedMaterialId) {
+        throw const MaterialImportException(
+          MaterialImportErrorCode.bindingMismatch,
+        );
+      }
+      return active;
+    }
+    final done = Completer<void>();
+    _finishing = done.future;
+    _finishingMaterial = savedMaterialId;
+    done.future.ignore();
+    Future<void>.sync(() => _finish(savedMaterialId))
+        .then(done.complete, onError: done.completeError)
+        .whenComplete(() {
+          if (identical(_finishing, done.future)) {
+            _finishing = null;
+            _finishingMaterial = null;
+          }
+        })
+        .ignore();
+    return done.future;
+  }
+
+  Future<void> _finish(String savedMaterialId) async {
     _check();
     final refs = _refs;
     if (refs == null) {
@@ -554,33 +682,77 @@ final class _ClientImportSession implements MaterialImportSession {
       _check();
     }
     await controller._cleanup(this);
+    _check();
     _cleanupPending = false;
     _finished = true;
     if (identical(controller._active, this)) controller._active = null;
   }
 
   @override
-  Future<void> cancel() async {
-    if (_finished) return;
-    markCancelled();
-    final nativeIdle = await controller._cancelNative(sessionId);
-    if (!nativeIdle) {
-      throw const MaterialImportException(MaterialImportErrorCode.busy);
+  Future<void> cancel() {
+    final active = _cancelling;
+    if (active != null) return active;
+    if (_finished) return Future.value();
+    final done = Completer<void>();
+    _cancelling = done.future;
+    done.future.ignore();
+    Future<void>.sync(_cancelWork)
+        .then(done.complete, onError: done.completeError)
+        .whenComplete(() {
+          if (identical(_cancelling, done.future)) _cancelling = null;
+        })
+        .ignore();
+    return done.future;
+  }
+
+  Future<void> _cancelWork() async {
+    MaterialImportErrorCode? first;
+    void capture(Object error, {bool acceptedCancellation = false}) {
+      if (acceptedCancellation && identical(error, _retirementSignal)) return;
+      first ??= error is MaterialImportException
+          ? error.code
+          : MaterialImportErrorCode.readFailed;
     }
-    await _runDone.future;
-    final preparing = _preparing;
-    if (preparing != null) {
-      try {
-        await preparing;
-      } catch (_) {}
+
+    try {
+      markCancelled();
+    } catch (error) {
+      capture(error);
     }
+    // Native/guard failure never skips already accepted preview/prepare/finish.
+    try {
+      if (!await Future<bool>.sync(() => controller._cancelNative(sessionId))) {
+        first ??= MaterialImportErrorCode.busy;
+      }
+    } catch (error) {
+      capture(error);
+    }
+    final accepted = <Future<Object?>>[
+      _runDone.future,
+      ?_preparing,
+      ?_finishing,
+      ?_cleaning,
+    ];
+    await Future.wait(
+      accepted.map(
+        (f) =>
+            Future<void>.sync(() async {
+              await f;
+            }).catchError((Object error) {
+              capture(error, acceptedCancellation: true);
+            }),
+      ),
+    );
     try {
       await controller._cleanup(this);
-      _cleanupPending = false;
-    } catch (_) {
-      _cleanupPending = true;
-      throw const MaterialImportException(MaterialImportErrorCode.readFailed);
+    } catch (error) {
+      capture(error);
     }
+    if (first != null) {
+      _cleanupPending = true;
+      throw MaterialImportException(first!);
+    }
+    _cleanupPending = false;
     if (identical(controller._active, this)) controller._active = null;
   }
 }

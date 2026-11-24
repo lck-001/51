@@ -111,6 +111,12 @@
       "sha256": "54fe281bb65f1284b04cce0ac8eba90c95da2880699648d026af518040284353"
     },
     {
+      "path": "docs/reviews/C3-G1B-storage-factory-results.md",
+      "gitBlob": "c4fddca0b1b6cc0fe77cd53369a6f642438261e8",
+      "sizeBytes": 5083,
+      "sha256": "69286356f94c7ee22a384aa42b567e7dee91c3fd50d516d4f22fb26aa390338a"
+    },
+    {
       "path": "docs/reviews/M13-android-adapter-gate.md",
       "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
       "sizeBytes": 14127,
@@ -772,9 +778,9 @@
     },
     {
       "path": "packages/learning_playback/lib/src/file_playable_cache.dart",
-      "gitBlob": "11516e90fd7e547745f3d37cd44ee5d69eccdc0e",
-      "sizeBytes": 5641,
-      "sha256": "0a1eb3db59fdf5282cf4e927cd7bc4f9bbe237081e5e456e5fbfbfaf46aff8d0"
+      "gitBlob": "d885a637ef75f1bf3d939619e69dd9208b45caff",
+      "sizeBytes": 7943,
+      "sha256": "25ed02ed0438fafc660711a569b042d3b12c230ae6d300b6e84d44d701a53c3e"
     },
     {
       "path": "packages/learning_playback/lib/src/learning_playback_coordinator.dart",
@@ -2620,9 +2626,9 @@
     },
     {
       "path": "validation/playback-01/README.md",
-      "gitBlob": "11ccc48ff64990b499e6c67b7e3c29a650e0b00c",
-      "sizeBytes": 2637,
-      "sha256": "9453525e94bb31acced6a88e7336256081676f6d7f9aeb3b37a270cbc056cf3d"
+      "gitBlob": "002f05f6b0d18a81db300920c37ecfa81938bdc9",
+      "sizeBytes": 3275,
+      "sha256": "2294713ab080e220909b22d47f522e1ce63c6af8038f054013f1a24f62a3b5c5"
     },
     {
       "path": "validation/playback-01/analysis_options.yaml",
@@ -2776,9 +2782,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_application.dart",
-      "gitBlob": "79c9a37affe18c8a9ed3e3a76f09efe9c84c9716",
-      "sizeBytes": 12068,
-      "sha256": "bdc25eeb5d7f8ae1cf4a9c41df7b59559858a31583bfce23a3c09156c03bbe93"
+      "gitBlob": "94cd1076df00adcd270985d51e9a21b37a9fc551",
+      "sizeBytes": 11324,
+      "sha256": "f92e1e19bf83ab14b0001465bb31537ccde1fbc6da3f267b9bea2e61a238b1c7"
     },
     {
       "path": "validation/playback-01/lib/client_background_regression.dart",
@@ -2806,9 +2812,21 @@
     },
     {
       "path": "validation/playback-01/lib/client_material_import.dart",
-      "gitBlob": "3d718211bd52b040d62335be00ec8a2702fbbcdc",
-      "sizeBytes": 19400,
-      "sha256": "dd3ca12da295c6ac1448794090be75a3a12ae7e0af9ada31a73a7af3b132a7f8"
+      "gitBlob": "708e6957a18e217b24f5709a2aba27301a771203",
+      "sizeBytes": 25113,
+      "sha256": "1113f741985fc8556a04dc454ef19e1b59869e3f996f9b2c7983d862f1daf1e8"
+    },
+    {
+      "path": "validation/playback-01/lib/client_private_storage.dart",
+      "gitBlob": "c804b2874a05d23adf25cadd80d481bcdfb7ff19",
+      "sizeBytes": 9782,
+      "sha256": "abe637a688eccd7ea1410f95cf0d82f18705a9d134340a900e0e17204e20805d"
+    },
+    {
+      "path": "validation/playback-01/lib/client_retirement.dart",
+      "gitBlob": "5b26982d7ec049e98fd9d9f48ae3fadb14a9c639",
+      "sizeBytes": 1485,
+      "sha256": "1fa25851c06a09b4685755565c1d30fd50ef3f8c075252809c3df8ecda56cda0"
     },
     {
       "path": "validation/playback-01/lib/client_shutdown.dart",
@@ -2881,6 +2899,12 @@
       "gitBlob": "661a48d9931497f762cb90e8787e8fb78300807b",
       "sizeBytes": 10813,
       "sha256": "ab6bb6530121efd387cab9c9f570beb9000e8de2942146232783605c21508024"
+    },
+    {
+      "path": "validation/playback-01/test/client_private_storage_test.dart",
+      "gitBlob": "591e4acf97f93597dc7706b9833856047cc58d74",
+      "sizeBytes": 28933,
+      "sha256": "05de0536a423500e4f771897bb345ece60bb686efd65a8b9c44acbac2d76204a"
     },
     {
       "path": "validation/playback-01/test/client_shutdown_test.dart",

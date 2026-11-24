@@ -21,3 +21,14 @@ The audio_service path override is a documented fixed-version compatibility patc
 media_kit1.2.6 schedules native destruction five seconds after dispose returns. The pinned Adapter keeps the loop/serial queue alive for six seconds before a background host destroys its cached engine. This is a version-specific timer drain, not a guarantee that every hardware/resource operation completed. Timeouts remain unknown and do not authorize concurrent cancellation or automatic playback.
 
 Use only original synthetic fixtures in tests. Source code is versioned; SDKs, runtime receipts, credentials, audio and installable binaries remain local and ignored. Device-specific evidence is recorded separately from pure policy tests.
+
+## G1-B storage assembly
+
+`ClientPrivateStorage` owns the private lease, matching Stores, media module and
+borrowed bridge assembly. It guards Windows staging/cache paths and closes them
+only after real accepted work settles; its close steps check prerequisites and
+coalesce concurrent calls. See [the scoped evidence](../../docs/reviews/C3-G1B-storage-factory-results.md).
+Headless FileIO tests may use the official `--no-test-assets` option because they
+do not render assets/widgets; this is not an asset build or native UI result.
+Permission UI, media-state presentation and packaged-proxy/native acceptance
+remain subsequent stages.

@@ -9,13 +9,14 @@ import 'package:learning_core/learning_core.dart';
 import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:agent_bridge/agent_bridge.dart';
 
 import 'client_cached_engine.dart';
 import 'client_command_barrier.dart';
 import 'client_material_import.dart';
 import 'client_shutdown.dart';
+import 'client_private_storage.dart';
+import 'client_retirement.dart';
 import 'playback/android_audio_host.dart';
 import 'playback/foreground_host.dart';
 import 'playback/playback_host.dart';
@@ -26,6 +27,7 @@ import 'playback/windows_playback_host.dart';
 final class ClientApplicationOwner {
   ClientApplicationOwner._();
 
+  late final ClientPrivateStorage storage;
   late final FileMaterialStore materials;
   late final FileLearningStore learning;
   late final PlaybackHost host;
@@ -37,7 +39,7 @@ final class ClientApplicationOwner {
   late final LearningRootLock rootLock;
   late final AgentBridgeController agentBridge;
   StreamSubscription<AgentBridgeStatus>? _assistantEvents;
-  Future<void>? _assistantEventCancellation;
+  late final ClientRetirement _retirement;
   final assistantStatus = ValueNotifier<AgentBridgeStatus>(
     const AgentBridgeStatus(phase: AgentBridgePhase.disabled),
   );
@@ -50,52 +52,30 @@ final class ClientApplicationOwner {
     bool silentValidation = false,
   }) async {
     final owner = ClientApplicationOwner._();
-    FileMaterialStore? materials;
-    FileLearningStore? learning;
+    ClientPrivateStorage? storage;
     PlaybackHost? host;
     ClientCachedEngine? engine;
-    ClientMaterialImportController? materialImports;
-    LearningRootLock? rootLock;
-    AgentBridgeController? bridge;
+    LearningPlaybackCoordinator? coordinator;
+    ShiyuClientRuntime? runtime;
     try {
-      // This must precede both Store.open calls, including schema migration.
-      rootLock = await LearningRootLock.acquire(root);
-      owner.rootLock = rootLock;
-      final ownedRoot = rootLock.rootDirectory;
-      materials = await FileMaterialStore.open(
-        root: Directory('${ownedRoot.path}/materials'),
-        trustedOwnerId: 'local-device-only',
-      );
-      owner.materials = materials;
-      learning = await FileLearningStore.open(
-        root: Directory('${ownedRoot.path}/learning'),
-        materials: materials,
-      );
-      owner.learning = learning;
       final binaryDirectory = File(Platform.resolvedExecutable).parent;
-      bridge = AgentBridgeController.attach(
-        materials: materials,
-        candidates: learning,
-        privateDirectory: Directory('${ownedRoot.path}/agent_bridge'),
-        rootLock: rootLock,
+      storage = await ClientPrivateStorage.open(
+        root: root,
         proxyCommand: ['${binaryDirectory.path}/tools/shiyu_agent_proxy.exe'],
       );
-      owner.agentBridge = bridge;
-      owner.assistantStatus.value = bridge.current;
-      owner._assistantEvents = bridge.snapshots.listen((status) {
+      owner.storage = storage;
+      owner.rootLock = storage.rootLock;
+      owner.materials = storage.materials;
+      owner.learning = storage.learning;
+      owner.agentBridge = storage.agentBridge;
+      owner.materialImports = storage.materialImports;
+      final materials = storage.materials,
+          learning = storage.learning,
+          cache = storage.playableCache;
+      owner.assistantStatus.value = owner.agentBridge.current;
+      owner._assistantEvents = owner.agentBridge.snapshots.listen((status) {
         owner.assistantStatus.value = status;
       });
-      final temporary = await getTemporaryDirectory();
-      materialImports = ClientMaterialImportController(
-        materials: materials,
-        stagingRoot: Directory('${temporary.path}/material_import_v1'),
-      );
-      owner.materialImports = materialImports;
-      final cache = FilePlayableCache(
-        root: Directory('${ownedRoot.path}/playable-cache'),
-        materials: materials,
-        learning: learning,
-      );
       host = Platform.isAndroid
           ? await AndroidAudioHost.create()
           : Platform.isWindows
@@ -110,46 +90,53 @@ final class ClientApplicationOwner {
       );
       owner.engine = engine;
       owner.playback = PlaybackController(engine: engine, system: host);
-      owner.coordinator = LearningPlaybackCoordinator(
+      owner.coordinator = coordinator = LearningPlaybackCoordinator(
         learning: learning,
         playback: owner.playback,
         mediaCache: cache,
       );
-      owner.runtime = ShiyuClientRuntime.attach(
+      owner.runtime = runtime = ShiyuClientRuntime.attach(
         materials: materials,
         learning: learning,
         playback: owner.playback,
         coordinator: owner.coordinator,
       );
+      owner._retirement = ClientRetirement(
+        admissions: [
+          () {
+            owner.frozen.value = true;
+          },
+          () {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          owner.engine.retireOpenAdmission,
+          owner.storage.retire,
+        ],
+        drains: [
+          owner.runtime.detach,
+          owner.coordinator.close,
+          owner.storage.drainWriters,
+          () {
+            final events = owner._assistantEvents;
+            owner._assistantEvents = null;
+            return events?.cancel() ?? Future<void>.value();
+          },
+          () {
+            owner.assistantStatus.value = owner.agentBridge.current;
+          },
+        ],
+      );
       owner.shutdown = ClientShutdown(
-        freezeBusiness: () {
-          owner.frozen.value = true;
-          FocusManager.instance.primaryFocus?.unfocus();
-          owner.engine.retireOpenAdmission();
-          owner.materialImports.retire();
-          owner._assistantEventCancellation = owner._assistantEvents?.cancel();
-          owner._assistantEvents = null;
-          owner.agentBridge.retire();
-          owner.assistantStatus.value = owner.agentBridge.current;
-        },
-        retireBookkeeping: () async {
-          await Future.wait([
-            owner.runtime.detach(),
-            owner.coordinator.close(),
-            owner.materialImports.close(),
-            owner.agentBridge.close(),
-            if (owner._assistantEventCancellation != null)
-              owner._assistantEventCancellation!,
-          ]);
-        },
+        freezeBusiness: owner._retirement.retire,
+        retireBookkeeping: () => owner._retirement.completion,
         stopAndRelease: owner._stopAndReleaseNative,
-        closeLearning: owner.learning.close,
-        closeMaterials: owner.materials.close,
+        closeLearning: owner.storage.closeLearning,
+        closeMaterials: owner.storage.closeMaterials,
         closeHost: owner.host.close,
         exitApplication: SystemNavigator.pop,
         // Store close success flags live in ClientShutdown, so a retry of this
         // OS release can never close non-idempotent Stores a second time.
-        afterStoresClosed: owner.rootLock.release,
+        afterStoresClosed: owner.storage.releaseAuthority,
       );
       if (host is AndroidAudioHost) {
         host.beforeBackgroundStop = engine.native.releaseNative;
@@ -173,39 +160,28 @@ final class ClientApplicationOwner {
       host.bind(owner.playback);
       return owner;
     } catch (_) {
-      // Startup has no selected media and cannot have started playback. Best
-      // effort cleanup is not reported as confirmed hardware release.
-      var authoritySafeToRelease = true;
-      try {
-        await bridge?.close();
-      } catch (_) {
-        authoritySafeToRelease = false;
-      }
-      try {
-        await owner._assistantEvents?.cancel();
-      } catch (_) {}
-      try {
-        await materialImports?.close();
-      } catch (_) {}
-      try {
-        await engine?.native.dispose();
-      } catch (_) {}
-      try {
-        await host?.close();
-      } catch (_) {}
-      try {
-        await learning?.close();
-      } catch (_) {
-        authoritySafeToRelease = false;
-      }
-      try {
-        await materials?.close();
-      } catch (_) {
-        authoritySafeToRelease = false;
-      }
-      if (authoritySafeToRelease) {
+      // Headless storage safety is symmetric. No native acknowledgement is
+      // reinterpreted as a Store flush, and a failed cleanup retains authority.
+      if (storage != null) {
+        final current = storage;
+        final cleanup = ClientRetirement(
+          admissions: [
+            if (engine != null) engine.retireOpenAdmission,
+            current.retire,
+          ],
+          drains: [
+            if (runtime != null) runtime.detach,
+            if (coordinator != null) coordinator.close,
+            current.drainWriters,
+            if (owner._assistantEvents != null) owner._assistantEvents!.cancel,
+            if (engine != null) engine.native.dispose,
+            if (host != null) host.close,
+          ],
+        );
+        cleanup.retire();
         try {
-          await rootLock?.release();
+          await cleanup.completion;
+          await current.closeStoresAndAuthority();
         } catch (_) {}
       }
       rethrow;
