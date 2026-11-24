@@ -105,6 +105,12 @@
       "sha256": "df1d63f8296af758a845c25111805ed9c7c1d91878fe8cf6d5323a77b1c04cd0"
     },
     {
+      "path": "docs/reviews/C3-G1A-private-root-results.md",
+      "gitBlob": "7362143b5ac20841c3470519090b3ffb77636654",
+      "sizeBytes": 4547,
+      "sha256": "54fe281bb65f1284b04cce0ac8eba90c95da2880699648d026af518040284353"
+    },
+    {
       "path": "docs/reviews/M13-android-adapter-gate.md",
       "gitBlob": "3c0253846d0a9a8b050e548e18fa60649303e546",
       "sizeBytes": 14127,
@@ -292,9 +298,9 @@
     },
     {
       "path": "packages/agent_bridge/README.md",
-      "gitBlob": "1528e4f8b1daa64acc81964d5e36f9ba5591a259",
-      "sizeBytes": 9425,
-      "sha256": "9bf7a1e63b891be06e1bda3ededa7a0c1b7187f508edbc147365188322d959ad"
+      "gitBlob": "40528b5130dad621013a97f9efdb2869b66cff0b",
+      "sizeBytes": 10010,
+      "sha256": "160021f92e89bc59c05f3b4ec26058ed0286ba608ee82faa6ec69b5e679e2097"
     },
     {
       "path": "packages/agent_bridge/bin/shiyu_agent_proxy.dart",
@@ -313,6 +319,12 @@
       "gitBlob": "3473053aec0bfe8b7b6decfca9aee6f6709f41b2",
       "sizeBytes": 105,
       "sha256": "6808ceb40b75e6f6df0cdbe3d0a8125a51e5476ac87a9d382e49820998998d72"
+    },
+    {
+      "path": "packages/agent_bridge/lib/private_storage.dart",
+      "gitBlob": "a6d5cbbd9910571caed7f7a5da09a74ee90526c4",
+      "sizeBytes": 54,
+      "sha256": "bf6208e8a03e8a20724073f6bb9d33bc90a3e5ea03c7ea00a9f698ffd52bb855"
     },
     {
       "path": "packages/agent_bridge/lib/src/bounded_stdio_writer.dart",
@@ -399,6 +411,12 @@
       "sha256": "8091df91fffd97854d00347606a7ecaec1e838b3e8f7366f630c8faefdaf3811"
     },
     {
+      "path": "packages/agent_bridge/lib/src/windows_private_app_root.dart",
+      "gitBlob": "c88184867dd8237f466b9400fab2d615fde8030e",
+      "sizeBytes": 22346,
+      "sha256": "8cfeccf628b0930341135b550a3ee2fcf7022ca4b123efc44434ec95d1218178"
+    },
+    {
       "path": "packages/agent_bridge/lib/src/wire.dart",
       "gitBlob": "0b30cad09127bd1bd87e9b889499c4fd1af8d1a6",
       "sizeBytes": 4980,
@@ -481,6 +499,12 @@
       "gitBlob": "3b4ade8bedea94dddde79fe7dd8fb772e686f99f",
       "sizeBytes": 23342,
       "sha256": "e6f1603101581f6e4ff6fa5733a820ee12d72a68d4394ad034258663b65f1408"
+    },
+    {
+      "path": "packages/agent_bridge/test/private_storage_local.dart",
+      "gitBlob": "b1e40523aefe22699a1b67c430a2e169cbc948ef",
+      "sizeBytes": 17263,
+      "sha256": "35f44d2aa4ef2e58e6944c912b42efe46c93de9548e15d152cdddb9f1a75da57"
     },
     {
       "path": "packages/agent_bridge/test/root_lock_independent.dart",

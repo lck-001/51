@@ -151,3 +151,13 @@ cannot send another data stage. Source cancellation uses a single active ticket,
 not per-event listeners on a shared pending Future. See [SDK evidence](../../docs/reviews/B2C2C-sdk-results.md)
 and the two public SDK regression scripts. This does not assemble the App UI or
 constitute pronunciation, native-device or human acceptance.
+
+## Windows storage-root foundation
+
+`package:agent_bridge/private_storage.dart` exposes the trusted App storage
+lease, separately from page/SDK contracts. It creates private roots atomically,
+pins canonical directory identity, checks inheritance propagation without
+changing existing ACLs, and owns its RootLock/pins. Protected and inherited
+private objects are distinct evidence classes; the older strict verifier is
+not relaxed. See [G1-A evidence](../../docs/reviews/C3-G1A-private-root-results.md).
+This foundation does not open Stores or assemble the App/import/cache lifecycle.
