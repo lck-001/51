@@ -359,6 +359,22 @@ struct WindowsSmtc::Impl {
     enabled = active;
   }
 
+  // Both call sites run on this HWND's owning UI thread. Never accept a
+  // caller-supplied ticket or wrap the monotonically increasing native value.
+  std::optional<int64_t> EnsureCloseTicket() noexcept {
+    if (stopped || !client_ready || close_ready || !IsWindow(window)) {
+      return std::nullopt;
+    }
+    if (!close_pending) {
+      if (close_ticket == std::numeric_limits<int64_t>::max()) {
+        return std::nullopt;
+      }
+      ++close_ticket;
+      close_pending = true;
+    }
+    return close_ticket;
+  }
+
   void HandleCall(const flutter::MethodCall<EncodableValue>& call,
                   std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
     try {
@@ -375,6 +391,27 @@ struct WindowsSmtc::Impl {
         result->Success(EncodableValue(Status()));
       } else if (call.method_name() == "retire") {
         Retire();
+        result->Success();
+      } else if (call.method_name() == "beginProgrammaticClose") {
+        if (stopped || !client_ready || close_ready || !IsWindow(window)) {
+          result->Error("close_unavailable"); return;
+        }
+        if (!close_pending && close_ticket == std::numeric_limits<int64_t>::max()) {
+          result->Error("close_ticket_exhausted"); return;
+        }
+        const auto ticket = EnsureCloseTicket();
+        if (!ticket) { result->Error("close_unavailable"); return; }
+        result->Success(EncodableValue(EncodableMap{
+            {EncodableValue("ticket"), EncodableValue(*ticket)}}));
+      } else if (call.method_name() == "detachDrainedFailedStartup") {
+        if (stopped || !client_ready || close_ready || !IsWindow(window)) {
+          result->Error("close_unavailable"); return;
+        }
+        // Explicit AppOwner failed-startup cleanup boundary only. Generic
+        // Retire/Stop must retain the ordinary WM_CLOSE safety handshake.
+        Retire();
+        client_ready = false;
+        close_pending = false;
         result->Success();
       } else if (call.method_name() == "closeReady") {
         const auto ticket = data ? Number(Field(*data, "ticket")) : std::nullopt;
@@ -425,10 +462,16 @@ struct WindowsSmtc::Impl {
     if (message == kDrainCommands) { Drain(); *result = 0; return true; }
     if (message == WM_CLOSE && client_ready && !close_ready) {
       if (!close_pending) {
-        close_pending = true;
-        ++close_ticket;
+        // Exhaustion must keep the gate closed; never let the outer
+        // exception fallback dispatch WM_CLOSE to DefWindowProc.
+        if (close_ticket == std::numeric_limits<int64_t>::max()) {
+          *result = 0;
+          return true;
+        }
+        const auto ticket = EnsureCloseTicket();
+        if (!ticket) { *result = 0; return true; }
         channel->InvokeMethod("windowCloseRequested", std::make_unique<EncodableValue>(
-            EncodableMap{{EncodableValue("ticket"), EncodableValue(close_ticket)}}));
+            EncodableMap{{EncodableValue("ticket"), EncodableValue(*ticket)}}));
       }
       *result = 0;
       return true;

@@ -133,7 +133,7 @@ final class ClientApplicationOwner {
         closeLearning: owner.storage.closeLearning,
         closeMaterials: owner.storage.closeMaterials,
         closeHost: owner.host.close,
-        exitApplication: SystemNavigator.pop,
+        exitApplication: owner._exitAfterDrain,
         // Store close success flags live in ClientShutdown, so a retry of this
         // OS release can never close non-idempotent Stores a second time.
         afterStoresClosed: owner.storage.releaseAuthority,
@@ -182,10 +182,33 @@ final class ClientApplicationOwner {
         try {
           await cleanup.completion;
           await current.closeStoresAndAuthority();
+          if (host is WindowsPlaybackHost) {
+            if (!current.writersDrained ||
+                !current.authorityReleased ||
+                current.rootLock.isHeld) {
+              throw StateError('failed_startup_cleanup_unconfirmed');
+            }
+            await host.detachDrainedFailedStartup();
+          }
         } catch (_) {}
       }
       rethrow;
     }
+  }
+
+  Future<void> _exitAfterDrain() async {
+    final currentHost = host;
+    if (currentHost is WindowsPlaybackHost) {
+      if (!_stopped(playback.current) ||
+          !storage.writersDrained ||
+          !storage.authorityReleased ||
+          rootLock.isHeld) {
+        throw StateError('windows_exit_drain_unconfirmed');
+      }
+      await currentHost.requestProgrammaticExitAfterDrain();
+      return;
+    }
+    await SystemNavigator.pop();
   }
 
   void retireCommands() {

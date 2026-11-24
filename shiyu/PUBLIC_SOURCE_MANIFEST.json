@@ -2800,9 +2800,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_application.dart",
-      "gitBlob": "94cd1076df00adcd270985d51e9a21b37a9fc551",
-      "sizeBytes": 11324,
-      "sha256": "f92e1e19bf83ab14b0001465bb31537ccde1fbc6da3f267b9bea2e61a238b1c7"
+      "gitBlob": "003ea8755e4cda0c378c7a6e7fb27f5a84a190bd",
+      "sizeBytes": 12103,
+      "sha256": "8bef4d3008cb966af93b32a99400b198f7dc58c3a3a3cad77a52e28b3dc2485c"
     },
     {
       "path": "validation/playback-01/lib/client_background_regression.dart",
@@ -2884,9 +2884,9 @@
     },
     {
       "path": "validation/playback-01/lib/playback/windows_playback_host.dart",
-      "gitBlob": "7fda491b302a724226f94e6f23b4276ca27c10dc",
-      "sizeBytes": 17357,
-      "sha256": "d197bef87f6cef3e74627a170f4fd654fd4ca86aea10c59456825f4d3e08f4e1"
+      "gitBlob": "0d46ea78cf19b6c30c0ec17593043bbf58a7b700",
+      "sizeBytes": 19882,
+      "sha256": "b7c85142560fb590fe08cb265dae75dd84ad05697ddee440659a781659a55225"
     },
     {
       "path": "validation/playback-01/pubspec.lock",
@@ -2965,6 +2965,12 @@
       "gitBlob": "9a5817ea3c93d561b2c8c2cdf6564026fad2637b",
       "sizeBytes": 6058,
       "sha256": "2767f02f1dfb6807cccb0433e69b4fb80d2453c23be72cbf0e767238061bcf5d"
+    },
+    {
+      "path": "validation/playback-01/test/windows_playback_host_exit_test.dart",
+      "gitBlob": "14fcb1599e48dc4c96c16104f88013c3ea08689b",
+      "sizeBytes": 10591,
+      "sha256": "c4c1db11ea8fbee08ae9df94fb2ee23c749def4b190a5c37e48b070e9a5d8cbd"
     },
     {
       "path": "validation/playback-01/windows/.gitignore",
@@ -3076,9 +3082,9 @@
     },
     {
       "path": "validation/playback-01/windows/runner/windows_smtc.cpp",
-      "gitBlob": "2201da3232f24dfb1adf800d843c24fd0698d6aa",
-      "sizeBytes": 19176,
-      "sha256": "8df48c6f5bf1d4fbb3f5e78ec6a7a9c7eeb727df95f5cab380094583925c9197"
+      "gitBlob": "7026a9fe51a79a016ffa62c7cb3d06bc75f91dd3",
+      "sizeBytes": 21069,
+      "sha256": "ccf2e5c2fd1545b0aee0fadd91dd7af8b9fc08caf65f66b08e5bf201e3c32ff3"
     },
     {
       "path": "validation/playback-01/windows/runner/windows_smtc.h",

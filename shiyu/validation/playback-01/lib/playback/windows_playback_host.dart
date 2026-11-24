@@ -16,6 +16,8 @@ final class WindowsPlaybackHost implements PlaybackHost {
   PlaybackToken? _publishedToken;
   Future<void> _publishTail = Future.value();
   Timer? _probeTimer;
+  Future<void>? _closeFuture, _programmaticExit, _failedStartupDetach;
+  bool _closeCompleted = false;
   bool _supported = false,
       _foreground = true,
       _retired = true,
@@ -141,7 +143,9 @@ final class WindowsPlaybackHost implements PlaybackHost {
       'genericMetadata': flag('genericMetadata'),
       'metadataCleared': flag('metadataCleared'),
       'metadataReadable': flag('metadataReadable'),
-      'metadataErrorCode': native?['metadataErrorCode'] is int ? native!['metadataErrorCode'] as int : null,
+      'metadataErrorCode': native?['metadataErrorCode'] is int
+          ? native!['metadataErrorCode'] as int
+          : null,
       'playbackStatus': statusName,
       'nativePlaybackStatusCode': status is int && status >= 0 && status <= 4
           ? status
@@ -487,8 +491,9 @@ final class WindowsPlaybackHost implements PlaybackHost {
   }
 
   @override
-  Future<void> close() async {
-    if (_closed || _closing) return;
+  Future<void> close() => _closeFuture ??= _close();
+
+  Future<void> _close() async {
     _closing = true;
     _probeTimer?.cancel();
     await _publishTail.timeout(const Duration(seconds: 15));
@@ -500,5 +505,65 @@ final class WindowsPlaybackHost implements PlaybackHost {
     _closed = true;
     _native.setMethodCallHandler(null);
     await _events.close();
+    _closeCompleted = true;
+  }
+
+  /// Only the application owner may call this after real Stop, Store drain and
+  /// authority release. Closing SMTC publication is not that storage proof.
+  /// Keep the exact operation even when a caller times out: timeout cannot
+  /// cancel native work or authorize a second ticket/WM_CLOSE.
+  Future<void> requestProgrammaticExitAfterDrain() {
+    if (!_closeCompleted ||
+        !_closed ||
+        !_retired ||
+        _failedStartupDetach != null) {
+      return Future.error(StateError('windows_host_close_unconfirmed'));
+    }
+    final existing = _programmaticExit;
+    if (existing != null) return existing;
+    final attempt = _requestProgrammaticExit();
+    _programmaticExit = attempt;
+    attempt.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace _) {
+        // Native explicitly says PostMessage failed and restored its guard.
+        // Only a later explicit request may start a new ticket. This observer
+        // never retries, and the old Future retains its original failure.
+        if (error is PlatformException &&
+            error.code == 'close_post_failed' &&
+            identical(_programmaticExit, attempt)) {
+          _programmaticExit = null;
+        }
+      },
+    );
+    return attempt;
+  }
+
+  Future<void> _requestProgrammaticExit() async {
+    final result = await _native.invokeMapMethod<String, dynamic>(
+      'beginProgrammaticClose',
+    );
+    final ticket = result?['ticket'];
+    if (ticket is! int || ticket <= 0) {
+      throw StateError('windows_close_ticket_invalid');
+    }
+    // PlatformException(close_post_failed) is a known native rejection; a
+    // pending Future/caller timeout remains unknown. Neither is physical exit.
+    // Unknown outcomes stay cached and never authorize a fresh native ticket.
+    await _native.invokeMethod<void>('closeReady', {'ticket': ticket});
+  }
+
+  /// Failed startup only: AppOwner must first await every cleanup and close
+  /// Stores/authority successfully. No caller-provided "drained" flag is used.
+  Future<void> detachDrainedFailedStartup() {
+    if (!_closeCompleted ||
+        !_closed ||
+        !_retired ||
+        _programmaticExit != null) {
+      return Future.error(StateError('windows_host_close_unconfirmed'));
+    }
+    return _failedStartupDetach ??= _native.invokeMethod<void>(
+      'detachDrainedFailedStartup',
+    );
   }
 }
