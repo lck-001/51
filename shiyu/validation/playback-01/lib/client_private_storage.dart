@@ -9,6 +9,17 @@ import 'package:material_core/material_core.dart';
 
 import 'client_material_import.dart';
 
+/// OS cache location supplied by the Android App owner, never by a document or
+/// external assistant. The suffix is shared with BoundedDocumentImport.kt.
+final class AndroidMaterialImportCache {
+  AndroidMaterialImportCache({required Directory cacheDirectory})
+    : _cacheDirectory = cacheDirectory.absolute;
+
+  final Directory _cacheDirectory;
+  Directory get stagingRoot =>
+      Directory('${_cacheDirectory.path}/material_import_v1');
+}
+
 enum ClientStorageErrorCode {
   notDrained,
   learningNotClosed,
@@ -63,7 +74,20 @@ final class ClientPrivateStorage {
     MaterialFileSelection? selection,
     MaterialStageRemoval? removeStage,
     MaterialNativeIdleProbe? nativeIdleProbe,
+    AndroidMaterialImportCache? androidImportCache,
   }) async {
+    // Reject a misrouted dependency before acquiring a lock or creating Stores.
+    if (androidImportCache != null &&
+        (!Platform.isAndroid || selection != null)) {
+      throw ArgumentError(
+        'Android import cache requires native Android selection',
+      );
+    }
+    if (Platform.isAndroid && selection == null && androidImportCache == null) {
+      throw ArgumentError(
+        'Native Android import requires its OS cache location',
+      );
+    }
     WindowsPrivateAppRootLease? lease;
     LearningRootLock? lock;
     FileMaterialStore? materials;
@@ -137,7 +161,9 @@ final class ClientPrivateStorage {
       );
       imports = ClientMaterialImportController(
         materials: materials,
-        stagingRoot: child('material-import-staging'),
+        stagingRoot: Platform.isAndroid && selection == null
+            ? androidImportCache!.stagingRoot
+            : child('material-import-staging'),
         selection: selection,
         removeStage: removeStage,
         nativeIdleProbe: nativeIdleProbe,

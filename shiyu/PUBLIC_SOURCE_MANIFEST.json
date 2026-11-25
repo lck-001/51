@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "60bd19e37f037ede828b1cd7bbd3a3831092e927",
-      "sizeBytes": 8711,
-      "sha256": "748cc7052b7de9d83353583dc5b64fa0d0fad8da0d68102d4f98e9c82869f4e9"
+      "gitBlob": "723a4b5ab9150193204e4aac5d312224a7e6cea7",
+      "sizeBytes": 9203,
+      "sha256": "5fb2743980f5d215c3f86d5a6c9e3323f5ffa001f480c81094e7a95a5dedd4e1"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -313,6 +313,12 @@
       "gitBlob": "3f8a22945e4ca7937f5181834be875fc312f8c2c",
       "sizeBytes": 12846,
       "sha256": "fd5399fde69dbe809b65b96ed4d0805ea8275733f6ef9a1b4f978bd06164f060"
+    },
+    {
+      "path": "docs/reviews/QA-20261125-functional-acceptance.md",
+      "gitBlob": "dc88c861486214ef09d0c895e09b15a2607203ff",
+      "sizeBytes": 5194,
+      "sha256": "69204392fecfb9faeb847f2dd067dc624d121c56282e58e51a1256e38432f3f7"
     },
     {
       "path": "packages/agent_bridge/README.md",
@@ -2806,9 +2812,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_application.dart",
-      "gitBlob": "003ea8755e4cda0c378c7a6e7fb27f5a84a190bd",
-      "sizeBytes": 12103,
-      "sha256": "8bef4d3008cb966af93b32a99400b198f7dc58c3a3a3cad77a52e28b3dc2485c"
+      "gitBlob": "0dd13a8bc1bc320dc2efb6f28b1f1e51af61ee78",
+      "sizeBytes": 12387,
+      "sha256": "3714e7d56ee40b4778187867f5904670d1de01f0fc5f5bbfba8990cbc53b5bf2"
     },
     {
       "path": "validation/playback-01/lib/client_background_regression.dart",
@@ -2842,9 +2848,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_private_storage.dart",
-      "gitBlob": "c804b2874a05d23adf25cadd80d481bcdfb7ff19",
-      "sizeBytes": 9782,
-      "sha256": "abe637a688eccd7ea1410f95cf0d82f18705a9d134340a900e0e17204e20805d"
+      "gitBlob": "7a05a5297ea5246026ffea831cd57a3fa01a02c3",
+      "sizeBytes": 10847,
+      "sha256": "e37358461b13920a5baa5a0c2b8c774dcfe6014ab9b2e01e707e0196efedc135"
     },
     {
       "path": "validation/playback-01/lib/client_retirement.dart",
@@ -2911,6 +2917,12 @@
       "gitBlob": "a881e33fcbfefe78bc7b707d1e8aa14b63452c7e",
       "sizeBytes": 1726,
       "sha256": "9e53da54151a7ed466035ce53024057f21bfac85141662f7f71eaba424b30455"
+    },
+    {
+      "path": "validation/playback-01/test/android_import_cache_contract_test.dart",
+      "gitBlob": "591b6b1460b22c4555b554d9f3959ee1b68761d6",
+      "sizeBytes": 1678,
+      "sha256": "d2d57739a456c8734b84a8b19505b821a85128fa5a1b0181a31cd9cc9f398b60"
     },
     {
       "path": "validation/playback-01/test/client_import_provenance_test.dart",

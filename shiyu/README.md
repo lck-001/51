@@ -112,3 +112,7 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 受限媒体通道与 SDK 已完成各自验收；[Windows 私有存储工厂](docs/reviews/C3-G1B-storage-factory-results.md)接入同一组材料、学习、缓存和关闭链。[双许可授权与媒体候选界面](docs/reviews/C3-G2-assistant-media-ui-results.md)通过固定源码的独立 50 项 Widget/FileStore 检查：原文读取与音频接收分别授权，确认后不自动选中或播放，保留底部词卡及大字小屏可访问性。
 
 [G3 Windows组合记录](docs/reviews/C3-G3-windows-integration-results.md)补充实际代理/SDK/同Store媒体链、同A重开、静音播放和窗口关闭：专用v4的空资料与完整合成链路均自然exit0，四组运行证据及实物已通过独立有限验收。下一步准备普通Windows人工体验包；专用探针不等于普通界面验收，不外推四端、真实生成或专业发音评测。未合并主分支或发布。
+
+## 2026-11-25 普通客户端自验
+
+[实际功能验收](docs/reviews/QA-20261125-functional-acceptance.md)：普通Windows真实渲染控件的材料、版本、许可、候选和静音播放链已实测；Android真实系统选择器暴露暂存目录错配P1，修复后TXT/DOCX、空文件、取消和冷启来源校验通过。仍有顶部视觉与Windows后台前台异常，完整自动学习、评分、复习看板等尚未接通；整体产品不判通过，未灰度或上线。

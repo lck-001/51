@@ -10,6 +10,7 @@ import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
 import 'package:playback_core/playback_core.dart';
 import 'package:agent_bridge/agent_bridge.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'client_cached_engine.dart';
 import 'client_command_barrier.dart';
@@ -59,9 +60,15 @@ final class ClientApplicationOwner {
     ShiyuClientRuntime? runtime;
     try {
       final binaryDirectory = File(Platform.resolvedExecutable).parent;
+      final androidImportCache = Platform.isAndroid
+          ? AndroidMaterialImportCache(
+              cacheDirectory: await getTemporaryDirectory(),
+            )
+          : null;
       storage = await ClientPrivateStorage.open(
         root: root,
         proxyCommand: ['${binaryDirectory.path}/tools/shiyu_agent_proxy.exe'],
+        androidImportCache: androidImportCache,
       );
       owner.storage = storage;
       owner.rootLock = storage.rootLock;
