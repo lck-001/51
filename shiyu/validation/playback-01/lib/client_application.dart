@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'client_cached_engine.dart';
 import 'client_command_barrier.dart';
+import 'client_preview_frame.dart';
 import 'client_material_import.dart';
 import 'client_shutdown.dart';
 import 'client_private_storage.dart';
@@ -321,26 +322,6 @@ class _ShiyuLocalClientState extends State<ShiyuLocalClient>
       ),
       child: child,
     ),
-    home: Column(
-      children: [
-        SafeArea(
-          bottom: false,
-          child: Material(
-            color: ShiyuClientTokens.hint,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: ValueListenableBuilder<String?>(
-                valueListenable: widget.owner.notice,
-                builder: (_, notice, _) => Text(
-                  notice ?? '本机预览 · 仅此设备保存，尚未接入翻译、配音和发音评分',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Expanded(child: _shell),
-      ],
-    ),
+    home: ClientPreviewFrame(notice: widget.owner.notice, child: _shell),
   );
 }

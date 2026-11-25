@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "723a4b5ab9150193204e4aac5d312224a7e6cea7",
-      "sizeBytes": 9203,
-      "sha256": "5fb2743980f5d215c3f86d5a6c9e3323f5ffa001f480c81094e7a95a5dedd4e1"
+      "gitBlob": "975f2d5cb0ede9361e598ed08aa47edf52631249",
+      "sizeBytes": 9522,
+      "sha256": "3076dbe725720465f017ab7f1f5891196a958cd276c8c39c3eee400e93a8bb52"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -319,6 +319,12 @@
       "gitBlob": "dc88c861486214ef09d0c895e09b15a2607203ff",
       "sizeBytes": 5194,
       "sha256": "69204392fecfb9faeb847f2dd067dc624d121c56282e58e51a1256e38432f3f7"
+    },
+    {
+      "path": "docs/reviews/QA-20261125-preview-banner-fix.md",
+      "gitBlob": "bcb5e4392a2a97c3d2f55247049446b292d580c7",
+      "sizeBytes": 3939,
+      "sha256": "141a6ace74f848851250d473f465a1f216378122a84889a5358811ebcef0cf73"
     },
     {
       "path": "packages/agent_bridge/README.md",
@@ -2812,9 +2818,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_application.dart",
-      "gitBlob": "0dd13a8bc1bc320dc2efb6f28b1f1e51af61ee78",
-      "sizeBytes": 12387,
-      "sha256": "3714e7d56ee40b4778187867f5904670d1de01f0fc5f5bbfba8990cbc53b5bf2"
+      "gitBlob": "3678f30a483904c8e2074000ed2bfe6150dd584d",
+      "sizeBytes": 11792,
+      "sha256": "f6fec928b1f546fffdb37b659a4b1d6e7f1617ee2c02cb38c2e21f5dc2de71bf"
     },
     {
       "path": "validation/playback-01/lib/client_background_regression.dart",
@@ -2845,6 +2851,12 @@
       "gitBlob": "708e6957a18e217b24f5709a2aba27301a771203",
       "sizeBytes": 25113,
       "sha256": "1113f741985fc8556a04dc454ef19e1b59869e3f996f9b2c7983d862f1daf1e8"
+    },
+    {
+      "path": "validation/playback-01/lib/client_preview_frame.dart",
+      "gitBlob": "f23337d8eab05a2f06feb871fd0f6eee60274a82",
+      "sizeBytes": 1285,
+      "sha256": "e61591de186a125df679fc38f72e11c7cd37b63e1f0eb881cfaa0a525f3a531d"
     },
     {
       "path": "validation/playback-01/lib/client_private_storage.dart",
@@ -2935,6 +2947,12 @@
       "gitBlob": "661a48d9931497f762cb90e8787e8fb78300807b",
       "sizeBytes": 10813,
       "sha256": "ab6bb6530121efd387cab9c9f570beb9000e8de2942146232783605c21508024"
+    },
+    {
+      "path": "validation/playback-01/test/client_preview_frame_test.dart",
+      "gitBlob": "7d7602e005a858f709c3b8324be32c301bd7937a",
+      "sizeBytes": 5583,
+      "sha256": "4d9de1644fd1ea0f8ae0629e3629dcdc675ada817d40e0280f04a8416dcb7101"
     },
     {
       "path": "validation/playback-01/test/client_private_storage_test.dart",
