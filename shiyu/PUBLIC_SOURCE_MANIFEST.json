@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "975f2d5cb0ede9361e598ed08aa47edf52631249",
-      "sizeBytes": 9522,
-      "sha256": "3076dbe725720465f017ab7f1f5891196a958cd276c8c39c3eee400e93a8bb52"
+      "gitBlob": "87b122fa0e5b20420602ccdfe4b436908c179c15",
+      "sizeBytes": 9831,
+      "sha256": "ec9181de7a47ac3df37ecabfd335e7b705d417bde6dde2cefda045644a329d55"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -325,6 +325,12 @@
       "gitBlob": "bcb5e4392a2a97c3d2f55247049446b292d580c7",
       "sizeBytes": 3939,
       "sha256": "141a6ace74f848851250d473f465a1f216378122a84889a5358811ebcef0cf73"
+    },
+    {
+      "path": "docs/reviews/QA-20261126-ordinary-ui-startup-gates.md",
+      "gitBlob": "c53e8027b85e17a98aefb520eb8522b44ef00b0e",
+      "sizeBytes": 2686,
+      "sha256": "3c234543b0c8ec1b9d27235eb599e4304e4340aaaf453dca208291dccf7cc2bd"
     },
     {
       "path": "packages/agent_bridge/README.md",
@@ -2818,9 +2824,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_application.dart",
-      "gitBlob": "3678f30a483904c8e2074000ed2bfe6150dd584d",
-      "sizeBytes": 11792,
-      "sha256": "f6fec928b1f546fffdb37b659a4b1d6e7f1617ee2c02cb38c2e21f5dc2de71bf"
+      "gitBlob": "c7d29dd9cb63aa531e298f8adc2cc11c979c31db",
+      "sizeBytes": 15974,
+      "sha256": "c358ac8e81d5ae444007989b226f034b2ff51ef64448472c1d3bfccc05a88926"
     },
     {
       "path": "validation/playback-01/lib/client_background_regression.dart",
@@ -2842,9 +2848,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_main.dart",
-      "gitBlob": "9952742363535223aae3bafca9cb97c873135902",
-      "sizeBytes": 1334,
-      "sha256": "f9c0374529df05e8fca2f495a7dd40d2b353452deff1972385bf867cb3e286a1"
+      "gitBlob": "59aed4e709b8b656f456bde8e030588e910b8be8",
+      "sizeBytes": 3628,
+      "sha256": "fae80f3eaaf24122c6e8d9fc4628a6856ea96be7d6fa12d19f8631172de813de"
     },
     {
       "path": "validation/playback-01/lib/client_material_import.dart",
@@ -2860,9 +2866,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_private_storage.dart",
-      "gitBlob": "7a05a5297ea5246026ffea831cd57a3fa01a02c3",
-      "sizeBytes": 10847,
-      "sha256": "e37358461b13920a5baa5a0c2b8c774dcfe6014ab9b2e01e707e0196efedc135"
+      "gitBlob": "a707cdba1c7abf5b460350613ee2c83361b362c1",
+      "sizeBytes": 13305,
+      "sha256": "f6977b71be3f20dbb30c8b904602b6328e4cb38fc83e20df3e94a9296d45195d"
     },
     {
       "path": "validation/playback-01/lib/client_retirement.dart",
@@ -2875,6 +2881,36 @@
       "gitBlob": "1b3a6a0c25fecfb09b4e907982e33f8129dbad9d",
       "sizeBytes": 2852,
       "sha256": "cf5a5ef5c73c3981ec9808d61c97ec652fd063e44beb28edeffdfbcb87270662"
+    },
+    {
+      "path": "validation/playback-01/lib/client_startup_retention.dart",
+      "gitBlob": "7ad567a81e4281923845a3a7b0f9535f723ade2d",
+      "sizeBytes": 9636,
+      "sha256": "6a5805d9dca2708b91f0e34a6b7896e2ff31fbb5de5f74b7dffa6b3f13ba4635"
+    },
+    {
+      "path": "validation/playback-01/lib/client_ui_validation_frame.dart",
+      "gitBlob": "a2db37673233cdaa28bd71600c87932ff8b080b0",
+      "sizeBytes": 3114,
+      "sha256": "fcfacb8116aaa4e4805cd67bcac7f2d3129e9cd5a36556077bab70f78431a631"
+    },
+    {
+      "path": "validation/playback-01/lib/client_ui_validation_root.dart",
+      "gitBlob": "a9a723df5309dcc0d273422a6fec44e5df131916",
+      "sizeBytes": 14291,
+      "sha256": "4077c5d3126283adaf80060d64a184525fefd426201b1554a9fcbf31ce1509e6"
+    },
+    {
+      "path": "validation/playback-01/lib/client_ui_validation_session.dart",
+      "gitBlob": "1ebee7494f275c4c94f0ddb1643e8631d6ed81c6",
+      "sizeBytes": 9707,
+      "sha256": "2264df193b6c3798bd39519fcaabb75d489b95fca5de371b9fe009b70ab39cb4"
+    },
+    {
+      "path": "validation/playback-01/lib/client_ui_wire.dart",
+      "gitBlob": "c9c566e73fa2d14c99f8d56ec110459cd59ba5f3",
+      "sizeBytes": 4547,
+      "sha256": "a9222a933c6ca16595708319733432f67e92859f4099f3f8fe56b5459c48afe3"
     },
     {
       "path": "validation/playback-01/lib/main.dart",
@@ -2908,9 +2944,9 @@
     },
     {
       "path": "validation/playback-01/lib/playback/windows_playback_host.dart",
-      "gitBlob": "0d46ea78cf19b6c30c0ec17593043bbf58a7b700",
-      "sizeBytes": 19882,
-      "sha256": "b7c85142560fb590fe08cb265dae75dd84ad05697ddee440659a781659a55225"
+      "gitBlob": "cf2a1489c019d6de462c68703e86797d58de61aa",
+      "sizeBytes": 21360,
+      "sha256": "4115a2b5409401ea32fe57d506850a0253ed5c6088ec3921a7b2239f88dbf1e7"
     },
     {
       "path": "validation/playback-01/pubspec.lock",
@@ -2935,6 +2971,12 @@
       "gitBlob": "591b6b1460b22c4555b554d9f3959ee1b68761d6",
       "sizeBytes": 1678,
       "sha256": "d2d57739a456c8734b84a8b19505b821a85128fa5a1b0181a31cd9cc9f398b60"
+    },
+    {
+      "path": "validation/playback-01/test/client_host_startup_retention_test.dart",
+      "gitBlob": "6bcb7a638b61c1a69b9eb985f35095cde619149b",
+      "sizeBytes": 4168,
+      "sha256": "8855b2ec3ecc88159861ce6ce8a4ae3ffa2f256d53ef2ccc668557704c5018d7"
     },
     {
       "path": "validation/playback-01/test/client_import_provenance_test.dart",
@@ -2965,6 +3007,48 @@
       "gitBlob": "7e9a625bf75ba739254dd1d5416429909c0a0032",
       "sizeBytes": 11458,
       "sha256": "5f859e7bc620edde76749c50ac59823d36f146cff417a7aa8ae2e0ee6a8febdf"
+    },
+    {
+      "path": "validation/playback-01/test/client_startup_retention_test.dart",
+      "gitBlob": "1c78709dadc6a9efe2c819e1b2ccb08f490b8176",
+      "sizeBytes": 7088,
+      "sha256": "201f136310e1f5f69cb0b250fb5a70a470845c578e47594c8a2f4764d2e900eb"
+    },
+    {
+      "path": "validation/playback-01/test/client_storage_startup_retention_test.dart",
+      "gitBlob": "a700a4244e3a49312a3f9112308fa076b6c0a160",
+      "sizeBytes": 5033,
+      "sha256": "47b1b73e1b2417266b3bde1c98600cd910449fe51cf12bba463e133c7367e835"
+    },
+    {
+      "path": "validation/playback-01/test/client_ui_validation_frame_test.dart",
+      "gitBlob": "af8803047e97581c07744d6963b1145a7fb1aaed",
+      "sizeBytes": 8018,
+      "sha256": "b3734dd82a1e2dcbff996dcaaacb68856d79716e47367f353aeb0bb0c62fc178"
+    },
+    {
+      "path": "validation/playback-01/test/client_ui_validation_gate_regression_test.dart",
+      "gitBlob": "6ce53c1da9421dbf18e4180d962e6251a78ba5a6",
+      "sizeBytes": 5461,
+      "sha256": "7676241f7b95e5b25df742dc4ceae781d35ad0fa88a4d30f8a078a08bf5dd1dd"
+    },
+    {
+      "path": "validation/playback-01/test/client_ui_validation_session_test.dart",
+      "gitBlob": "4ff645df4fbb778f468302b034ad824638320723",
+      "sizeBytes": 7590,
+      "sha256": "cdd0816fbe3f410a62ab899f143cc868f13300879f5c6c94b292292cbffd1895"
+    },
+    {
+      "path": "validation/playback-01/test/client_ui_wire_root_test.dart",
+      "gitBlob": "45534d5feb5fd567cafdd457a9877d3ed5407702",
+      "sizeBytes": 7335,
+      "sha256": "c3cb4fd94e88b67fcf0967f4e28d59ffa2ffeef8d6112c0bf1d4027b98722a97"
+    },
+    {
+      "path": "validation/playback-01/test/fixtures/startup_validation_wire_v1.json",
+      "gitBlob": "e09fa11f32889a6f32483ec0cb8292eca3d20297",
+      "sizeBytes": 45470,
+      "sha256": "fb48540b36f353b760c3613ed72ed3a7737edc878ce9c8de906d2d9346562a48"
     },
     {
       "path": "validation/playback-01/test/g2_modal_retirement_test.dart",
@@ -3046,9 +3130,9 @@
     },
     {
       "path": "validation/playback-01/windows/runner/CMakeLists.txt",
-      "gitBlob": "a558a77be0e7b6ff4db040e1b1d6d46e51a95680",
-      "sizeBytes": 2043,
-      "sha256": "852154256d30f0febb8380e542efcb7ec6a199b2df77676a1dbcfc2753856dd8"
+      "gitBlob": "c1dbc7e2f9fcf91a0cba23e6a16cc65618f72ffc",
+      "sizeBytes": 2527,
+      "sha256": "05dda20d8dd8cc769ffbf5f668ef024c659069be302454d7b235541088f3b040"
     },
     {
       "path": "validation/playback-01/windows/runner/Runner.rc",
@@ -3070,9 +3154,33 @@
     },
     {
       "path": "validation/playback-01/windows/runner/main.cpp",
-      "gitBlob": "7e825d15894cc3ce5f87b35a3612c1e1091d4bf4",
-      "sizeBytes": 1493,
-      "sha256": "8a077a41d129e61a0f7bd8f964a5149195f8fc5076dc7d8f719285571d7c834a"
+      "gitBlob": "c757125b1a4b0506583567a4bd2fa8bc221586f7",
+      "sizeBytes": 3493,
+      "sha256": "c178e174b08cd1f974976c909b5fe3b7effd542881f7fb04cc286fce0eb55354"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/ordinary_ui_policy.cpp",
+      "gitBlob": "1f4f8f410b1fdab1d192e92f600c1ecba23d3fb7",
+      "sizeBytes": 13225,
+      "sha256": "69e646bca4a6cd5a60c62d8165c51d899caeef512e30e9817b3523aa2f97dfcd"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/ordinary_ui_policy.h",
+      "gitBlob": "48b8205eff0e4434e66c4198c48d7fd8f8f92a9a",
+      "sizeBytes": 2365,
+      "sha256": "f7be3167a4d9d4fff4a290dede021d192164bc1babe7642df0758dea39645391"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/ordinary_ui_startup.cpp",
+      "gitBlob": "b0c661908dd5735f3cf3307158a91e4ab6d1281e",
+      "sizeBytes": 28442,
+      "sha256": "45af1fea9989dbb1cc7ad42f87d5ada72f6601b1e3fd20dd3f6b192ad0ce466e"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/ordinary_ui_startup.h",
+      "gitBlob": "0bb999b7d8071742a5e29d558d08866f56e093c5",
+      "sizeBytes": 756,
+      "sha256": "0f24f5021075f5a9a3ab3c73bf0c820b015f957be8f3def83a1748f7b388a306"
     },
     {
       "path": "validation/playback-01/windows/runner/resource.h",
@@ -3093,16 +3201,28 @@
       "sha256": "825d243e9fa1542619909c1b72d09b3ed7c1f3b225bb8367c125835e5dc3f8aa"
     },
     {
+      "path": "validation/playback-01/windows/runner/tests/ordinary_ui_policy_test.cpp",
+      "gitBlob": "ebfe1083d1042d7254d36d7ace297b1d65e5ce9d",
+      "sizeBytes": 4381,
+      "sha256": "5d1efc4a9aff1c6ecb7846a4b4dd69a551e94006022e27b49f4baae54ecea18d"
+    },
+    {
+      "path": "validation/playback-01/windows/runner/tests/ordinary_ui_wire_vectors.generated.h",
+      "gitBlob": "cbc781c3ce58293cb5141bab9f656fb46110e9ae",
+      "sizeBytes": 14581,
+      "sha256": "2c8a7ab266d24d5ba9e20624e7d1d039ef033f29a9717e997fad22dbfe67944f"
+    },
+    {
       "path": "validation/playback-01/windows/runner/utils.cpp",
-      "gitBlob": "3cb71466549c0c087512f3465765191e4f7507be",
-      "sizeBytes": 2168,
-      "sha256": "6c2c87106b4b29d534c7edcafb3b7f7b9079caa3cdafa7e56671ad2adf5a2543"
+      "gitBlob": "821909cb9050e566faf6c6651ea20ec2884277db",
+      "sizeBytes": 3709,
+      "sha256": "fba7229d485cc28cb8865bc5dec0b0d6db673aef7f3f7cda94007a0518c39abb"
     },
     {
       "path": "validation/playback-01/windows/runner/utils.h",
-      "gitBlob": "3879d54755798567f0f318d63340508d5668eb96",
-      "sizeBytes": 672,
-      "sha256": "95a7f7dddb832997cefa937a96f89472332277e75734a5de553610760b744b03"
+      "gitBlob": "06b61acd0836286873d6d808b1450bfb81c8214f",
+      "sizeBytes": 1063,
+      "sha256": "d46b81bae4964af8139f3973deb0fbcfe86eac0cf8d7df95baf97d138f9924f0"
     },
     {
       "path": "validation/playback-01/windows/runner/win32_window.cpp",
@@ -3118,9 +3238,9 @@
     },
     {
       "path": "validation/playback-01/windows/runner/windows_smtc.cpp",
-      "gitBlob": "7026a9fe51a79a016ffa62c7cb3d06bc75f91dd3",
-      "sizeBytes": 21069,
-      "sha256": "ccf2e5c2fd1545b0aee0fadd91dd7af8b9fc08caf65f66b08e5bf201e3c32ff3"
+      "gitBlob": "5dbc1e188def59850361eaa6a01b075a6957fd1a",
+      "sizeBytes": 23695,
+      "sha256": "c6d6d4568cb2c1bf5ec162308e9103e047a72a90169af143ac003b32968e6123"
     },
     {
       "path": "validation/playback-01/windows/runner/windows_smtc.h",

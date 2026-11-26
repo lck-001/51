@@ -118,3 +118,5 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 [实际功能验收](docs/reviews/QA-20261125-functional-acceptance.md)：普通Windows真实渲染控件的材料、版本、许可、候选和静音播放链已实测；Android真实系统选择器暴露暂存目录错配P1，修复后TXT/DOCX、空文件、取消和冷启来源校验通过。仍有顶部视觉与Windows后台前台异常，完整自动学习、评分、复习看板等尚未接通；整体产品不判通过，未灰度或上线。
 
 [顶部视觉修复](docs/reviews/QA-20261125-preview-banner-fix.md)已完成展示层独立复核、74项相关回归和Android实际横竖屏/大字/导入冷启验证。Windows后台隔离仍待安全方案实证，不能把此布局修复当作其已解决；核心英语与真实朗读方案保持单列评审。
+
+[普通UI启动门与资源保留](docs/reviews/QA-20261126-ordinary-ui-startup-gates.md)增加Debug限定的非输入Desktop/fresh资料校验及失败持有链，最终相关headless合并回归110项通过；完整App构建与真实普通界面尚待准入，不把pure或dummy结果当整产品验收。

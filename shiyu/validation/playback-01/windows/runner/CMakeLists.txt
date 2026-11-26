@@ -12,6 +12,8 @@ add_executable(${BINARY_NAME} WIN32
   "utils.cpp"
   "win32_window.cpp"
   "windows_smtc.cpp"
+  "ordinary_ui_policy.cpp"
+  "ordinary_ui_startup.cpp"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
   "Runner.rc"
   "runner.exe.manifest"
@@ -36,6 +38,14 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_link_libraries(${BINARY_NAME} PRIVATE "windowsapp.lib" "runtimeobject.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "advapi32.lib" "bcrypt.lib")
+
+# Closed Debug acceptance artifact. Dart's same-named define is independently
+# checked before MediaKit/Store. No special Dart target or product Shell.
+option(SHIYU_UI_VALIDATION_ONLY "Require closed ordinary-UI validation startup" OFF)
+if(SHIYU_UI_VALIDATION_ONLY)
+  target_compile_definitions(${BINARY_NAME} PRIVATE SHIYU_UI_VALIDATION_ONLY=1)
+endif()
 target_compile_definitions(${BINARY_NAME} PRIVATE "WINVER=0x0A00" "_WIN32_WINNT=0x0A00")
 target_compile_options(${BINARY_NAME} PRIVATE /utf-8)
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")

@@ -8,6 +8,7 @@ import 'package:learning_playback/learning_playback.dart';
 import 'package:material_core/material_core.dart';
 
 import 'client_material_import.dart';
+import 'client_startup_retention.dart';
 
 /// OS cache location supplied by the Android App owner, never by a document or
 /// external assistant. The suffix is shared with BoundedDocumentImport.kt.
@@ -68,6 +69,7 @@ final class ClientPrivateStorage {
       _authorityReleasing;
   bool get writersDrained => _drainSuccess;
   bool get authorityReleased => _authorityReleased;
+  bool get storesClosed => _learningClosed && _materialsClosed;
   static Future<ClientPrivateStorage> open({
     required Directory root,
     required List<String> proxyCommand,
@@ -75,6 +77,7 @@ final class ClientPrivateStorage {
     MaterialStageRemoval? removeStage,
     MaterialNativeIdleProbe? nativeIdleProbe,
     AndroidMaterialImportCache? androidImportCache,
+    ClientStartupAttempt? startupAttempt,
   }) async {
     // Reject a misrouted dependency before acquiring a lock or creating Stores.
     if (androidImportCache != null &&
@@ -88,6 +91,8 @@ final class ClientPrivateStorage {
         'Native Android import requires its OS cache location',
       );
     }
+    final attempt = startupAttempt ?? ClientStartupAttempt();
+    final ownAttempt = startupAttempt == null;
     WindowsPrivateAppRootLease? lease;
     LearningRootLock? lock;
     FileMaterialStore? materials;
@@ -99,26 +104,39 @@ final class ClientPrivateStorage {
     try {
       final Directory owned;
       if (Platform.isWindows) {
-        lease = await WindowsPrivateAppRoot.open(
-          supportParent: root.parent,
-          leaf: root.uri.pathSegments.where((part) => part.isNotEmpty).last,
+        lease = await attempt.observe<WindowsPrivateAppRootLease>(
+          ClientStartupOperation.privateRootOpen,
+          WindowsPrivateAppRoot.open(
+            supportParent: root.parent,
+            leaf: root.uri.pathSegments.where((part) => part.isNotEmpty).last,
+          ),
         );
+        attempt.retain(ClientStartupRef.lease, lease);
         lock = lease.rootLock;
         owned = lease.root; // Never acquire a second lock.
       } else {
-        lock = await LearningRootLock.acquire(root);
+        lock = await attempt.observe<LearningRootLock>(
+          ClientStartupOperation.privateRootOpen,
+          LearningRootLock.acquire(root),
+        );
         owned = lock.rootDirectory;
       }
+      attempt.retain(ClientStartupRef.rootLock, lock);
       Directory child(String name) =>
           lease?.childDirectory(name) ?? Directory('${owned.path}/$name');
-      materials = await FileMaterialStore.open(
-        root: child('materials'),
-        trustedOwnerId: 'local-device-only',
+      materials = await attempt.observe<FileMaterialStore>(
+        ClientStartupOperation.materialsOpen,
+        FileMaterialStore.open(
+          root: child('materials'),
+          trustedOwnerId: 'local-device-only',
+        ),
       );
-      learning = await FileLearningStore.open(
-        root: child('learning'),
-        materials: materials,
+      attempt.retain(ClientStartupRef.materials, materials);
+      learning = await attempt.observe<FileLearningStore>(
+        ClientStartupOperation.learningOpen,
+        FileLearningStore.open(root: child('learning'), materials: materials),
       );
+      attempt.retain(ClientStartupRef.learning, learning);
       if (Platform.isWindows) {
         if (materials.recoveryReport.issues.any(
               (issue) => issue.kind == RecoveryIssueKind.registrationHold,
@@ -132,13 +150,17 @@ final class ClientPrivateStorage {
             )) {
           throw const AgentBridgeException(AgentBridgeErrorCode.recoveryHold);
         }
-        media = await MediaIngest.open(
-          privateRoot: child('media_ingest'),
-          rootLock: lock,
-          materials: materials,
-          learning: learning,
-          ownerId: materials.trustedOwnerId,
+        media = await attempt.observe<MediaIngest>(
+          ClientStartupOperation.mediaOpen,
+          MediaIngest.open(
+            privateRoot: child('media_ingest'),
+            rootLock: lock,
+            materials: materials,
+            learning: learning,
+            ownerId: materials.trustedOwnerId,
+          ),
         );
+        attempt.retain(ClientStartupRef.media, media);
       }
       bridge = AgentBridgeController.attach(
         materials: materials,
@@ -148,6 +170,7 @@ final class ClientPrivateStorage {
         proxyCommand: proxyCommand,
         mediaIngest: media,
       );
+      attempt.retain(ClientStartupRef.bridge, bridge);
       final authority = lease;
       void guard(FileSystemEntity entry) {
         authority!.verifyEffectivePath(entry.path);
@@ -159,6 +182,7 @@ final class ClientPrivateStorage {
         learning: learning,
         pathGuard: authority == null ? null : guard,
       );
+      attempt.retain(ClientStartupRef.cache, cache);
       imports = ClientMaterialImportController(
         materials: materials,
         stagingRoot: Platform.isAndroid && selection == null
@@ -169,8 +193,9 @@ final class ClientPrivateStorage {
         nativeIdleProbe: nativeIdleProbe,
         pathGuard: authority == null ? null : guard,
       );
+      attempt.retain(ClientStartupRef.importer, imports);
       await lease?.verifyPrivateDescendants();
-      return ClientPrivateStorage._(
+      final storage = ClientPrivateStorage._(
         rootLock: lock,
         materials: materials,
         learning: learning,
@@ -180,47 +205,72 @@ final class ClientPrivateStorage {
         materialImports: imports,
         lease: lease,
       );
-    } catch (_) {
-      final retire = <Future<void>>[];
-      for (final action in <void Function()>[
-        if (cache != null) cache.retire,
-        if (imports != null) imports.retire,
-        if (bridge != null) bridge.retire,
-      ]) {
-        final future = Future<void>.sync(action);
-        future.ignore();
-        retire.add(future);
-      }
+      attempt.retain(ClientStartupRef.storage, storage);
+      if (ownAttempt) attempt.handoff(ClientStartupRef.storage, storage);
+      return storage;
+    } catch (error, stack) {
+      final retainedFailure = attempt.fail(error, stack);
       var safe = true;
-      Future<void> settle(FutureOr<void> Function() action) async {
+      Future<void> settle(
+        ClientStartupCleanup step,
+        FutureOr<void> Function() action,
+      ) async {
         try {
-          await Future<void>.sync(action);
+          await attempt.cleanup(step, action);
         } catch (_) {
           safe = false;
         }
       }
 
       await Future.wait([
-        ...retire.map((f) => settle(() => f)),
-        if (imports != null) settle(imports.close),
-        if (cache != null) settle(cache.drain),
-        settle(() async {
-          if (bridge != null) await settle(bridge.close);
-          if (media != null) await settle(media.close);
-        }),
+        if (cache != null)
+          settle(ClientStartupCleanup.retireCache, cache.retire),
+        if (imports != null)
+          settle(ClientStartupCleanup.retireImporter, imports.retire),
+        if (bridge != null)
+          settle(ClientStartupCleanup.retireBridge, bridge.retire),
+      ]);
+      await Future.wait([
+        if (imports != null)
+          settle(ClientStartupCleanup.closeImporter, imports.close),
+        if (cache != null) settle(ClientStartupCleanup.drainCache, cache.drain),
+        () async {
+          if (bridge != null) {
+            await settle(ClientStartupCleanup.closeBridge, bridge.close);
+          }
+          if (media != null) {
+            await settle(ClientStartupCleanup.closeMedia, media.close);
+          }
+        }(),
       ]);
       if (safe) {
-        if (learning != null) await settle(learning.close);
-        if (materials != null) await settle(materials.close);
+        if (learning != null) {
+          await settle(ClientStartupCleanup.closeLearning, learning.close);
+        }
+        if (materials != null && safe) {
+          await settle(ClientStartupCleanup.closeMaterials, materials.close);
+        }
       }
       if (safe) {
         if (lease != null) {
-          await settle(lease.close);
+          await settle(ClientStartupCleanup.releaseAuthority, lease.close);
         } else if (lock != null) {
-          await settle(lock.release);
+          await settle(ClientStartupCleanup.releaseAuthority, lock.release);
         }
       }
-      rethrow;
+      if (safe && ownAttempt && !attempt.cleanupFailed) {
+        attempt.releasedAfterCleanup();
+        // Standalone callers historically receive the original Store failure.
+        // Unwrap only after all actual work settled and owned resources ended;
+        // explicit upper-owner tokens and unresolved cleanup keep the carrier.
+        if (attempt.resourcesEnded && !attempt.hasPending) {
+          Error.throwWithStackTrace(
+            retainedFailure.primaryError,
+            retainedFailure.primaryStack,
+          );
+        }
+      }
+      Error.throwWithStackTrace(retainedFailure, retainedFailure.primaryStack);
     }
   }
 

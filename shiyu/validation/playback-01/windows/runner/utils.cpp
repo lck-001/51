@@ -6,6 +6,45 @@
 #include <windows.h>
 
 #include <iostream>
+#include <limits>
+
+bool GetCommandLineArgumentsWide(std::vector<std::wstring>* args,
+                                 unsigned long* error) {
+  args->clear(); *error = ERROR_SUCCESS;
+  int count = 0;
+  wchar_t** values = CommandLineToArgvW(GetCommandLineW(), &count);
+  if (!values) { *error = GetLastError(); return false; }
+  bool ok = count >= 1;
+  try {
+    if (ok) for (int i = 1; i < count; ++i) args->push_back(values[i]);
+    else *error = ERROR_INVALID_PARAMETER;
+  } catch (...) { ok = false; *error = ERROR_NOT_ENOUGH_MEMORY; }
+  if (LocalFree(values) != nullptr) {
+    const DWORD cleanup_error = GetLastError();
+    if (ok) { ok = false; *error = cleanup_error; }
+  }
+  if (!ok) args->clear();
+  return ok;
+}
+
+bool Utf8FromUtf16Strict(const std::wstring& value, std::string* result,
+                        unsigned long* error) {
+  result->clear(); *error = ERROR_SUCCESS;
+  if (value.empty()) return true;
+  if (value.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
+    *error = ERROR_INVALID_PARAMETER; return false;
+  }
+  const int size = static_cast<int>(value.size());
+  const int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+      value.data(), size, nullptr, 0, nullptr, nullptr);
+  if (needed <= 0) { *error = GetLastError(); return false; }
+  result->resize(needed);
+  if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value.data(), size,
+      result->data(), needed, nullptr, nullptr) != needed) {
+    *error = GetLastError(); result->clear(); return false;
+  }
+  return true;
+}
 
 void CreateAndAttachConsole() {
   if (::AllocConsole()) {

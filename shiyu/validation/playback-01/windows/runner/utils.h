@@ -16,4 +16,11 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string);
 // encoded in UTF-8. Returns an empty std::vector<std::string> on failure.
 std::vector<std::string> GetCommandLineArguments();
 
+// Explicit failure channel, used before any Console/COM/engine startup. A
+// failed extraction/conversion can never become an ordinary empty argv.
+bool GetCommandLineArgumentsWide(std::vector<std::wstring>* args,
+                                 unsigned long* error);
+bool Utf8FromUtf16Strict(const std::wstring& value, std::string* result,
+                        unsigned long* error);
+
 #endif  // RUNNER_UTILS_H_

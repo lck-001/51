@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:playback_core/playback_core.dart';
 
 import 'playback_host.dart';
+import '../client_startup_retention.dart';
 
 /// Win32 HWND-bound SMTC. No OS media object, path or native Player reaches UI.
 /// A live HWND/SMTC binding is a host observation, not lock/sleep acceptance.
@@ -15,9 +16,12 @@ final class WindowsPlaybackHost implements PlaybackHost {
   PlaybackController? _controller;
   PlaybackToken? _publishedToken;
   Future<void> _publishTail = Future.value();
+  ClientStartupAttempt? _startupAttempt;
+  Future<void>? _nativeRetireOriginal;
   Timer? _probeTimer;
   Future<void>? _closeFuture, _programmaticExit, _failedStartupDetach;
   bool _closeCompleted = false;
+  bool get nativeRetireAccepted => _nativeRetireOriginal != null;
   bool _supported = false,
       _foreground = true,
       _retired = true,
@@ -39,27 +43,50 @@ final class WindowsPlaybackHost implements PlaybackHost {
   static Future<WindowsPlaybackHost> create({
     Future<void> Function(PlaybackToken expected)? beforeWindowClose,
     void Function(bool closing)? onClosingChanged,
+    ClientStartupAttempt? startupAttempt,
   }) async {
+    final attempt = startupAttempt ?? ClientStartupAttempt();
+    final ownAttempt = startupAttempt == null;
     final host = WindowsPlaybackHost._(
       beforeWindowClose: beforeWindowClose,
       onClosingChanged: onClosingChanged,
     );
+    host._startupAttempt = attempt;
+    attempt.retain(ClientStartupRef.host, host);
     _native.setMethodCallHandler(host._nativeEvent);
     try {
-      final status = await _native
-          .invokeMapMethod<String, dynamic>('create')
-          .timeout(const Duration(seconds: 2));
+      final original = _native.invokeMapMethod<String, dynamic>('create');
+      attempt.observe(ClientStartupOperation.hostNativeCreate, original);
+      final status = await original.timeout(const Duration(seconds: 2));
       host._supported = status?['configured'] == true;
+      if (attempt.validationOnly) {
+        final hresult = status?['startupBindHresult'];
+        if (status?['startupBindAttempted'] != true ||
+            status?['startupBindSucceeded'] != true ||
+            status?['startupBindStage'] != 'bound' ||
+            hresult is! int ||
+            hresult < 0 ||
+            hresult > 0x7fffffff ||
+            status?['startupBindErrorKnown'] != false) {
+          throw StateError('validation_native_binding_unconfirmed');
+        }
+      }
       if (!host._supported) {
         host.lastFailure = '系统媒体控件不可用，当前仅支持前台播放。';
+        if (attempt.validationOnly) {
+          throw StateError('validation_host_binding_unconfirmed');
+        }
       }
-    } catch (_) {
-      host.lastFailure = 'Windows 播放宿主未确认，当前仅支持前台播放。';
+    } catch (error, stack) {
+      host.lastFailure = 'Windows 播放宿主未确认，已保留启动资源。';
+      final failure = attempt.fail(error, stack);
+      Error.throwWithStackTrace(failure, failure.primaryStack);
     }
     host._probeTimer = Timer.periodic(
       const Duration(milliseconds: 750),
       (_) => host._scheduleProbe(),
     );
+    if (ownAttempt) attempt.handoff(ClientStartupRef.host, host);
     return host;
   }
 
@@ -497,9 +524,13 @@ final class WindowsPlaybackHost implements PlaybackHost {
     _closing = true;
     _probeTimer?.cancel();
     await _publishTail.timeout(const Duration(seconds: 15));
-    await _native
-        .invokeMethod<void>('retire')
-        .timeout(const Duration(seconds: 2));
+    final originalRetire = _native.invokeMethod<void>('retire');
+    _nativeRetireOriginal = originalRetire;
+    _startupAttempt?.observe(
+      ClientStartupOperation.hostNativeRetire,
+      originalRetire,
+    );
+    await originalRetire.timeout(const Duration(seconds: 2));
     _publishedToken = null;
     _retired = true;
     _closed = true;

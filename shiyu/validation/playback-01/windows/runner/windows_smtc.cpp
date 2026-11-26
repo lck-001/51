@@ -1,4 +1,5 @@
 #include "windows_smtc.h"
+#include "ordinary_ui_startup.h"
 
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
@@ -137,6 +138,10 @@ struct WindowsSmtc::Impl {
        client_ready = false, enabled = false, suspended = false,
        close_pending = false, close_ready = false;
   int64_t close_ticket = 0;
+  bool startup_bind_attempted = false, startup_bind_succeeded = false;
+  std::string startup_bind_stage = "not-started";
+  int64_t startup_bind_hresult = 0;
+  bool startup_bind_error_known = false;
 
   Impl(HWND hwnd, flutter::BinaryMessenger* messenger) : window(hwnd) {
     callbacks->window = window;
@@ -150,19 +155,35 @@ struct WindowsSmtc::Impl {
   bool Bind() {
     if (stopped || !IsWindow(window)) return false;
     if (controls) return true;
+    startup_bind_attempted = true;
     if (!ro_initialized) {
+      startup_bind_stage = "RoInitialize";
       const auto hr = RoInitialize(RO_INIT_SINGLETHREADED);
-      if (FAILED(hr)) return false;
+      startup_bind_hresult = static_cast<uint32_t>(hr);
+      if (FAILED(hr)) {
+        startup_bind_hresult = static_cast<uint32_t>(hr);
+        startup_bind_error_known = true; return false;
+      }
       ro_initialized = true;
     }
     try {
+      startup_bind_stage = "activation-factory";
       const auto factory = winrt::get_activation_factory<
           SystemMediaTransportControls, ISystemMediaTransportControlsInterop>();
-      winrt::check_hresult(factory->GetForWindow(
+      startup_bind_stage = "GetForWindow";
+      const auto window_result = factory->GetForWindow(
           window, winrt::guid_of<SystemMediaTransportControls>(),
-          winrt::put_abi(controls)));
+          winrt::put_abi(controls));
+      startup_bind_hresult = static_cast<uint32_t>(window_result);
+      winrt::check_hresult(window_result);
       controls.IsEnabled(false);
+      startup_bind_succeeded = true;
+      startup_bind_stage = "bound";
       return true;
+    } catch (const winrt::hresult_error& error) {
+      startup_bind_hresult = static_cast<uint32_t>(error.code().value);
+      startup_bind_error_known = true;
+      Revoke(); return false;
     } catch (...) {
       Revoke();
       return false;
@@ -247,6 +268,11 @@ struct WindowsSmtc::Impl {
       }
     } catch (...) { bound = false; }
     return {{EncodableValue("configured"), EncodableValue(bound)},
+            {EncodableValue("startupBindAttempted"), EncodableValue(startup_bind_attempted)},
+            {EncodableValue("startupBindSucceeded"), EncodableValue(startup_bind_succeeded)},
+            {EncodableValue("startupBindStage"), EncodableValue(startup_bind_stage)},
+            {EncodableValue("startupBindHresult"), EncodableValue(startup_bind_hresult)},
+            {EncodableValue("startupBindErrorKnown"), EncodableValue(startup_bind_error_known)},
             {EncodableValue("windowAlive"), EncodableValue(!stopped && IsWindow(window) != FALSE)},
             {EncodableValue("windowVisible"), EncodableValue(IsWindowVisible(window) != FALSE)},
             {EncodableValue("windowFocused"), EncodableValue(GetForegroundWindow() == window)},
@@ -379,7 +405,28 @@ struct WindowsSmtc::Impl {
                   std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
     try {
       const auto* data = call.arguments() ? std::get_if<EncodableMap>(call.arguments()) : nullptr;
-      if (call.method_name() == "create") {
+      if (call.method_name() == "startupValidationProof" ||
+          call.method_name() == "startupValidationCloseGrantProof") {
+        // Fixed, readonly validation metadata; never a caller-selected path,
+        // SMTC Bind, activation or close operation.
+        if (call.arguments() && !std::holds_alternative<std::monostate>(*call.arguments())) {
+          result->Error("invalid_arguments"); return;
+        }
+        try {
+          const auto proof = call.method_name() == "startupValidationProof"
+              ? shiyu_ui::ReadStartupValidationProof()
+              : shiyu_ui::ReadStartupCloseGrantProof();
+          result->Success(EncodableValue(proof));
+        } catch (...) {
+          // Accessors already retain/emit the original typed failure, secondary
+          // cleanup and sticky native state. The channel exposes no private detail.
+          // Also make a channel/codec publication failure sticky; this cannot
+          // overwrite an accessor's already recorded original typed cause.
+          if (shiyu_ui::ValidationArmed())
+            shiyu_ui::NativeStartupFailure("Policy.readonly-channel-unconfirmed", 0);
+          result->Error("startup_validation_unconfirmed");
+        }
+      } else if (call.method_name() == "create") {
         client_ready = true;
         (void)Bind();
         result->Success(EncodableValue(Status()));

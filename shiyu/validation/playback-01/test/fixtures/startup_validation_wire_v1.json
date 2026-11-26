@@ -1,0 +1,541 @@
+{
+  "contract": "# Ordinary empty UI wire v1 (source/pure only)\n\nThis is the single wire definition shared by Python/C++/Dart. No runtime approval.\nAll objects are closed: missing/extra/duplicate keys reject. UTF-8, no BOM, ASCII\nJSON escapes, lexicographic ASCII key order, no insignificant whitespace, integer\nnumbers only (no bool-as-int, float, exponent, -0), final single LF for files and\nphase lines. SHA256 lowercase hex hashes the actual complete bytes, including LF.\nCanonical JSON strings use JSON escaping; slash is not escaped; non-ASCII uses\nlowercase four-digit UTF-16 escapes (surrogate pairs where necessary).\n\nTypes: H=64 lowercase hex; ID=16 lowercase hex volume serial + ':' + 16 lowercase\nhex file index; SID=actual owner SID string; P=normalized physical long DOS path\n(backslashes, no trailing slash); runId=`ui-`+8 lowercase hex; attempt=32 lowercase\nhex; desktopNonce=`ShiyuIso_`+32 lowercase hex. All integer values 0..2^53-1;\npid/tid/HWND/seq are positive. creationFileTime is a positive decimal **string**,\nno leading zeros. No path supplied by caller grants authority.\nNative converts uintptr_t HWND only after exact <=2^53-1 check; out-of-range\nrejects, never truncates or passes through float/JavaScript Number conversion.\nCanonical strings reject isolated surrogate code units; valid pairs encode normally.\nThis startup-only codec does not alter existing learning snapshot v4 raw UTF8.\nP preserves actual case returned by GetFinalPathNameByHandleW (normalized DOS),\nremoving the local \\\\?\\ prefix then GetLongPathNameW; never lowercase/re-case it.\nRemove non-root trailing backslash. All scope/digest/anchor comparisons use this\nexact physical spelling; a path alias never substitutes its shorter text.\n\nCLI exactly: --shiyu-ui-validation=ordinary-empty-ui,\n--shiyu-ui-run=runId, --shiyu-ui-attempt=attempt,\n--shiyu-ui-desktop=desktopNonce, --shiyu-ui-silent=true.\nAll five required once; unknown validation namespace/legacy validation flags reject.\n\nAnchor fields: protocol:1, purpose:\"ordinary-empty-ui-anchor\", ownerSid:SID,\nworkspacePath:P, basePath:P, workspaceIdentity:ID, baseIdentity:ID,\nsourceSha256:H, bundleSha256:H, commonSha256:H. <=2048 bytes.\nIntent fields: protocol:1, role:\"ordinary-empty-ui\", runId, attempt, desktopNonce,\nownerSid:SID, workspaceIdentity:ID, baseIdentity:ID, runIdentity:ID,\nprofileLeaf:\"profile\", stdoutIdentity:ID, stderrIdentity:ID,\nanchorSha256:H, imageSha256:H, bundleSha256:H, commonSha256:H. <=8192 bytes.\nParent creates anchor/intent/stdout/stderr; profile must not yet exist.\n\nrootScope=SHA256(canonical JSON array bytes **without LF**):\n[\"ordinary-empty-scope:1\",ownerSid,workspaceIdentity,baseIdentity,runIdentity,\n normalizedPhysicalProfile,attempt].\nownerScope=SHA256(canonical JSON array bytes without LF):[rootScope,trustedOwnerId].\n\nC0 fields: protocol:1, role:\"ordinary-empty-ui\", runId, attempt, desktopNonce,\nrootScope:H, appPid:int, creationFileTime:decimal-string, imageSha256:H,\nbundleSha256:H. C adds ownerScope:H, mainIsolateId:nonempty VM main isolate id.\ncontextHash=SHA256(canonical C object bytes **without LF**).\n\nPrefix exactly ASCII `SHIYU_UI_PHASE `; complete line <=4096 bytes, cumulative\nprotocol <=65536, raw stdout <=262144. Other stdout lines retained privately and\nignored as protocol. Partial prefix/JSON line stays pending, never readiness.\nMalformed/duplicate/unknown phase or wrong role/context fails sticky.\nEach phase is {phase:string,context:C0,proof:object}; C0 is identical throughout.\nNative phase order: native-gate-accepted then native-window-created; Dart ready\nmust follow gate, may interleave window-created. Each phase occurs once.\n\nnative-gate-accepted proof closed fields: nativeTid:int, desktopName:string,\nstation:\"WinSta0\", grantedAccess:int, intentSha256:H, workspaceIdentity:ID,\nbaseIdentity:ID, runIdentity:ID, stdoutIdentity:ID, stderrIdentity:ID.\ndesktopName must equal context.desktopNonce; access must contain 0x83 and no bits\noutside 0x20087. These are actual reads, parent verifies retained process identity.\nnative-window-created proof: mainHwnd:int, mainTid:int,\nwindowClass:\"FLUTTER_RUNNER_WIN32_WINDOW\".\nordinary-shell-frame-ready proof: nativeGateLineSha256:H, ownerScope:H,\nrootMatches:true, g1Held:true, shellMounted:true, frameRendered:true,\nsilent:true, frameCount:positive-int, viewportWidth:int, viewportHeight:int,\ndprMilli:positive-int, bandLeft:int, bandTop:int, bandWidth:int, bandHeight:int.\nViewport/band coordinates are physical pixel integers; dprMilli is round(DPR*1000).\nThe rounded DPR is metadata only, never permission to rescale/crop/repaint pixels.\nEmpty/loading facts remain actual status evidence, not ready assertions.\nowner-drained proof: ownerScope:H, stopConfirmed:true, storesDrained:true,\nstoresClosed:true, authorityReleased:true. native-loop-ended proof:\nmainHwnd:int, mainAbsent:true, messageLoopExit:0. Failed startup never forges these.\n\nRPC methods only ext.shiyu.validation.status and ext.shiyu.validation.close.\nstatus request: {contextHash:H,seq:positive-int,phase:\"observe\"}.\nclose request: {contextHash:H,seq:positive-int,phase:\"close\",grantSha256:H}.\nVM service query transports values as strings; seq is canonical decimal, extension\nparses exact decimal integer and rejects malformed/unknown parameters. Payload\ncanonical digest uses numeric seq as above. seq starts 1 and increments by one\nacross both methods; never retry. Exact reply: {method,contextHash,seq,childPhase,\nobservedAtMicros:decimal-string,facts:object}; facts schema is per method and is\nnot caller authority. close facts exactly {accepted:true}; no completed boolean.\nstatus facts exactly {ownerReady:bool,g1Held:bool,loading:bool,learningCount:int,\nmaterialCount:int,hasSelection:bool,hasSource:bool,frameCount:int,\nviewportWidth:int,viewportHeight:int,dprMilli:int,bandLeft:int,bandTop:int,\nbandWidth:int,bandHeight:int}. Failed sessions reject observe with typed failure;\nretention snapshot remains private diagnostics, not a passing status response.\n\nclose.grant canonical file <=4096 bytes: {protocol:1,role:\"ordinary-empty-ui\",\ncontext:C,contextHash:H,grantId:32lowerhex,seq:positive-int,phase:\"close\",\nobserverReceiptSha256:H}. It is CreateNew/flush/close once, only after pending\nsettles, same retained hThread is OS terminal exit0, joined and CloseHandle\nconfirmed. No observerDone input. Child validates physical run/private plain file,\nexact raw digest/context/seq, consumes before await, starts actual Owner exit once.\nTimeout/EOF/late reply is sticky unknown; neither retry nor green restoration.\n\nState: guarded -> owner-ready -> shell-frame-ready -> observing -> close-accepted\n-> draining -> native-closing; failed sticky side path. Status observe only in\nshell-frame-ready/observing. Close only after ready+qualified reader termination.\nDefault worker remains through actual App and reader OS terminals/handle closes.\n\nFixed native readonly channel, two methods only, request null, response canonical\nASCII JSON string (no LF); no file path arguments, Bind or resource acquisition.\n`startupValidationProof`: {protocol:1,c0:C0,workspacePath:P,basePath:P,runPath:P,\nprofilePath:P,workspaceIdentity:ID,baseIdentity:ID,runIdentity:ID,stdoutIdentity:ID,\nstderrIdentity:ID,ownerSid:SID,cwdMatches:true,plain:true,private:true,\nprofileAbsent:true,anchorRawBase64:string,intentRawBase64:string,\nnativeGateLineRawBase64:string}. Native rechecks actual current cwd, file identity,\nprivate ACL, plain ancestors and limits. Dart independently validates decoded raw\nbytes, original native prefix line, hash, own pid and C0 before MediaKit/Store.\n`startupValidationCloseGrantProof`: {protocol:1,attempt,rootScope:H,runIdentity:ID,\nfileIdentity:ID,plain:true,private:true,ownerMatches:true,rawBase64:string}.\nBase64 is standard RFC4648 alphabet, padding required, no whitespace. Decoded\nlimits follow anchor<=2048, intent<=8192, native line/grant<=4096. First method\nmust not derive a fresh proof from Dart arguments; second only reads fixed\nR/close.grant and never accepts caller path or observer completion assertion.\n\n## Additive native failure channel (Root approved 2026-11-26)\n\nNo existing C/phase/RPC/grant field or prior vector byte changes. Native also\nwrites `SHIYU_UI_FAILURE ` + canonical ASCII JSON + LF to the inherited private\nstderr handle. Whole line <=4096 bytes. This is auxiliary failure diagnostics,\nnever readiness, resource-release authority or a replacement C proof. A full\nfailure marker always makes the round sticky failed regardless of payload,\nincluding malformed payload or numeric error 0. Preserve raw bytes privately.\n\nClosed producer variants: {api:string,win32Code:uint32},\n{api:string,hresult:uint32}, {api:string,win32Code:uint32,cleanupFailures:array},\n{api:string,ntstatus:uint32,cleanupFailures:array}. No signed reinterpretation;\nuint32 is 0..4294967295. api is a source-fixed ASCII label, never error.message,\npath or VM URL. cleanup items are either {api:\"CloseHandle\",resource:fixed-label,\nwin32Code:uint32} or {api:\"CloseDesktop.input-query\",win32Code:uint32}.\nThese schema checks are audit-only: invalid fields never let a marker pass.\n\nOnly identifiable marker fragments count as partial protocol: at least the\n`SHIYU_UI_` namespace is required. Ordinary stderr tails such as `S` are ordinary\nlog bytes. An ambiguous namespace fragment delays ready without inventing a\ncomplete failure receipt; explicit `SHIYU_UI_F...` failure fragments fail sticky.\nPartial marker/JSON cannot grant readiness; identifiable terminal protocol\nfragments reject after real OS terminal. Read both logs by their pinned identity.\n",
+  "schema": {
+    "anchor": [
+      "protocol",
+      "purpose",
+      "ownerSid",
+      "workspacePath",
+      "basePath",
+      "workspaceIdentity",
+      "baseIdentity",
+      "sourceSha256",
+      "bundleSha256",
+      "commonSha256"
+    ],
+    "c0": [
+      "protocol",
+      "role",
+      "runId",
+      "attempt",
+      "desktopNonce",
+      "rootScope",
+      "appPid",
+      "creationFileTime",
+      "imageSha256",
+      "bundleSha256"
+    ],
+    "closeGrant": [
+      "protocol",
+      "role",
+      "context",
+      "contextHash",
+      "grantId",
+      "seq",
+      "phase",
+      "observerReceiptSha256"
+    ],
+    "closeRequest": [
+      "contextHash",
+      "seq",
+      "phase",
+      "grantSha256"
+    ],
+    "context": [
+      "protocol",
+      "role",
+      "runId",
+      "attempt",
+      "desktopNonce",
+      "rootScope",
+      "appPid",
+      "creationFileTime",
+      "imageSha256",
+      "bundleSha256",
+      "ownerScope",
+      "mainIsolateId"
+    ],
+    "failurePrefix": "SHIYU_UI_FAILURE ",
+    "failureVariants": [
+      [
+        "api",
+        "win32Code"
+      ],
+      [
+        "api",
+        "hresult"
+      ],
+      [
+        "api",
+        "win32Code",
+        "cleanupFailures"
+      ],
+      [
+        "api",
+        "ntstatus",
+        "cleanupFailures"
+      ]
+    ],
+    "intent": [
+      "protocol",
+      "role",
+      "runId",
+      "attempt",
+      "desktopNonce",
+      "ownerSid",
+      "workspaceIdentity",
+      "baseIdentity",
+      "runIdentity",
+      "profileLeaf",
+      "stdoutIdentity",
+      "stderrIdentity",
+      "anchorSha256",
+      "imageSha256",
+      "bundleSha256",
+      "commonSha256"
+    ],
+    "nativeReadonlyGrant": [
+      "protocol",
+      "attempt",
+      "rootScope",
+      "runIdentity",
+      "fileIdentity",
+      "plain",
+      "private",
+      "ownerMatches",
+      "rawBase64"
+    ],
+    "nativeReadonlyProof": [
+      "protocol",
+      "c0",
+      "workspacePath",
+      "basePath",
+      "runPath",
+      "profilePath",
+      "workspaceIdentity",
+      "baseIdentity",
+      "runIdentity",
+      "stdoutIdentity",
+      "stderrIdentity",
+      "ownerSid",
+      "cwdMatches",
+      "plain",
+      "private",
+      "profileAbsent",
+      "anchorRawBase64",
+      "intentRawBase64",
+      "nativeGateLineRawBase64"
+    ],
+    "phaseProofs": {
+      "native-gate-accepted": [
+        "nativeTid",
+        "desktopName",
+        "station",
+        "grantedAccess",
+        "intentSha256",
+        "workspaceIdentity",
+        "baseIdentity",
+        "runIdentity",
+        "stdoutIdentity",
+        "stderrIdentity"
+      ],
+      "native-loop-ended": [
+        "mainHwnd",
+        "mainAbsent",
+        "messageLoopExit"
+      ],
+      "native-window-created": [
+        "mainHwnd",
+        "mainTid",
+        "windowClass"
+      ],
+      "ordinary-shell-frame-ready": [
+        "nativeGateLineSha256",
+        "ownerScope",
+        "rootMatches",
+        "g1Held",
+        "shellMounted",
+        "frameRendered",
+        "silent",
+        "frameCount",
+        "viewportWidth",
+        "viewportHeight",
+        "dprMilli",
+        "bandLeft",
+        "bandTop",
+        "bandWidth",
+        "bandHeight"
+      ],
+      "owner-drained": [
+        "ownerScope",
+        "stopConfirmed",
+        "storesDrained",
+        "storesClosed",
+        "authorityReleased"
+      ]
+    },
+    "reply": [
+      "method",
+      "contextHash",
+      "seq",
+      "childPhase",
+      "observedAtMicros",
+      "facts"
+    ],
+    "statusFacts": [
+      "ownerReady",
+      "g1Held",
+      "loading",
+      "learningCount",
+      "materialCount",
+      "hasSelection",
+      "hasSource",
+      "frameCount",
+      "viewportWidth",
+      "viewportHeight",
+      "dprMilli",
+      "bandLeft",
+      "bandTop",
+      "bandWidth",
+      "bandHeight"
+    ],
+    "statusRequest": [
+      "contextHash",
+      "seq",
+      "phase"
+    ]
+  },
+  "vectors": {
+    "anchor": {
+      "canonicalSha256": "51d4b17a59e1983ead8e3fa1d3d47edd52ceb80094d8c4fb7c94703466c97d9b",
+      "fileAscii": "{\"baseIdentity\":\"0000000000000001:0000000000000002\",\"basePath\":\"C:\\\\synthetic-workspace\\\\.ui-runs\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"commonSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"ownerSid\":\"S-1-5-21-1-2-3-1001\",\"protocol\":1,\"purpose\":\"ordinary-empty-ui-anchor\",\"sourceSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"workspaceIdentity\":\"0000000000000001:0000000000000002\",\"workspacePath\":\"C:\\\\synthetic-workspace\"}\n",
+      "fileSha256": "aa3ab9878ffd3ed9ee3e2a7559c8d1e68d71d2917b29750df16fa8792d58542d",
+      "value": {
+        "baseIdentity": "0000000000000001:0000000000000002",
+        "basePath": "C:\\synthetic-workspace\\.ui-runs",
+        "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "commonSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ownerSid": "S-1-5-21-1-2-3-1001",
+        "protocol": 1,
+        "purpose": "ordinary-empty-ui-anchor",
+        "sourceSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "workspaceIdentity": "0000000000000001:0000000000000002",
+        "workspacePath": "C:\\synthetic-workspace"
+      }
+    },
+    "c0": {
+      "canonicalSha256": "e7ca55bf1aa4defbae8b9c749fabab22ff4cdb9d009b416f82ffe38bb2aec4b2",
+      "fileAscii": "{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"}\n",
+      "fileSha256": "b7fb9c1a2e925fa57c96824bc563039aa918d7e19021392e53608175cae06638",
+      "value": {
+        "appPid": 1234,
+        "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "creationFileTime": "134086000000000001",
+        "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+        "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "protocol": 1,
+        "role": "ordinary-empty-ui",
+        "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+        "runId": "ui-1234abcd"
+      }
+    },
+    "closeGrant": {
+      "canonicalSha256": "631372f5d22882f0c08097b55fe9e53bda341149650e4889de66e89048ca17e3",
+      "fileAscii": "{\"context\":{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"mainIsolateId\":\"isolates/123\",\"ownerScope\":\"db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"},\"contextHash\":\"ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c\",\"grantId\":\"dddddddddddddddddddddddddddddddd\",\"observerReceiptSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"phase\":\"close\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"seq\":2}\n",
+      "fileSha256": "98000c848905ceed4841ac83ff8b0f987e025bb7f2491c96062afe1cefe3ec10",
+      "value": {
+        "context": {
+          "appPid": 1234,
+          "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "creationFileTime": "134086000000000001",
+          "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "mainIsolateId": "isolates/123",
+          "ownerScope": "db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8",
+          "protocol": 1,
+          "role": "ordinary-empty-ui",
+          "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+          "runId": "ui-1234abcd"
+        },
+        "contextHash": "ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c",
+        "grantId": "dddddddddddddddddddddddddddddddd",
+        "observerReceiptSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "phase": "close",
+        "protocol": 1,
+        "role": "ordinary-empty-ui",
+        "seq": 2
+      }
+    },
+    "closeRequest": {
+      "canonicalSha256": "b39fc4b7f13fd922792b24a37124dca69794f9c1c1b414f23f3b154af1eaa5ee",
+      "fileAscii": "{\"contextHash\":\"ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c\",\"grantSha256\":\"98000c848905ceed4841ac83ff8b0f987e025bb7f2491c96062afe1cefe3ec10\",\"phase\":\"close\",\"seq\":2}\n",
+      "fileSha256": "912ea7831e8772a43d4f99c003f8d372c0d1d50c02521f2467fc12a629235192",
+      "value": {
+        "contextHash": "ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c",
+        "grantSha256": "98000c848905ceed4841ac83ff8b0f987e025bb7f2491c96062afe1cefe3ec10",
+        "phase": "close",
+        "seq": 2
+      }
+    },
+    "context": {
+      "canonicalSha256": "ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c",
+      "fileAscii": "{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"mainIsolateId\":\"isolates/123\",\"ownerScope\":\"db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"}\n",
+      "fileSha256": "d1bec69dc9252698a7a8b7744dd237cce814098cc055d3dd4dc6d471747d8134",
+      "value": {
+        "appPid": 1234,
+        "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "creationFileTime": "134086000000000001",
+        "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+        "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "mainIsolateId": "isolates/123",
+        "ownerScope": "db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8",
+        "protocol": 1,
+        "role": "ordinary-empty-ui",
+        "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+        "runId": "ui-1234abcd"
+      }
+    },
+    "failureGuardNtstatus": {
+      "canonicalSha256": "f921477ea45cda9cc1e64d644adcbb2c0f99e514c002565a7723c6b6180b162b",
+      "fileAscii": "SHIYU_UI_FAILURE {\"api\":\"NtQueryObject\",\"cleanupFailures\":[{\"api\":\"CloseDesktop.input-query\",\"win32Code\":5}],\"ntstatus\":3221225473}\n",
+      "fileSha256": "9cae9a37542c6fce7bc416558b2536d7d243bf18e2576a853e82ee4d5008b0e2",
+      "value": {
+        "api": "NtQueryObject",
+        "cleanupFailures": [
+          {
+            "api": "CloseDesktop.input-query",
+            "win32Code": 5
+          }
+        ],
+        "ntstatus": 3221225473
+      }
+    },
+    "failureGuardWin32": {
+      "canonicalSha256": "0b74220f8be70b0099aba79d2eaa7f42aa1d826e14b52eb8bc8a687642ced3fc",
+      "fileAscii": "SHIYU_UI_FAILURE {\"api\":\"CreateFileW.guard\",\"cleanupFailures\":[{\"api\":\"CloseHandle\",\"resource\":\"stdout\",\"win32Code\":6}],\"win32Code\":5}\n",
+      "fileSha256": "56f29461aa8d93b61c5acd56ac9aa9bef049f427ee3c97d3fe27cc5ce487678a",
+      "value": {
+        "api": "CreateFileW.guard",
+        "cleanupFailures": [
+          {
+            "api": "CloseHandle",
+            "resource": "stdout",
+            "win32Code": 6
+          }
+        ],
+        "win32Code": 5
+      }
+    },
+    "failureHresult": {
+      "canonicalSha256": "528a78e3d355753e95f200de79a07eb43f4c89279f2d58c5aa5f14aff055709f",
+      "fileAscii": "SHIYU_UI_FAILURE {\"api\":\"CoInitializeEx\",\"hresult\":2147500037}\n",
+      "fileSha256": "60fea56fbf45a75c5bee079b19b6a1b66aa98a351ee9439320c97d5fd74d4e25",
+      "value": {
+        "api": "CoInitializeEx",
+        "hresult": 2147500037
+      }
+    },
+    "failureWin32": {
+      "canonicalSha256": "49416900cdca8cfcbb927725f0bfdd61b7ec615ea7e41ccc673b62e7ada29455",
+      "fileAscii": "SHIYU_UI_FAILURE {\"api\":\"native-window-proof\",\"win32Code\":0}\n",
+      "fileSha256": "f046b0bc41df5276d5a02a19d923131319534292db3633b9ab0dba222069c2c7",
+      "value": {
+        "api": "native-window-proof",
+        "win32Code": 0
+      }
+    },
+    "intent": {
+      "canonicalSha256": "d2b9cfafab7f502d98059fddd3c4bb63137b880e20e048848f1a3725794ea0af",
+      "fileAscii": "{\"anchorSha256\":\"aa3ab9878ffd3ed9ee3e2a7559c8d1e68d71d2917b29750df16fa8792d58542d\",\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"baseIdentity\":\"0000000000000001:0000000000000002\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"commonSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"ownerSid\":\"S-1-5-21-1-2-3-1001\",\"profileLeaf\":\"profile\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"runId\":\"ui-1234abcd\",\"runIdentity\":\"0000000000000001:0000000000000002\",\"stderrIdentity\":\"0000000000000001:0000000000000002\",\"stdoutIdentity\":\"0000000000000001:0000000000000002\",\"workspaceIdentity\":\"0000000000000001:0000000000000002\"}\n",
+      "fileSha256": "5a6bcb76569de6946cb8e82916e60e7a90c71f811cee02ae2a24a6dab12267d6",
+      "value": {
+        "anchorSha256": "aa3ab9878ffd3ed9ee3e2a7559c8d1e68d71d2917b29750df16fa8792d58542d",
+        "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "baseIdentity": "0000000000000001:0000000000000002",
+        "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "commonSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+        "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ownerSid": "S-1-5-21-1-2-3-1001",
+        "profileLeaf": "profile",
+        "protocol": 1,
+        "role": "ordinary-empty-ui",
+        "runId": "ui-1234abcd",
+        "runIdentity": "0000000000000001:0000000000000002",
+        "stderrIdentity": "0000000000000001:0000000000000002",
+        "stdoutIdentity": "0000000000000001:0000000000000002",
+        "workspaceIdentity": "0000000000000001:0000000000000002"
+      }
+    },
+    "nativeGate": {
+      "canonicalSha256": "04fe05d603075a2d57981115eaeda748e87aa328606d509a786c0d062b1db0ba",
+      "fileAscii": "SHIYU_UI_PHASE {\"context\":{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"},\"phase\":\"native-gate-accepted\",\"proof\":{\"baseIdentity\":\"0000000000000001:0000000000000002\",\"desktopName\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"grantedAccess\":131207,\"intentSha256\":\"5a6bcb76569de6946cb8e82916e60e7a90c71f811cee02ae2a24a6dab12267d6\",\"nativeTid\":2345,\"runIdentity\":\"0000000000000001:0000000000000002\",\"station\":\"WinSta0\",\"stderrIdentity\":\"0000000000000001:0000000000000002\",\"stdoutIdentity\":\"0000000000000001:0000000000000002\",\"workspaceIdentity\":\"0000000000000001:0000000000000002\"}}\n",
+      "fileSha256": "fffb6156d4484aa51ea4b939003ba07c9a45376eb46a49f7675b80b907a6b5fd",
+      "value": {
+        "context": {
+          "appPid": 1234,
+          "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "creationFileTime": "134086000000000001",
+          "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "protocol": 1,
+          "role": "ordinary-empty-ui",
+          "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+          "runId": "ui-1234abcd"
+        },
+        "phase": "native-gate-accepted",
+        "proof": {
+          "baseIdentity": "0000000000000001:0000000000000002",
+          "desktopName": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "grantedAccess": 131207,
+          "intentSha256": "5a6bcb76569de6946cb8e82916e60e7a90c71f811cee02ae2a24a6dab12267d6",
+          "nativeTid": 2345,
+          "runIdentity": "0000000000000001:0000000000000002",
+          "station": "WinSta0",
+          "stderrIdentity": "0000000000000001:0000000000000002",
+          "stdoutIdentity": "0000000000000001:0000000000000002",
+          "workspaceIdentity": "0000000000000001:0000000000000002"
+        }
+      }
+    },
+    "nativeReadonlyGrant": {
+      "canonicalSha256": "69f977162f747b37c4da0d066d3d80c7b5489906bf59abd34a77087c5b26d2df",
+      "fileAscii": "{\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"fileIdentity\":\"0000000000000001:0000000000000002\",\"ownerMatches\":true,\"plain\":true,\"private\":true,\"protocol\":1,\"rawBase64\":\"eyJjb250ZXh0Ijp7ImFwcFBpZCI6MTIzNCwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNyZWF0aW9uRmlsZVRpbWUiOiIxMzQwODYwMDAwMDAwMDAwMDEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm1haW5Jc29sYXRlSWQiOiJpc29sYXRlcy8xMjMiLCJvd25lclNjb3BlIjoiZGI5MzM0OWRhNjliMWNhNjcxMWZiN2YxYTgzZGQxNTkyYzkxNWE4ZWJlZDg5Y2EwY2I2ZDUyYWVhNzY5YzJmOCIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJyb290U2NvcGUiOiIzZjAyN2Y4MTEyMGU0YThiNWQ5ZWEzMTRiMmUyY2Y1NjE0OWMzOTVhZmZhMzdkODViYmZlZDgyMWRlYTNlMWI1IiwicnVuSWQiOiJ1aS0xMjM0YWJjZCJ9LCJjb250ZXh0SGFzaCI6ImNhNDFjM2RkZjg4NTAyNWU3ZmExNWJhNzRiOGNjNzA1ZDg1NjNhZjk1ODdjZjc0ZTI5YjZlZDRhZDU4NzVmMmMiLCJncmFudElkIjoiZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJvYnNlcnZlclJlY2VpcHRTaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwicGhhc2UiOiJjbG9zZSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJzZXEiOjJ9Cg==\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runIdentity\":\"0000000000000001:0000000000000002\"}\n",
+      "fileSha256": "ba4682e653871c8eea791d4edfff4ddc3acdf732bf8875019acb8f6e9386843a",
+      "value": {
+        "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "fileIdentity": "0000000000000001:0000000000000002",
+        "ownerMatches": true,
+        "plain": true,
+        "private": true,
+        "protocol": 1,
+        "rawBase64": "eyJjb250ZXh0Ijp7ImFwcFBpZCI6MTIzNCwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNyZWF0aW9uRmlsZVRpbWUiOiIxMzQwODYwMDAwMDAwMDAwMDEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm1haW5Jc29sYXRlSWQiOiJpc29sYXRlcy8xMjMiLCJvd25lclNjb3BlIjoiZGI5MzM0OWRhNjliMWNhNjcxMWZiN2YxYTgzZGQxNTkyYzkxNWE4ZWJlZDg5Y2EwY2I2ZDUyYWVhNzY5YzJmOCIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJyb290U2NvcGUiOiIzZjAyN2Y4MTEyMGU0YThiNWQ5ZWEzMTRiMmUyY2Y1NjE0OWMzOTVhZmZhMzdkODViYmZlZDgyMWRlYTNlMWI1IiwicnVuSWQiOiJ1aS0xMjM0YWJjZCJ9LCJjb250ZXh0SGFzaCI6ImNhNDFjM2RkZjg4NTAyNWU3ZmExNWJhNzRiOGNjNzA1ZDg1NjNhZjk1ODdjZjc0ZTI5YjZlZDRhZDU4NzVmMmMiLCJncmFudElkIjoiZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJvYnNlcnZlclJlY2VpcHRTaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwicGhhc2UiOiJjbG9zZSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJzZXEiOjJ9Cg==",
+        "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+        "runIdentity": "0000000000000001:0000000000000002"
+      }
+    },
+    "nativeReadonlyProof": {
+      "canonicalSha256": "9cac7c44c73167b72fbbb4e22219e99025bde96c79fc83e7bd0c58b1d9b6760c",
+      "fileAscii": "{\"anchorRawBase64\":\"eyJiYXNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJiYXNlUGF0aCI6IkM6XFxzeW50aGV0aWMtd29ya3NwYWNlXFwudWktcnVucyIsImJ1bmRsZVNoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjb21tb25TaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwib3duZXJTaWQiOiJTLTEtNS0yMS0xLTItMy0xMDAxIiwicHJvdG9jb2wiOjEsInB1cnBvc2UiOiJvcmRpbmFyeS1lbXB0eS11aS1hbmNob3IiLCJzb3VyY2VTaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwid29ya3NwYWNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJ3b3Jrc3BhY2VQYXRoIjoiQzpcXHN5bnRoZXRpYy13b3Jrc3BhY2UifQo=\",\"baseIdentity\":\"0000000000000001:0000000000000002\",\"basePath\":\"C:\\\\synthetic-workspace\\\\.ui-runs\",\"c0\":{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"},\"cwdMatches\":true,\"intentRawBase64\":\"eyJhbmNob3JTaGEyNTYiOiJhYTNhYjk4NzhmZmQzZWQ5ZWUzZTJhNzU1OWM4ZDFlNjhkNzFkMjkxN2IyOTc1MGRmMTZmYTg3OTJkNTg1NDJkIiwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYmFzZUlkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNvbW1vblNoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm93bmVyU2lkIjoiUy0xLTUtMjEtMS0yLTMtMTAwMSIsInByb2ZpbGVMZWFmIjoicHJvZmlsZSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJydW5JZCI6InVpLTEyMzRhYmNkIiwicnVuSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJzdGRlcnJJZGVudGl0eSI6IjAwMDAwMDAwMDAwMDAwMDE6MDAwMDAwMDAwMDAwMDAwMiIsInN0ZG91dElkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwid29ya3NwYWNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIifQo=\",\"nativeGateLineRawBase64\":\"U0hJWVVfVUlfUEhBU0UgeyJjb250ZXh0Ijp7ImFwcFBpZCI6MTIzNCwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNyZWF0aW9uRmlsZVRpbWUiOiIxMzQwODYwMDAwMDAwMDAwMDEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJyb290U2NvcGUiOiIzZjAyN2Y4MTEyMGU0YThiNWQ5ZWEzMTRiMmUyY2Y1NjE0OWMzOTVhZmZhMzdkODViYmZlZDgyMWRlYTNlMWI1IiwicnVuSWQiOiJ1aS0xMjM0YWJjZCJ9LCJwaGFzZSI6Im5hdGl2ZS1nYXRlLWFjY2VwdGVkIiwicHJvb2YiOnsiYmFzZUlkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwiZGVza3RvcE5hbWUiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImdyYW50ZWRBY2Nlc3MiOjEzMTIwNywiaW50ZW50U2hhMjU2IjoiNWE2YmNiNzY1NjlkZTY5NDZjYjhlODI5MTZlNjBlN2E5MGM3MWY4MTFjZWUwMmFlMmEyNGE2ZGFiMTIyNjdkNiIsIm5hdGl2ZVRpZCI6MjM0NSwicnVuSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJzdGF0aW9uIjoiV2luU3RhMCIsInN0ZGVycklkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwic3Rkb3V0SWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJ3b3Jrc3BhY2VJZGVudGl0eSI6IjAwMDAwMDAwMDAwMDAwMDE6MDAwMDAwMDAwMDAwMDAwMiJ9fQo=\",\"ownerSid\":\"S-1-5-21-1-2-3-1001\",\"plain\":true,\"private\":true,\"profileAbsent\":true,\"profilePath\":\"C:\\\\synthetic-workspace\\\\.ui-runs\\\\ui-1234abcd\\\\profile\",\"protocol\":1,\"runIdentity\":\"0000000000000001:0000000000000002\",\"runPath\":\"C:\\\\synthetic-workspace\\\\.ui-runs\\\\ui-1234abcd\",\"stderrIdentity\":\"0000000000000001:0000000000000002\",\"stdoutIdentity\":\"0000000000000001:0000000000000002\",\"workspaceIdentity\":\"0000000000000001:0000000000000002\",\"workspacePath\":\"C:\\\\synthetic-workspace\"}\n",
+      "fileSha256": "f3004059aaf4fec8ecaa2f1d5aeaf92cff81211df3e45b3a403e5b7ebc370bdb",
+      "value": {
+        "anchorRawBase64": "eyJiYXNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJiYXNlUGF0aCI6IkM6XFxzeW50aGV0aWMtd29ya3NwYWNlXFwudWktcnVucyIsImJ1bmRsZVNoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjb21tb25TaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwib3duZXJTaWQiOiJTLTEtNS0yMS0xLTItMy0xMDAxIiwicHJvdG9jb2wiOjEsInB1cnBvc2UiOiJvcmRpbmFyeS1lbXB0eS11aS1hbmNob3IiLCJzb3VyY2VTaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwid29ya3NwYWNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJ3b3Jrc3BhY2VQYXRoIjoiQzpcXHN5bnRoZXRpYy13b3Jrc3BhY2UifQo=",
+        "baseIdentity": "0000000000000001:0000000000000002",
+        "basePath": "C:\\synthetic-workspace\\.ui-runs",
+        "c0": {
+          "appPid": 1234,
+          "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "creationFileTime": "134086000000000001",
+          "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "protocol": 1,
+          "role": "ordinary-empty-ui",
+          "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+          "runId": "ui-1234abcd"
+        },
+        "cwdMatches": true,
+        "intentRawBase64": "eyJhbmNob3JTaGEyNTYiOiJhYTNhYjk4NzhmZmQzZWQ5ZWUzZTJhNzU1OWM4ZDFlNjhkNzFkMjkxN2IyOTc1MGRmMTZmYTg3OTJkNTg1NDJkIiwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYmFzZUlkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNvbW1vblNoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIm93bmVyU2lkIjoiUy0xLTUtMjEtMS0yLTMtMTAwMSIsInByb2ZpbGVMZWFmIjoicHJvZmlsZSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJydW5JZCI6InVpLTEyMzRhYmNkIiwicnVuSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJzdGRlcnJJZGVudGl0eSI6IjAwMDAwMDAwMDAwMDAwMDE6MDAwMDAwMDAwMDAwMDAwMiIsInN0ZG91dElkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwid29ya3NwYWNlSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIifQo=",
+        "nativeGateLineRawBase64": "U0hJWVVfVUlfUEhBU0UgeyJjb250ZXh0Ijp7ImFwcFBpZCI6MTIzNCwiYXR0ZW1wdCI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYnVuZGxlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNyZWF0aW9uRmlsZVRpbWUiOiIxMzQwODYwMDAwMDAwMDAwMDEiLCJkZXNrdG9wTm9uY2UiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImltYWdlU2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsInByb3RvY29sIjoxLCJyb2xlIjoib3JkaW5hcnktZW1wdHktdWkiLCJyb290U2NvcGUiOiIzZjAyN2Y4MTEyMGU0YThiNWQ5ZWEzMTRiMmUyY2Y1NjE0OWMzOTVhZmZhMzdkODViYmZlZDgyMWRlYTNlMWI1IiwicnVuSWQiOiJ1aS0xMjM0YWJjZCJ9LCJwaGFzZSI6Im5hdGl2ZS1nYXRlLWFjY2VwdGVkIiwicHJvb2YiOnsiYmFzZUlkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwiZGVza3RvcE5hbWUiOiJTaGl5dUlzb19jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsImdyYW50ZWRBY2Nlc3MiOjEzMTIwNywiaW50ZW50U2hhMjU2IjoiNWE2YmNiNzY1NjlkZTY5NDZjYjhlODI5MTZlNjBlN2E5MGM3MWY4MTFjZWUwMmFlMmEyNGE2ZGFiMTIyNjdkNiIsIm5hdGl2ZVRpZCI6MjM0NSwicnVuSWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJzdGF0aW9uIjoiV2luU3RhMCIsInN0ZGVycklkZW50aXR5IjoiMDAwMDAwMDAwMDAwMDAwMTowMDAwMDAwMDAwMDAwMDAyIiwic3Rkb3V0SWRlbnRpdHkiOiIwMDAwMDAwMDAwMDAwMDAxOjAwMDAwMDAwMDAwMDAwMDIiLCJ3b3Jrc3BhY2VJZGVudGl0eSI6IjAwMDAwMDAwMDAwMDAwMDE6MDAwMDAwMDAwMDAwMDAwMiJ9fQo=",
+        "ownerSid": "S-1-5-21-1-2-3-1001",
+        "plain": true,
+        "private": true,
+        "profileAbsent": true,
+        "profilePath": "C:\\synthetic-workspace\\.ui-runs\\ui-1234abcd\\profile",
+        "protocol": 1,
+        "runIdentity": "0000000000000001:0000000000000002",
+        "runPath": "C:\\synthetic-workspace\\.ui-runs\\ui-1234abcd",
+        "stderrIdentity": "0000000000000001:0000000000000002",
+        "stdoutIdentity": "0000000000000001:0000000000000002",
+        "workspaceIdentity": "0000000000000001:0000000000000002",
+        "workspacePath": "C:\\synthetic-workspace"
+      }
+    },
+    "nativeWindow": {
+      "canonicalSha256": "38b4ddb0a7a29e62864a867c815c34d070d7832bd75b0fc3d1406f60c0233805",
+      "fileAscii": "SHIYU_UI_PHASE {\"context\":{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"},\"phase\":\"native-window-created\",\"proof\":{\"mainHwnd\":3456,\"mainTid\":2345,\"windowClass\":\"FLUTTER_RUNNER_WIN32_WINDOW\"}}\n",
+      "fileSha256": "b41626a36c0dbd4db442a4215fd41d19187abc4c3a664ff89361a585a717754b",
+      "value": {
+        "context": {
+          "appPid": 1234,
+          "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "creationFileTime": "134086000000000001",
+          "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "protocol": 1,
+          "role": "ordinary-empty-ui",
+          "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+          "runId": "ui-1234abcd"
+        },
+        "phase": "native-window-created",
+        "proof": {
+          "mainHwnd": 3456,
+          "mainTid": 2345,
+          "windowClass": "FLUTTER_RUNNER_WIN32_WINDOW"
+        }
+      }
+    },
+    "shellReady": {
+      "canonicalSha256": "d68801bd784b013d8ac56798d7664929f928b4021a2ccaaf5605e5074e156176",
+      "fileAscii": "SHIYU_UI_PHASE {\"context\":{\"appPid\":1234,\"attempt\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"bundleSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"creationFileTime\":\"134086000000000001\",\"desktopNonce\":\"ShiyuIso_cccccccccccccccccccccccccccccccc\",\"imageSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol\":1,\"role\":\"ordinary-empty-ui\",\"rootScope\":\"3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5\",\"runId\":\"ui-1234abcd\"},\"phase\":\"ordinary-shell-frame-ready\",\"proof\":{\"bandHeight\":32,\"bandLeft\":0,\"bandTop\":0,\"bandWidth\":1000,\"dprMilli\":1000,\"frameCount\":1,\"frameRendered\":true,\"g1Held\":true,\"nativeGateLineSha256\":\"fffb6156d4484aa51ea4b939003ba07c9a45376eb46a49f7675b80b907a6b5fd\",\"ownerScope\":\"db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8\",\"rootMatches\":true,\"shellMounted\":true,\"silent\":true,\"viewportHeight\":700,\"viewportWidth\":1000}}\n",
+      "fileSha256": "38eb314c16988cae25e712f7a4091092af096c45ff3e325d8966edcf19009f9c",
+      "value": {
+        "context": {
+          "appPid": 1234,
+          "attempt": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bundleSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "creationFileTime": "134086000000000001",
+          "desktopNonce": "ShiyuIso_cccccccccccccccccccccccccccccccc",
+          "imageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "protocol": 1,
+          "role": "ordinary-empty-ui",
+          "rootScope": "3f027f81120e4a8b5d9ea314b2e2cf56149c395affa37d85bbfed821dea3e1b5",
+          "runId": "ui-1234abcd"
+        },
+        "phase": "ordinary-shell-frame-ready",
+        "proof": {
+          "bandHeight": 32,
+          "bandLeft": 0,
+          "bandTop": 0,
+          "bandWidth": 1000,
+          "dprMilli": 1000,
+          "frameCount": 1,
+          "frameRendered": true,
+          "g1Held": true,
+          "nativeGateLineSha256": "fffb6156d4484aa51ea4b939003ba07c9a45376eb46a49f7675b80b907a6b5fd",
+          "ownerScope": "db93349da69b1ca6711fb7f1a83dd1592c915a8ebed89ca0cb6d52aea769c2f8",
+          "rootMatches": true,
+          "shellMounted": true,
+          "silent": true,
+          "viewportHeight": 700,
+          "viewportWidth": 1000
+        }
+      }
+    },
+    "statusRequest": {
+      "canonicalSha256": "b1e267ef4a691cdff7a5a8018a165dfcc19984d35bee6d03fa5333666847a755",
+      "fileAscii": "{\"contextHash\":\"ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c\",\"phase\":\"observe\",\"seq\":1}\n",
+      "fileSha256": "855c46248bfacc526eba109661eb7620422c8b8ad87a67d64ec394e027295423",
+      "value": {
+        "contextHash": "ca41c3ddf885025e7fa15ba74b8cc705d8563af9587cf74e29b6ed4ad5875f2c",
+        "phase": "observe",
+        "seq": 1
+      }
+    },
+    "unicodeCanonical": {
+      "canonicalSha256": "16e5ff405d6225acc3c812792ed9e53bde18f087a1919762047bd58cf8789692",
+      "fileAscii": "{\"positiveInteger\":9007199254740991,\"text\":\"\\u4e2d\\u6587\\ud83d\\ude00\\\\/\\n\"}\n",
+      "fileSha256": "fc84d9a51e0b957483041d8d2962c93393a63864491b3fbede3049f0aa679638",
+      "value": {
+        "positiveInteger": 9007199254740991,
+        "text": "\u4e2d\u6587\ud83d\ude00\\/\n"
+      }
+    }
+  },
+  "wireVersion": 1
+}

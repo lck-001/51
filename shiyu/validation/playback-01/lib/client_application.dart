@@ -18,6 +18,8 @@ import 'client_preview_frame.dart';
 import 'client_material_import.dart';
 import 'client_shutdown.dart';
 import 'client_private_storage.dart';
+import 'client_startup_retention.dart';
+import 'client_ui_validation_session.dart';
 import 'client_retirement.dart';
 import 'playback/android_audio_host.dart';
 import 'playback/foreground_host.dart';
@@ -26,7 +28,7 @@ import 'playback/windows_playback_host.dart';
 
 /// App/process ownership, never page-owned native resources. This local preview
 /// has no login, cloud sync, generated content, dictionary or scoring provider.
-final class ClientApplicationOwner {
+final class ClientApplicationOwner implements ClientUiOwner {
   ClientApplicationOwner._();
 
   late final ClientPrivateStorage storage;
@@ -48,12 +50,18 @@ final class ClientApplicationOwner {
   final frozen = ValueNotifier<bool>(false);
   final notice = ValueNotifier<String?>(null);
   late final ClientShutdown shutdown;
+  bool _uiValidationAllowed = false;
+  ClientUiValidationSession? _uiValidation;
 
   static Future<ClientApplicationOwner> open({
     required Directory root,
     bool silentValidation = false,
+    ClientStartupAttempt? startupAttempt,
   }) async {
+    final attempt = startupAttempt ?? ClientStartupAttempt();
     final owner = ClientApplicationOwner._();
+    attempt.retain(ClientStartupRef.owner, owner);
+    owner._uiValidationAllowed = attempt.validationOnly;
     ClientPrivateStorage? storage;
     PlaybackHost? host;
     ClientCachedEngine? engine;
@@ -70,7 +78,9 @@ final class ClientApplicationOwner {
         root: root,
         proxyCommand: ['${binaryDirectory.path}/tools/shiyu_agent_proxy.exe'],
         androidImportCache: androidImportCache,
+        startupAttempt: attempt,
       );
+      attempt.retain(ClientStartupRef.storage, storage);
       owner.storage = storage;
       owner.rootLock = storage.rootLock;
       owner.materials = storage.materials;
@@ -84,11 +94,13 @@ final class ClientApplicationOwner {
       owner._assistantEvents = owner.agentBridge.snapshots.listen((status) {
         owner.assistantStatus.value = status;
       });
+      attempt.retain(ClientStartupRef.assistantEvents, owner._assistantEvents!);
       host = Platform.isAndroid
           ? await AndroidAudioHost.create()
           : Platform.isWindows
-          ? await WindowsPlaybackHost.create()
+          ? await WindowsPlaybackHost.create(startupAttempt: attempt)
           : ForegroundPlaybackHost();
+      attempt.retain(ClientStartupRef.host, host);
       owner.host = host;
       engine = ClientCachedEngine(
         cache: cache,
@@ -96,19 +108,23 @@ final class ClientApplicationOwner {
         beforePlay: host.preparePlay,
         silentValidation: silentValidation,
       );
+      attempt.retain(ClientStartupRef.engine, engine);
       owner.engine = engine;
       owner.playback = PlaybackController(engine: engine, system: host);
+      attempt.retain(ClientStartupRef.playback, owner.playback);
       owner.coordinator = coordinator = LearningPlaybackCoordinator(
         learning: learning,
         playback: owner.playback,
         mediaCache: cache,
       );
+      attempt.retain(ClientStartupRef.coordinator, owner.coordinator);
       owner.runtime = runtime = ShiyuClientRuntime.attach(
         materials: materials,
         learning: learning,
         playback: owner.playback,
         coordinator: owner.coordinator,
       );
+      attempt.retain(ClientStartupRef.runtime, owner.runtime);
       owner._retirement = ClientRetirement(
         admissions: [
           () {
@@ -166,10 +182,26 @@ final class ClientApplicationOwner {
         };
       }
       host.bind(owner.playback);
+      attempt.handoff(ClientStartupRef.owner, owner);
       return owner;
-    } catch (_) {
-      // Headless storage safety is symmetric. No native acknowledgement is
-      // reinterpreted as a Store flush, and a failed cleanup retains authority.
+    } catch (error, stack) {
+      final failure = attempt.fail(error, stack);
+      final partialHost =
+          host ?? attempt.retained<PlaybackHost>(ClientStartupRef.host);
+      // Inner factory failure carries this same token even if storage never returned.
+      // No second authority or factory is opened for recovery.
+      var safe = true;
+      Future<void> settle(
+        ClientStartupCleanup step,
+        FutureOr<void> Function() action,
+      ) async {
+        try {
+          await attempt.cleanup(step, action);
+        } catch (_) {
+          safe = false;
+        }
+      }
+
       if (storage != null) {
         final current = storage;
         final cleanup = ClientRetirement(
@@ -182,29 +214,85 @@ final class ClientApplicationOwner {
             if (coordinator != null) coordinator.close,
             current.drainWriters,
             if (owner._assistantEvents != null) owner._assistantEvents!.cancel,
-            if (engine != null) engine.native.dispose,
-            if (host != null) host.close,
+            // Native create may have timed out at its caller, but that exact
+            // original operation must settle before close/detach can be issued.
+            () async {
+              await attempt.operationSettled(
+                ClientStartupOperation.hostNativeCreate,
+              );
+              final partialPlayback = attempt.retained<PlaybackController>(
+                ClientStartupRef.playback,
+              );
+              if (partialPlayback != null) {
+                await attempt.cleanup(
+                  ClientStartupCleanup.disposePlayback,
+                  partialPlayback.dispose,
+                );
+              }
+              if (engine != null) {
+                await attempt.cleanup(
+                  ClientStartupCleanup.disposeEngine,
+                  engine.native.dispose,
+                );
+              }
+              if (partialHost != null) {
+                await attempt.cleanup(
+                  ClientStartupCleanup.closeHost,
+                  partialHost.close,
+                );
+              }
+            },
           ],
         );
-        cleanup.retire();
-        try {
-          await cleanup.completion;
-          await current.closeStoresAndAuthority();
-          if (host is WindowsPlaybackHost) {
-            if (!current.writersDrained ||
-                !current.authorityReleased ||
-                current.rootLock.isHeld) {
-              throw StateError('failed_startup_cleanup_unconfirmed');
-            }
-            await host.detachDrainedFailedStartup();
+        await settle(ClientStartupCleanup.retireApplication, () {
+          cleanup.retire();
+          return cleanup.completion;
+        });
+        if (safe) {
+          await settle(
+            ClientStartupCleanup.closeLearning,
+            current.closeLearning,
+          );
+          if (safe) {
+            await settle(
+              ClientStartupCleanup.closeMaterials,
+              current.closeMaterials,
+            );
           }
-        } catch (_) {}
+          if (safe) {
+            await settle(
+              ClientStartupCleanup.releaseAuthority,
+              current.releaseAuthority,
+            );
+          }
+          if (safe && partialHost is WindowsPlaybackHost) {
+            await settle(
+              ClientStartupCleanup.detachFailedHost,
+              partialHost.detachDrainedFailedStartup,
+            );
+          }
+        }
       }
-      rethrow;
+      await settle(ClientStartupCleanup.disposeOwnerSignals, () {
+        owner.assistantStatus.dispose();
+        owner.frozen.dispose();
+        owner.notice.dispose();
+      });
+      if (safe && !attempt.cleanupFailed) attempt.releasedAfterCleanup();
+      Error.throwWithStackTrace(failure, failure.primaryStack);
     }
   }
 
   Future<void> _exitAfterDrain() async {
+    final validation = _uiValidation;
+    if (validation != null) {
+      await validation.ownerDrained(
+        stopped: _stopped(playback.current),
+        storesDrained: storage.writersDrained,
+        storesClosed: storage.storesClosed,
+        released: storage.authorityReleased && !rootLock.isHeld,
+      );
+    }
     final currentHost = host;
     if (currentHost is WindowsPlaybackHost) {
       if (!_stopped(playback.current) ||
@@ -218,6 +306,30 @@ final class ClientApplicationOwner {
     }
     await SystemNavigator.pop();
   }
+
+  void bindUiValidation(ClientUiValidationSession session) {
+    if (!_uiValidationAllowed || _uiValidation != null) {
+      throw StateError('validation_binding_rejected');
+    }
+    _uiValidation = session;
+  }
+
+  @override
+  String get uiTrustedOwnerId => materials.trustedOwnerId;
+  @override
+  bool get uiRootHeld => rootLock.isHeld;
+  @override
+  String get uiRootPath => rootLock.rootDirectory.path;
+  @override
+  Future<Map<String, Object?>> uiActualFacts() async => {
+    'g1Held': rootLock.isHeld,
+    'learningCount': (await learning.listVersions()).length,
+    'materialCount': (await materials.listDrafts()).length,
+    'hasSelection': playback.current.item != null,
+    'hasSource': engine.native.diagnosticSummary()['hasSource'] == true,
+  };
+  @override
+  Future<void> uiRequestExit() => shutdown.requestExit();
 
   void retireCommands() {
     shutdown.retire();
