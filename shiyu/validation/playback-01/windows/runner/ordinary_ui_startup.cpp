@@ -183,7 +183,7 @@ std::string ObjectName(HANDLE handle) {
   return Ascii(U16Path(value));
 }
 std::string InputName(State& state) {
-  HANDLE input = OpenInputDesktop(0,FALSE,DESKTOP_READOBJECTS); Win(input != nullptr,"OpenInputDesktop");
+  HDESK input = OpenInputDesktop(0,FALSE,DESKTOP_READOBJECTS); Win(input != nullptr,"OpenInputDesktop");
   std::string name; std::exception_ptr primary;
   try { name = ObjectName(input); } catch (...) { primary = std::current_exception(); }
   if (!CloseDesktop(input)) {

@@ -3172,9 +3172,9 @@
     },
     {
       "path": "validation/playback-01/windows/runner/ordinary_ui_startup.cpp",
-      "gitBlob": "b0c661908dd5735f3cf3307158a91e4ab6d1281e",
-      "sizeBytes": 28442,
-      "sha256": "45af1fea9989dbb1cc7ad42f87d5ada72f6601b1e3fd20dd3f6b192ad0ce466e"
+      "gitBlob": "a9b383e7f00fa7193207673cedd2581b024e867d",
+      "sizeBytes": 28441,
+      "sha256": "9cc314c021e0b9d85c35eec2953892ab6c9e6df51c5012b4c3e009c595130144"
     },
     {
       "path": "validation/playback-01/windows/runner/ordinary_ui_startup.h",
