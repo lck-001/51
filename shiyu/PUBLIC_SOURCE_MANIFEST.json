@@ -2902,9 +2902,9 @@
     },
     {
       "path": "validation/playback-01/lib/client_ui_validation_session.dart",
-      "gitBlob": "1ebee7494f275c4c94f0ddb1643e8631d6ed81c6",
-      "sizeBytes": 9707,
-      "sha256": "2264df193b6c3798bd39519fcaabb75d489b95fca5de371b9fe009b70ab39cb4"
+      "gitBlob": "d15964056c6e62d97dba7220fb1bab1dfcb13e45",
+      "sizeBytes": 10225,
+      "sha256": "198a1716b024e520e3e138b6c3771fd7245497482ed9b1f84149c67f8ec59fd6"
     },
     {
       "path": "validation/playback-01/lib/client_ui_wire.dart",
@@ -3031,6 +3031,12 @@
       "gitBlob": "6ce53c1da9421dbf18e4180d962e6251a78ba5a6",
       "sizeBytes": 5461,
       "sha256": "7676241f7b95e5b25df742dc4ceae781d35ad0fa88a4d30f8a078a08bf5dd1dd"
+    },
+    {
+      "path": "validation/playback-01/test/client_ui_validation_registered_transport_test.dart",
+      "gitBlob": "ff763ec4d74c18e36285c079456f249d87ac7d41",
+      "sizeBytes": 4425,
+      "sha256": "095a7c9f31819e2e81b3bf28f7bc41d78f165c4d89225bb0076b40f04af2b3c9"
     },
     {
       "path": "validation/playback-01/test/client_ui_validation_session_test.dart",

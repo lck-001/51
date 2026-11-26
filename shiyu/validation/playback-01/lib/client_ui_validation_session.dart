@@ -143,15 +143,18 @@ final class ClientUiValidationSession {
     ...uiBytes({'phase': name, 'context': plan.c0, 'proof': proof}, lf: true),
   ]);
 
-  void register() {
+  void register({
+    void Function(String, developer.ServiceExtensionHandler)? registerWith,
+  }) {
+    final registrar = registerWith ?? developer.registerExtension;
     for (final method in [
       'ext.shiyu.validation.status',
       'ext.shiyu.validation.close',
     ]) {
-      developer.registerExtension(method, (method, parameters) async {
+      registrar(method, (method, parameters) async {
         try {
           return developer.ServiceExtensionResponse.result(
-            uiCanonical(await handle(method, parameters)),
+            uiCanonical(await handleTransport(method, parameters)),
           );
         } catch (_) {
           fail();
@@ -161,6 +164,20 @@ final class ClientUiValidationSession {
           );
         }
       });
+    }
+  }
+
+  Future<Map<String, Object?>> handleTransport(
+    String method,
+    Map<String, String> parameters,
+  ) async {
+    try {
+      uiNeed(parameters['isolateId'] == mainIsolateId, 'rpc-isolate');
+      final payload = Map<String, String>.from(parameters)..remove('isolateId');
+      return await handle(method, payload);
+    } catch (_) {
+      fail();
+      rethrow;
     }
   }
 
