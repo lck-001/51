@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "bef2e640bfeabbc3e26fd718f4a8873e5d81fad9",
-      "sizeBytes": 10242,
-      "sha256": "7c8c5785402a564ce3d88b6fb813340c0b9171830796e3c1c837d1d7d3aee688"
+      "gitBlob": "cae761f7617641ead6fc8554d23c57e12e7862b5",
+      "sizeBytes": 10611,
+      "sha256": "439827c571516d5486d571fadfe07e1916b08586140ccf6a1c747b36d78a811e"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -333,6 +333,12 @@
       "sha256": "3c234543b0c8ec1b9d27235eb599e4304e4340aaaf453dca208291dccf7cc2bd"
     },
     {
+      "path": "docs/reviews/QA-20261127-editor-keyboard-traversal.md",
+      "gitBlob": "4be227441637cec9cbd630ba65f3d2e709190ba8",
+      "sizeBytes": 1865,
+      "sha256": "f758b17a78b07268a35cb476c2b9032242efb85682ae98e6cdc5f8c0a544c5be"
+    },
+    {
       "path": "docs/reviews/QA-20261127-material-edit-protection.md",
       "gitBlob": "415db9392bb60dab46a7ab5cf625c4ffdf18aa95",
       "sizeBytes": 2221,
@@ -610,9 +616,9 @@
     },
     {
       "path": "packages/client_shell/lib/client_shell.dart",
-      "gitBlob": "765bbdd6688be0a944ca8e0c11572b89a3792a96",
-      "sizeBytes": 88377,
-      "sha256": "737531d676960554bc33c2f51035c3f3d9958743381a51e8197b4c971de3580d"
+      "gitBlob": "f9100e68420a375d77201f877ba49d11f6ac27d0",
+      "sizeBytes": 88738,
+      "sha256": "b4a3e4c35550877724ba27bcaeec6a9b52f0e5cb95a4f4ff162596eb35916d0a"
     },
     {
       "path": "packages/client_shell/lib/src/assistant_connection_widgets.dart",
@@ -670,9 +676,9 @@
     },
     {
       "path": "packages/client_shell/test/dirty_new_material_fix_boundaries_test.dart",
-      "gitBlob": "b28200d9827dedbfd9ec14a999d923aae07bf994",
-      "sizeBytes": 6813,
-      "sha256": "8babe1948f788fccab37c12283edad5b46f3aa759ef1087c5807aa4c80ce2303"
+      "gitBlob": "f960a774a3afa1d36a86ea0dcb10a243ce13c6df",
+      "sizeBytes": 6771,
+      "sha256": "141dac4dd2b7d5039784a56cd63bfa0fb51435e8b6cc2d542a71fbf993d0b7fa"
     },
     {
       "path": "packages/client_shell/test/dirty_new_material_regression_test.dart",
@@ -682,9 +688,15 @@
     },
     {
       "path": "packages/client_shell/test/editor_back_entry_test.dart",
-      "gitBlob": "2e81024ef8de2c916baaf7cf3d0e5374e9fa3479",
-      "sizeBytes": 13887,
-      "sha256": "dcdc41a97f4556d765d4e5b311ff5e6160d2ef407335c6b9411192b4bfcddb02"
+      "gitBlob": "699faaecc46d0a3af711abb792b3801b21c04482",
+      "sizeBytes": 13861,
+      "sha256": "2adb6ec6360267b855162214e991575e3736a62112c4abad6bc6aaa395054ce2"
+    },
+    {
+      "path": "packages/client_shell/test/editor_keyboard_traversal_test.dart",
+      "gitBlob": "ec4525a42e65aa3cb8e4b2c5b754784344db40f1",
+      "sizeBytes": 9485,
+      "sha256": "37a5536591028363cfea88675e9d9d5e987d4c313f791152bdbffa4ed12ba9b1"
     },
     {
       "path": "packages/client_shell/test/g2_render_test.dart",

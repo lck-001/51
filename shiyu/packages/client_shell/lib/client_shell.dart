@@ -1620,147 +1620,150 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     ),
   );
 
-  Widget _addPage() => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      const Text(
-        '先把内容留下来',
-        style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 9),
-      const Text(
-        '这里保存的是私有材料，不会自动翻译、计费或分享。',
-        style: TextStyle(
-          fontSize: 13,
-          height: 1.7,
-          color: ShiyuClientTokens.muted,
+  Widget _addPage() => FocusTraversalGroup(
+    policy: WidgetOrderTraversalPolicy(),
+    child: ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          '先把内容留下来',
+          style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
         ),
-      ),
-      const SizedBox(height: 20),
-      Wrap(
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          _tag('粘贴文字'),
-          OutlinedButton.icon(
-            key: const Key('import-file'),
-            onPressed:
-                widget.onStartImport == null ||
-                    _importSession != null ||
-                    _importing ||
-                    _saving ||
-                    _confirming ||
-                    _handlingBack
-                ? null
-                : () => unawaited(_startImport()),
-            icon: const Icon(Icons.upload_file_outlined, size: 18),
-            label: Text(_importing ? '正在导入…' : '导入文件'),
+        const SizedBox(height: 9),
+        const Text(
+          '这里保存的是私有材料，不会自动翻译、计费或分享。',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.7,
+            color: ShiyuClientTokens.muted,
           ),
-          if (_importing)
-            TextButton(
-              key: const Key('import-cancel'),
-              onPressed: () {
-                _inputEpoch++;
-                _retireImport();
-                setState(() => _message = '未创建新草稿。');
-              },
-              child: const Text('取消导入'),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            _tag('粘贴文字'),
+            OutlinedButton.icon(
+              key: const Key('import-file'),
+              onPressed:
+                  widget.onStartImport == null ||
+                      _importSession != null ||
+                      _importing ||
+                      _saving ||
+                      _confirming ||
+                      _handlingBack
+                  ? null
+                  : () => unawaited(_startImport()),
+              icon: const Icon(Icons.upload_file_outlined, size: 18),
+              label: Text(_importing ? '正在导入…' : '导入文件'),
             ),
-          const Chip(label: Text('口述 · 尚未接入')),
-        ],
-      ),
-      if (widget.onStartImport != null)
-        const Padding(
-          padding: EdgeInsets.only(top: 10),
-          child: Text(
-            '支持 TXT、Word（.docx），仅在本机提取。过长内容请按章节拆分；PPT、PDF 后续接入。',
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.7,
-              color: ShiyuClientTokens.muted,
+            if (_importing)
+              TextButton(
+                key: const Key('import-cancel'),
+                onPressed: () {
+                  _inputEpoch++;
+                  _retireImport();
+                  setState(() => _message = '未创建新草稿。');
+                },
+                child: const Text('取消导入'),
+              ),
+            const Chip(label: Text('口述 · 尚未接入')),
+          ],
+        ),
+        if (widget.onStartImport != null)
+          const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              '支持 TXT、Word（.docx），仅在本机提取。过长内容请按章节拆分；PPT、PDF 后续接入。',
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.7,
+                color: ShiyuClientTokens.muted,
+              ),
             ),
           ),
-        ),
-      if (_importPreview != null)
-        Container(
-          key: const Key('import-preview-note'),
-          margin: const EdgeInsets.only(top: 12),
-          padding: const EdgeInsets.all(12),
-          color: ShiyuClientTokens.hint,
-          child: Text(
-            '${_editing != null && !_dirty ? '导入草稿已保存 · 来源收尾待确认' : '导入预览 · 尚未保存'}${_importPreview!.warnings.isEmpty ? '' : '\n${_importPreview!.warnings.map(_importWarning).join(' ')}'}\n请先保存或返回处理当前预览，再选择其他文件。',
-            style: const TextStyle(fontSize: 12, height: 1.7),
+        if (_importPreview != null)
+          Container(
+            key: const Key('import-preview-note'),
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(12),
+            color: ShiyuClientTokens.hint,
+            child: Text(
+              '${_editing != null && !_dirty ? '导入草稿已保存 · 来源收尾待确认' : '导入预览 · 尚未保存'}${_importPreview!.warnings.isEmpty ? '' : '\n${_importPreview!.warnings.map(_importWarning).join(' ')}'}\n请先保存或返回处理当前预览，再选择其他文件。',
+              style: const TextStyle(fontSize: 12, height: 1.7),
+            ),
+          ),
+        const SizedBox(height: 18),
+        TextField(
+          key: const Key('draft-title'),
+          controller: _title,
+          enabled: !_saving && !_confirming && !_importing,
+          onChanged: (_) => setState(() {
+            _dirty = true;
+          }),
+          maxLength: 120,
+          decoration: const InputDecoration(
+            labelText: '材料标题',
+            hintText: '给这段内容起个名字',
+            border: OutlineInputBorder(),
           ),
         ),
-      const SizedBox(height: 18),
-      TextField(
-        key: const Key('draft-title'),
-        controller: _title,
-        enabled: !_saving && !_confirming && !_importing,
-        onChanged: (_) => setState(() {
-          _dirty = true;
-        }),
-        maxLength: 120,
-        decoration: const InputDecoration(
-          labelText: '材料标题',
-          hintText: '给这段内容起个名字',
-          border: OutlineInputBorder(),
+        const SizedBox(height: 14),
+        TextField(
+          key: const Key('draft-text'),
+          controller: _text,
+          enabled: !_saving && !_confirming && !_importing,
+          onChanged: (_) => setState(() {
+            _dirty = true;
+          }),
+          minLines: 8,
+          maxLines: 16,
+          decoration: const InputDecoration(
+            labelText: '原文内容',
+            alignLabelWithHint: true,
+            hintText: '粘贴你的文字。原文会保留，后续学习内容另行准备。',
+            border: OutlineInputBorder(),
+          ),
         ),
-      ),
-      const SizedBox(height: 14),
-      TextField(
-        key: const Key('draft-text'),
-        controller: _text,
-        enabled: !_saving && !_confirming && !_importing,
-        onChanged: (_) => setState(() {
-          _dirty = true;
-        }),
-        minLines: 8,
-        maxLines: 16,
-        decoration: const InputDecoration(
-          labelText: '原文内容',
-          alignLabelWithHint: true,
-          hintText: '粘贴你的文字。原文会保留，后续学习内容另行准备。',
-          border: OutlineInputBorder(),
+        const SizedBox(height: 18),
+        FilledButton.icon(
+          key: const Key('draft-save'),
+          onPressed:
+              _saving ||
+                  _importing ||
+                  _confirming ||
+                  _title.text.trim().isEmpty ||
+                  _text.text.trim().isEmpty
+              ? null
+              : () => unawaited(_saveDraft()),
+          icon: const Icon(Icons.save_outlined, size: 18),
+          label: Text(_saving ? '正在保存…' : '保存草稿'),
         ),
-      ),
-      const SizedBox(height: 18),
-      FilledButton.icon(
-        key: const Key('draft-save'),
-        onPressed:
-            _saving ||
-                _importing ||
-                _confirming ||
-                _title.text.trim().isEmpty ||
-                _text.text.trim().isEmpty
-            ? null
-            : () => unawaited(_saveDraft()),
-        icon: const Icon(Icons.save_outlined, size: 18),
-        label: Text(_saving ? '正在保存…' : '保存草稿'),
-      ),
-      const SizedBox(height: 12),
-      OutlinedButton(
-        key: const Key('draft-confirm'),
-        onPressed:
-            _editing == null || _dirty || _saving || _confirming || _importing
-            ? null
-            : () => unawaited(_confirm()),
-        child: Text(_confirming ? '正在确认…' : '确认此版本'),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        _editing == null
-            ? '先保存草稿，再确认固定版本。'
-            : _dirty
-            ? '输入已修改，请先保存，再确认新版本。'
-            : '已保存草稿修订 ${_editing!.revision}。确认不会触发外部处理。',
-        style: const TextStyle(
-          fontSize: 12,
-          color: ShiyuClientTokens.muted,
-          height: 1.7,
+        const SizedBox(height: 12),
+        OutlinedButton(
+          key: const Key('draft-confirm'),
+          onPressed:
+              _editing == null || _dirty || _saving || _confirming || _importing
+              ? null
+              : () => unawaited(_confirm()),
+          child: Text(_confirming ? '正在确认…' : '确认此版本'),
         ),
-      ),
-    ],
+        const SizedBox(height: 10),
+        Text(
+          _editing == null
+              ? '先保存草稿，再确认固定版本。'
+              : _dirty
+              ? '输入已修改，请先保存，再确认新版本。'
+              : '已保存草稿修订 ${_editing!.revision}。确认不会触发外部处理。',
+          style: const TextStyle(
+            fontSize: 12,
+            color: ShiyuClientTokens.muted,
+            height: 1.7,
+          ),
+        ),
+      ],
+    ),
   );
 
   Widget _learningPage() {
