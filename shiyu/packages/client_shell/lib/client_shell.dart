@@ -524,21 +524,44 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     if (tab == 0 || tab == 1 || tab == 4) unawaited(_reload());
   }
 
-  void _newDraft() {
-    if (_saving || _confirming) return;
-    _inputEpoch++;
-    _retireImport();
-    setState(() {
-      _retryLearning = null;
-      _editing = null;
-      _title.clear();
-      _text.clear();
-      _dirty = false;
-      _tab = 2;
-      _message = null;
-      _saving = false;
-      _confirming = false;
-    });
+  bool _newDraftBusy = false;
+
+  Future<void> _newDraft() async {
+    if (_newDraftBusy ||
+        _saving ||
+        _confirming ||
+        _handlingBack ||
+        !_scope(_scopeEpoch))
+      return;
+    final scope = _scopeEpoch, input = _inputEpoch;
+    _newDraftBusy = true;
+    try {
+      final discard = await _discardEdits();
+      if (!discard ||
+          !_scope(scope) ||
+          input != _inputEpoch ||
+          _saving ||
+          _confirming ||
+          _handlingBack)
+        return;
+      _inputEpoch++;
+      _retireImport();
+      setState(() {
+        _retryLearning = null;
+        _editing = null;
+        _title.clear();
+        _text.clear();
+        _dirty = false;
+        _tab = 2;
+        _message = null;
+        _saving = false;
+        _confirming = false;
+      });
+    } catch (_) {
+      // An unknown dialog outcome never grants permission to discard input.
+    } finally {
+      _newDraftBusy = false;
+    }
   }
 
   void _edit(MaterialDraft draft) {
@@ -1166,6 +1189,21 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     }
   }
 
+  VoidCallback? _editorBackAction() {
+    final scope = _scopeEpoch;
+    bool allowed() =>
+        _scope(scope) &&
+        _tab == 2 &&
+        !_saving &&
+        !_confirming &&
+        !_handlingBack &&
+        !_newDraftBusy;
+    if (!allowed()) return null;
+    return () {
+      if (allowed()) unawaited(_handleBack());
+    };
+  }
+
   @override
   Widget build(BuildContext context) => PopScope<Object?>(
     canPop: false,
@@ -1191,6 +1229,13 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
                     tooltip: '返回学习列表',
                     icon: const Icon(Icons.arrow_back_ios_new, size: 20),
                     onPressed: _leaveReader,
+                  )
+                : _tab == 2
+                ? IconButton(
+                    key: const Key('editor-back'),
+                    tooltip: '返回材料',
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                    onPressed: _editorBackAction(),
                   )
                 : null,
             actions: [

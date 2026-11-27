@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "87b122fa0e5b20420602ccdfe4b436908c179c15",
-      "sizeBytes": 9831,
-      "sha256": "ec9181de7a47ac3df37ecabfd335e7b705d417bde6dde2cefda045644a329d55"
+      "gitBlob": "bef2e640bfeabbc3e26fd718f4a8873e5d81fad9",
+      "sizeBytes": 10242,
+      "sha256": "7c8c5785402a564ce3d88b6fb813340c0b9171830796e3c1c837d1d7d3aee688"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -333,6 +333,12 @@
       "sha256": "3c234543b0c8ec1b9d27235eb599e4304e4340aaaf453dca208291dccf7cc2bd"
     },
     {
+      "path": "docs/reviews/QA-20261127-material-edit-protection.md",
+      "gitBlob": "415db9392bb60dab46a7ab5cf625c4ffdf18aa95",
+      "sizeBytes": 2221,
+      "sha256": "9e82adf49e85dc5f20ed64d7b7a2b96d779cdb7c5dbeb0b8e1223c0a44bf63b9"
+    },
+    {
       "path": "packages/agent_bridge/README.md",
       "gitBlob": "40528b5130dad621013a97f9efdb2869b66cff0b",
       "sizeBytes": 10010,
@@ -604,9 +610,9 @@
     },
     {
       "path": "packages/client_shell/lib/client_shell.dart",
-      "gitBlob": "38ddc0fc920b0542830749a566ca4b505d1652d4",
-      "sizeBytes": 87121,
-      "sha256": "fdca8486cc899d86b01b6ba15bb1c9e93e192fc83e257c210b7420ffd135da24"
+      "gitBlob": "765bbdd6688be0a944ca8e0c11572b89a3792a96",
+      "sizeBytes": 88377,
+      "sha256": "737531d676960554bc33c2f51035c3f3d9958743381a51e8197b4c971de3580d"
     },
     {
       "path": "packages/client_shell/lib/src/assistant_connection_widgets.dart",
@@ -661,6 +667,24 @@
       "gitBlob": "7c77a4f0937ea7b769b921df196ccea2833dcc6e",
       "sizeBytes": 19066,
       "sha256": "2a1d71c9c32ccb807c83ecf5799286e819dca02d6103c126c6d67287fa2686f4"
+    },
+    {
+      "path": "packages/client_shell/test/dirty_new_material_fix_boundaries_test.dart",
+      "gitBlob": "b28200d9827dedbfd9ec14a999d923aae07bf994",
+      "sizeBytes": 6813,
+      "sha256": "8babe1948f788fccab37c12283edad5b46f3aa759ef1087c5807aa4c80ce2303"
+    },
+    {
+      "path": "packages/client_shell/test/dirty_new_material_regression_test.dart",
+      "gitBlob": "6e4126c7b88f56764a78b8b2008ae98aa41a374b",
+      "sizeBytes": 3895,
+      "sha256": "b251c22a1d6e35107282a4f510dfe08426565de8697b8802d333658c91cffe80"
+    },
+    {
+      "path": "packages/client_shell/test/editor_back_entry_test.dart",
+      "gitBlob": "2e81024ef8de2c916baaf7cf3d0e5374e9fa3479",
+      "sizeBytes": 13887,
+      "sha256": "dcdc41a97f4556d765d4e5b311ff5e6160d2ef407335c6b9411192b4bfcddb02"
     },
     {
       "path": "packages/client_shell/test/g2_render_test.dart",

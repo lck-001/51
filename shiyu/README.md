@@ -120,3 +120,7 @@ M13方案评审已收口，详见[联合结论](docs/reviews/M13-conclusion.md)�
 [顶部视觉修复](docs/reviews/QA-20261125-preview-banner-fix.md)已完成展示层独立复核、74项相关回归和Android实际横竖屏/大字/导入冷启验证。Windows后台隔离仍待安全方案实证，不能把此布局修复当作其已解决；核心英语与真实朗读方案保持单列评审。
 
 [普通UI启动门与资源保留](docs/reviews/QA-20261126-ordinary-ui-startup-gates.md)增加Debug限定的非输入Desktop/fresh资料校验及失败持有链，最终相关headless合并回归110项通过；完整App构建与真实普通界面尚待准入，不把pure或dummy结果当整产品验收。
+
+## 2026-11-27 材料编辑保护
+
+[未保存保护与编辑页返回入口](docs/reviews/QA-20261127-material-edit-protection.md)修复材料页新增静默清空输入，并补齐材料编辑页的可见返回入口；原有导航与阅读返回保持。最终58项界面、119项关联headless回归通过。新版原生包及真实录入／保存／返回仍需继续验证，不宣称完整产品交付。
