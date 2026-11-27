@@ -34,9 +34,9 @@
     },
     {
       "path": "README.md",
-      "gitBlob": "cae761f7617641ead6fc8554d23c57e12e7862b5",
-      "sizeBytes": 10611,
-      "sha256": "439827c571516d5486d571fadfe07e1916b08586140ccf6a1c747b36d78a811e"
+      "gitBlob": "474ad5486844858a87c38b76290255b86c3019ad",
+      "sizeBytes": 10981,
+      "sha256": "15a32cd908d20962110230e8811b654d04c334e8ec813b08eb3c1dbded30c701"
     },
     {
       "path": "docs/adr/0001-learning-candidate-confirmation.md",
@@ -333,6 +333,12 @@
       "sha256": "3c234543b0c8ec1b9d27235eb599e4304e4340aaaf453dca208291dccf7cc2bd"
     },
     {
+      "path": "docs/reviews/QA-20261127-editor-action-visibility.md",
+      "gitBlob": "095c7033cf491964705bb23d8385dfc1e203c1a3",
+      "sizeBytes": 2194,
+      "sha256": "3e341e27153e71cd6904066bce6fa74877e73eb999d58b3896640a750dcb01f7"
+    },
+    {
       "path": "docs/reviews/QA-20261127-editor-keyboard-traversal.md",
       "gitBlob": "4be227441637cec9cbd630ba65f3d2e709190ba8",
       "sizeBytes": 1865,
@@ -616,9 +622,9 @@
     },
     {
       "path": "packages/client_shell/lib/client_shell.dart",
-      "gitBlob": "f9100e68420a375d77201f877ba49d11f6ac27d0",
-      "sizeBytes": 88738,
-      "sha256": "b4a3e4c35550877724ba27bcaeec6a9b52f0e5cb95a4f4ff162596eb35916d0a"
+      "gitBlob": "289ab6ff1b57176c10d2a5fc002288c518ea1234",
+      "sizeBytes": 89867,
+      "sha256": "adbc789b9ea3f3b46aaeb65f51cd950d9b5d0bc37120cf9f314b1592027f8720"
     },
     {
       "path": "packages/client_shell/lib/src/assistant_connection_widgets.dart",
@@ -631,6 +637,12 @@
       "gitBlob": "7f199b715d2db716b2d15806bc5ed4280690cb4d",
       "sizeBytes": 20778,
       "sha256": "34bd2aaf5fec34dd500a2be447b1d5cbe5d9493d73bb8457d70d1066d99e759b"
+    },
+    {
+      "path": "packages/client_shell/lib/src/editor_action_visibility.dart",
+      "gitBlob": "b71eefcc3f0478e62ae52e957c8924cc02551356",
+      "sizeBytes": 8195,
+      "sha256": "25d0e60a04639fca0d25525fd27d8cc663d8b718a704a18e98b32a33bfd6882b"
     },
     {
       "path": "packages/client_shell/pubspec.lock",
@@ -687,6 +699,12 @@
       "sha256": "b251c22a1d6e35107282a4f510dfe08426565de8697b8802d333658c91cffe80"
     },
     {
+      "path": "packages/client_shell/test/editor_action_visibility_test.dart",
+      "gitBlob": "b0471b1e00d9d1b20ea3c5a009971a0d06d00188",
+      "sizeBytes": 10286,
+      "sha256": "2e60c7cdb88e40322169f548e67e520adeedbdc21ee2185949772ce299c8b4fa"
+    },
+    {
       "path": "packages/client_shell/test/editor_back_entry_test.dart",
       "gitBlob": "699faaecc46d0a3af711abb792b3801b21c04482",
       "sizeBytes": 13861,
@@ -727,6 +745,12 @@
       "gitBlob": "dfc4133b4d08d707714df32e9e61f0b753a9a208",
       "sizeBytes": 6222,
       "sha256": "8bb2ec5d4eded28f079033d73c3739f764c8cbc86cdae13b74cb99c031e0c0a2"
+    },
+    {
+      "path": "packages/client_shell/test/support/editor_io_timing.dart",
+      "gitBlob": "034f058f1e16753534365edc57c52a891cdaa62f",
+      "sizeBytes": 7514,
+      "sha256": "77da62e8c477ba4fc281a97a0447b4940e58fe577602946507a5c10a5cc47969"
     },
     {
       "path": "packages/client_shell/test/system_back_test.dart",

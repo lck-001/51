@@ -14,6 +14,8 @@ import 'package:playback_core/playback_core.dart';
 import 'src/candidate_review_sheet.dart';
 import 'src/assistant_connection_widgets.dart';
 
+part 'src/editor_action_visibility.dart';
+
 /// Frozen v0.13 colors. No new palette or layout language is introduced.
 abstract final class ShiyuClientTokens {
   static const paper = Color(0xFFFFFFFF);
@@ -162,7 +164,8 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
       _loadEpoch = 0,
       _selectionEpoch = 0,
       _lookupEpoch = 0,
-      _inputEpoch = 0;
+      _inputEpoch = 0,
+      _editorActionViewEpoch = 0;
   bool _loading = true,
       _saving = false,
       _confirming = false,
@@ -512,6 +515,7 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
 
   void _navigate(int tab) {
     if (_saving || _confirming) return;
+    if (tab != _tab) _editorActionViewEpoch++;
     if (_importing && tab != 2) {
       _inputEpoch++;
       _retireImport();
@@ -1620,6 +1624,28 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
     ),
   );
 
+  Widget _visibleEditorAction(
+    _EditorActionKind action,
+    ButtonStyleButton Function(ValueChanged<bool>) buildButton,
+  ) {
+    final scope = _scopeEpoch,
+        input = _inputEpoch,
+        view = _editorActionViewEpoch;
+    return _EditorActionVisibility(
+      key: ValueKey<_EditorActionKind>(action),
+      scopeEpoch: scope,
+      inputEpoch: input,
+      viewEpoch: view,
+      isCurrent: () =>
+          _scope(scope) &&
+          _inputEpoch == input &&
+          _editorActionViewEpoch == view &&
+          _tab == 2 &&
+          !_handlingBack,
+      buildButton: buildButton,
+    );
+  }
+
   Widget _addPage() => FocusTraversalGroup(
     policy: WidgetOrderTraversalPolicy(),
     child: ListView(
@@ -1727,27 +1753,39 @@ class _ShiyuClientShellState extends State<ShiyuClientShell> {
           ),
         ),
         const SizedBox(height: 18),
-        FilledButton.icon(
-          key: const Key('draft-save'),
-          onPressed:
-              _saving ||
-                  _importing ||
-                  _confirming ||
-                  _title.text.trim().isEmpty ||
-                  _text.text.trim().isEmpty
-              ? null
-              : () => unawaited(_saveDraft()),
-          icon: const Icon(Icons.save_outlined, size: 18),
-          label: Text(_saving ? '正在保存…' : '保存草稿'),
+        _visibleEditorAction(
+          _EditorActionKind.save,
+          (onFocusChange) => FilledButton.icon(
+            key: const Key('draft-save'),
+            onFocusChange: onFocusChange,
+            onPressed:
+                _saving ||
+                    _importing ||
+                    _confirming ||
+                    _title.text.trim().isEmpty ||
+                    _text.text.trim().isEmpty
+                ? null
+                : () => unawaited(_saveDraft()),
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: Text(_saving ? '正在保存…' : '保存草稿'),
+          ),
         ),
         const SizedBox(height: 12),
-        OutlinedButton(
-          key: const Key('draft-confirm'),
-          onPressed:
-              _editing == null || _dirty || _saving || _confirming || _importing
-              ? null
-              : () => unawaited(_confirm()),
-          child: Text(_confirming ? '正在确认…' : '确认此版本'),
+        _visibleEditorAction(
+          _EditorActionKind.confirm,
+          (onFocusChange) => OutlinedButton(
+            key: const Key('draft-confirm'),
+            onFocusChange: onFocusChange,
+            onPressed:
+                _editing == null ||
+                    _dirty ||
+                    _saving ||
+                    _confirming ||
+                    _importing
+                ? null
+                : () => unawaited(_confirm()),
+            child: Text(_confirming ? '正在确认…' : '确认此版本'),
+          ),
         ),
         const SizedBox(height: 10),
         Text(
